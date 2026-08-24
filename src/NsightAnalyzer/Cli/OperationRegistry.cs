@@ -1,0 +1,216 @@
+using NsightAnalyzer.Contracts;
+using NsightAnalyzer.Operations;
+
+namespace NsightAnalyzer.Cli;
+
+internal sealed record OperationDefinition(
+    OperationDescriptor Descriptor,
+    Func<ParsedCommand, Task<OperationResult>> Handler);
+
+internal static class OperationRegistry
+{
+    private static readonly IReadOnlyList<OperationDefinition> Definitions =
+    [
+        new(
+            new(
+                "capabilities",
+                SchemaVersion.V1,
+                "readOnly",
+                false,
+                "verified",
+                "Returns the currently callable GPU Trace atom catalog.",
+                "capabilities [--compact]"),
+            _ => Task.FromResult(
+                CapabilitiesOperation.Execute(GetPublicDescriptors()))),
+        new(
+            new(
+                "trace.info",
+                SchemaVersion.V1,
+                "readOnly",
+                true,
+                "implemented",
+                "Returns trace identity and verifies the pinned Viewer decoder/bridge.",
+                "trace.info <trace> [--identity-mode localWeak|sha256] [--viewer <path>]"),
+            command => TraceInfoOperation.ExecuteAsync(
+                command.TracePath!,
+                command.ViewerPath,
+                command.TimeoutMs,
+                command.IdentityMode)),
+        new(
+            new(
+                "trace.events",
+                SchemaVersion.V1,
+                "readOnly",
+                true,
+                "implemented",
+                "Returns a bounded page of semantic Event List facts and exact EventKeys.",
+                "trace.events <trace> [--cursor N] [--limit N] [--viewer <path>]"),
+            command => TraceEventsOperation.ExecuteAsync(
+                command.TracePath!,
+                command.ViewerPath,
+                command.TimeoutMs,
+                command.Cursor,
+                command.Limit)),
+        new(
+            new(
+                "trace.event-parameters",
+                SchemaVersion.V1,
+                "readOnly",
+                true,
+                "implemented",
+                "Returns structured parameters for one exact EventKey.",
+                "trace.event-parameters <trace> (--event-ordinal N|--event-path P)"),
+            command => TraceEventParametersOperation.ExecuteAsync(
+                command.TracePath!,
+                command.ViewerPath,
+                command.TimeoutMs,
+                command.EventOrdinal,
+                command.EventPath)),
+        new(
+            new(
+                "trace.range-metrics",
+                SchemaVersion.V1,
+                "readOnly",
+                true,
+                "implemented",
+                "Returns long-form Warp Metrics for one exact pass/marker EventKey.",
+                "trace.range-metrics <trace> (--event-ordinal N|--event-path P) " +
+                "[--table <exact>] [--cursor N] [--limit N]"),
+            command => TraceRangeMetricsOperation.ExecuteAsync(
+                command.TracePath!,
+                command.ViewerPath,
+                command.TimeoutMs,
+                command.EventOrdinal,
+                command.EventPath,
+                command.MetricTables,
+                command.Cursor,
+                command.Limit)),
+        new(
+            new(
+                "trace.range-shaders",
+                SchemaVersion.V1,
+                "readOnly",
+                true,
+                "implemented",
+                "Returns paged static/dynamic shader facts for one exact range.",
+                "trace.range-shaders <trace> (--event-ordinal N|--event-path P) " +
+                "[--shader-hash H] [--shader-occurrence N] [--cursor N] [--limit N]"),
+            command => TraceRangeShadersOperation.ExecuteAsync(
+                command.TracePath!,
+                command.ViewerPath,
+                command.TimeoutMs,
+                command.EventOrdinal,
+                command.EventPath,
+                command.ShaderHash,
+                command.ShaderOccurrence,
+                command.Cursor,
+                command.Limit)),
+        new(
+            new(
+                "trace.range-instruction-mix",
+                SchemaVersion.V1,
+                "readOnly",
+                true,
+                "implemented",
+                "Returns dynamic range-level instruction categories, samples, and stalls.",
+                "trace.range-instruction-mix <trace> " +
+                "(--event-ordinal N|--event-path P) [--cursor N] [--limit N]"),
+            command => TraceRangeInstructionMixOperation.ExecuteAsync(
+                command.TracePath!,
+                command.ViewerPath,
+                command.TimeoutMs,
+                command.EventOrdinal,
+                command.EventPath,
+                command.Cursor,
+                command.Limit)),
+        new(
+            new(
+                "trace.shader-source",
+                SchemaVersion.V1,
+                "readOnly",
+                true,
+                "implemented",
+                "Returns paged DXIL/SASS-correlated hotspot rows for one exact shader.",
+                "trace.shader-source <trace> (--event-ordinal N|--event-path P) " +
+                "--shader-hash H [--shader-occurrence N] [--cursor N] [--limit N]"),
+            command => TraceShaderSourceOperation.ExecuteAsync(
+                command.TracePath!,
+                command.ViewerPath,
+                command.TimeoutMs,
+                command.EventOrdinal,
+                command.EventPath,
+                command.ShaderHash!,
+                command.ShaderOccurrence ?? 0,
+                command.Cursor,
+                command.Limit)),
+        new(
+            new(
+                "trace.analysis",
+                SchemaVersion.V1,
+                "readOnly",
+                true,
+                "implemented",
+                "Returns Viewer Trace Analysis ranges, top issues, and annotations.",
+                "trace.analysis <trace> (--event-ordinal N|--event-path P) " +
+                "[--cursor N] [--limit N] [--viewer <path>]"),
+            command => TraceAnalysisOperation.ExecuteAsync(
+                command.TracePath!,
+                command.ViewerPath,
+                command.TimeoutMs,
+                command.EventOrdinal,
+                command.EventPath,
+                command.Cursor,
+                command.Limit)),
+        new(
+            new(
+                "trace.counter-catalog",
+                SchemaVersion.V1,
+                "writesLocalArtifacts",
+                true,
+                "implemented",
+                "Exports and returns the raw GPU counter column catalog.",
+                "trace.counter-catalog <trace> (--event-ordinal N|--event-path P) " +
+                "[--cursor N] [--limit N] [--viewer <path>]"),
+            command => TraceCounterCatalogOperation.ExecuteAsync(
+                command.TracePath!,
+                command.ViewerPath,
+                command.TimeoutMs,
+                command.EventOrdinal,
+                command.EventPath,
+                command.Cursor,
+                command.Limit)),
+        new(
+            new(
+                "trace.range-counters",
+                SchemaVersion.V1,
+                "writesLocalArtifacts",
+                true,
+                "implemented",
+                "Exports exact raw counter values by exported range name.",
+                "trace.range-counters <trace> (--event-ordinal N|--event-path P) " +
+                "--counter <exact> [--counter <exact>...] [--range <exact>...] " +
+                "[--cursor N] [--limit N]"),
+            command => TraceRangeCountersOperation.ExecuteAsync(
+                command.TracePath!,
+                command.ViewerPath,
+                command.TimeoutMs,
+                command.EventOrdinal,
+                command.EventPath,
+                command.CounterNames,
+                command.RangeNames,
+                command.Cursor,
+                command.Limit)),
+    ];
+
+    public static bool IsKnown(string operation) =>
+        Definitions.Any(definition =>
+            definition.Descriptor.Id.Equals(operation, StringComparison.Ordinal));
+
+    public static Task<OperationResult> ExecuteAsync(ParsedCommand command) =>
+        Definitions.Single(definition =>
+            definition.Descriptor.Id.Equals(
+                command.Operation, StringComparison.Ordinal)).Handler(command);
+
+    private static IReadOnlyList<OperationDescriptor> GetPublicDescriptors() =>
+        Definitions.Select(definition => definition.Descriptor).ToArray();
+}

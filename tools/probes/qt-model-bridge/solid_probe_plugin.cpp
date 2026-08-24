@@ -30,7 +30,7 @@
 
 namespace {
 
-constexpr auto kPluginVersion = "probe-0.42";
+constexpr auto kPluginVersion = "probe-0.44";
 constexpr auto kVerifiedNsightVersion = "2026.2.0";
 constexpr auto kVerifiedNsightBuild = "37991608";
 
@@ -896,7 +896,9 @@ bool HasComboProbe()
         || !EnvironmentFilters("NSIGHT_SOLID_PROBE_COMBO_ANCESTRY_CLASS_MATCH").isEmpty()
         || !EnvironmentFilters("NSIGHT_SOLID_PROBE_COMBO_ANCESTRY_OBJECT_MATCH").isEmpty()
         || !EnvironmentFilters("NSIGHT_SOLID_PROBE_COMBO_CURRENT_TEXT_MATCH").isEmpty()
-        || !qEnvironmentVariable("NSIGHT_SOLID_PROBE_COMBO_SELECT_MATCH").trimmed().isEmpty();
+        || !qEnvironmentVariable("NSIGHT_SOLID_PROBE_COMBO_SELECT_MATCH").trimmed().isEmpty()
+        || !qEnvironmentVariable(
+            "NSIGHT_SOLID_PROBE_COMBO_SELECT_FROM_MODEL_SELECTION").trimmed().isEmpty();
 }
 
 QList<QTabWidget*> DiscoverTabWidgets(QApplication* application)
@@ -2078,15 +2080,27 @@ private slots:
         }
 
         if (application != nullptr && m_mode == "selection-metrics-export") {
+            const int configuredPollLimit = qEnvironmentVariableIntValue(
+                "NSIGHT_SOLID_PROBE_METRIC_SETTLE_MAX_POLLS");
+            const int selectionMetricsPollLimit = configuredPollLimit > 0
+                ? qBound(120, configuredPollLimit, 7200)
+                : 120;
+            root.insert("selectionMetricsPollLimit", selectionMetricsPollLimit);
             const bool complete = HandleSelectionMetrics(application, root);
-            if (!complete && m_pollCount >= 120) {
+            if (!complete && m_pollCount >= selectionMetricsPollLimit) {
                 root.insert("status", "timeout");
                 root.insert("stage", "timeout");
             }
             Write(root);
-            if (complete || m_pollCount >= 120) {
+            if (complete || m_pollCount >= selectionMetricsPollLimit) {
                 m_timer.stop();
-                if (qEnvironmentVariableIntValue("NSIGHT_SOLID_PROBE_QUIT_WHEN_READY") == 1) {
+                const bool leaveTimeoutForExternalKill = !complete
+                    && m_pollCount >= selectionMetricsPollLimit
+                    && qEnvironmentVariableIntValue(
+                        "NSIGHT_SOLID_PROBE_EXTERNAL_KILL_ON_TIMEOUT") == 1;
+                if (!leaveTimeoutForExternalKill
+                    && qEnvironmentVariableIntValue(
+                        "NSIGHT_SOLID_PROBE_QUIT_WHEN_READY") == 1) {
                     const bool closeModalBeforeQuit = qEnvironmentVariableIntValue(
                         "NSIGHT_SOLID_PROBE_CLOSE_MODAL_BEFORE_QUIT") == 1;
                     if (closeModalBeforeQuit) {
@@ -2755,6 +2769,8 @@ private:
                         selectionModel, modelView->currentIndex());
                 }
                 m_targetModelSelection = IndexSummary(selectionModel, target);
+                m_targetModelSelectionParent = IndexSummary(
+                    selectionModel, target.parent());
                 int nudgeSettlePolls = qEnvironmentVariableIntValue(
                     "NSIGHT_SOLID_PROBE_MODEL_SELECT_NUDGE_SETTLE_MIN_POLLS");
                 nudgeSettlePolls = nudgeSettlePolls > 0 ? nudgeSettlePolls : 2;
@@ -2908,6 +2924,15 @@ private:
                                 providerSummaryColumn,
                                 &m_modelSelectionTargetProviderExpectedSum);
                         m_modelSelectionTargetProviderSumMatches = false;
+                        if (!m_modelSelectionPreflightHasCurrent) {
+                            // A details provider cannot populate until its producer
+                            // row is selected. Treat an empty current selection as the
+                            // settled baseline, then verify the provider after applying
+                            // the requested target selection.
+                            m_modelSelectionNudgeProviderReady = true;
+                            m_modelSelectionNudgeProviderSnapshot =
+                                m_modelSelectionNudgeInitialProviderSnapshot;
+                        }
                         root.insert("modelSelectionNudgeApplied", true);
                         root.insert("modelSelectionNudgeTarget",
                             m_modelSelectionNudgeTarget);
@@ -3118,6 +3143,8 @@ private:
                 root.insert("stage", "waiting-model-selection-update");
                 root.insert("beforeModelSelection", m_beforeModelSelection);
                 root.insert("targetModelSelection", m_targetModelSelection);
+                root.insert("targetModelSelectionParent",
+                    m_targetModelSelectionParent);
                 root.insert("currentModelSelection", IndexSummary(
                     selectionModel, modelView->currentIndex()));
                 return false;
@@ -3125,6 +3152,8 @@ private:
 
             root.insert("beforeModelSelection", m_beforeModelSelection);
             root.insert("targetModelSelection", m_targetModelSelection);
+            root.insert("targetModelSelectionParent",
+                m_targetModelSelectionParent);
             const int pollsSinceModelSelection = m_pollCount - m_modelSelectionAppliedPoll;
             root.insert("pollsSinceModelSelection", pollsSinceModelSelection);
             const QJsonObject currentModelSelection = IndexSummary(
@@ -3161,9 +3190,17 @@ private:
                     && providerPanelOwner->currentWidget() == providerPanel;
             }
             root.insert("modelSelectionProviderPanelReady", providerPanelReady);
+            const bool deferProviderVerificationUntilCombo =
+                qEnvironmentVariableIntValue(
+                    "NSIGHT_SOLID_PROBE_MODEL_SELECT_DEFER_PROVIDER_VERIFY_UNTIL_COMBO")
+                == 1;
+            root.insert("modelSelectionDeferProviderVerificationUntilCombo",
+                deferProviderVerificationUntilCombo);
             if (m_modelSelectionNudgeProviderReady
                 && !m_modelSelectionTargetProviderReady
-                && providerPanelReady) {
+                && providerPanelReady
+                && (!deferProviderVerificationUntilCombo
+                    || m_comboSelectionAppliedPoll != 0)) {
                 int providerStablePolls = qEnvironmentVariableIntValue(
                     "NSIGHT_SOLID_PROBE_MODEL_SELECT_PROVIDER_STABLE_MIN_POLLS");
                 providerStablePolls = providerStablePolls > 0
@@ -3579,8 +3616,34 @@ private:
             }
         }
 
-        const QString comboSelectionMatch = qEnvironmentVariable(
+        QString comboSelectionMatch = qEnvironmentVariable(
             "NSIGHT_SOLID_PROBE_COMBO_SELECT_MATCH").trimmed();
+        const QString comboSelectionFromModel = qEnvironmentVariable(
+            "NSIGHT_SOLID_PROBE_COMBO_SELECT_FROM_MODEL_SELECTION")
+            .trimmed().toLower();
+        if (comboSelectionMatch.isEmpty()
+            && comboSelectionFromModel == "shader-source") {
+            const QJsonArray shaderCells =
+                m_targetModelSelection.value("cells").toArray();
+            const QJsonArray pipelineCells =
+                m_targetModelSelectionParent.value("cells").toArray();
+            const QString shaderName = shaderCells.size() > 2
+                ? shaderCells.at(2).toString().trimmed()
+                : QString();
+            const QString pipelineName = pipelineCells.size() > 2
+                ? pipelineCells.at(2).toString().trimmed()
+                : QString();
+            if (shaderName.isEmpty() || pipelineName.isEmpty()) {
+                root.insert("status", "error");
+                root.insert("stage",
+                    "combo-selection-model-identity-unavailable");
+                return true;
+            }
+            comboSelectionMatch = pipelineName + " - " + shaderName;
+            root.insert("comboSelectionDerivedFromModelSelection", true);
+            root.insert("comboSelectionDerivedShaderName", shaderName);
+            root.insert("comboSelectionDerivedPipelineName", pipelineName);
+        }
         if (!comboSelectionMatch.isEmpty()) {
             int comboSelectionSettlePolls = qEnvironmentVariableIntValue(
                 "NSIGHT_SOLID_PROBE_COMBO_SELECT_SETTLE_MIN_POLLS");
@@ -3725,6 +3788,20 @@ private:
                 true,
                 &currentModelTotal,
                 &missingRequiredFilter);
+            const int requiredModelCount = qMax(0,
+                qEnvironmentVariableIntValue(
+                    "NSIGHT_SOLID_PROBE_MODEL_REQUIRED_MIN_COUNT"));
+            const bool requiredModelsReady =
+                currentModels.size() >= requiredModelCount;
+            root.insert("requiredModelCount", requiredModelCount);
+            root.insert("requiredModelsReady", requiredModelsReady);
+            root.insert("currentModelTotal", currentModelTotal);
+            root.insert("currentModelReturned", currentModels.size());
+            if (!requiredModelsReady) {
+                root.insert("status", "selection-applied");
+                root.insert("stage", "waiting-required-models");
+                return false;
+            }
         }
 
         const QJsonObject combinedSnapshot{
@@ -3884,6 +3961,7 @@ private:
     QJsonObject m_modelSelectionNudgeTarget;
     QJsonObject m_modelSelectionTriggerCellRect;
     QJsonObject m_modelSelectionAfterTrigger;
+    QJsonObject m_targetModelSelectionParent;
     QString m_beforePanelObjectName;
     QString m_modelSelectionInvokeParameterType;
     QString m_modelSelectionInvokeSourceModelClass;

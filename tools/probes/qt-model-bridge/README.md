@@ -16,7 +16,7 @@ synthesize mouse/keyboard input.
 - Viewer application version:
   `2026.2.0.0 (build 37991608) (public-release)`
 - Qt 6.8.1, MSVC 2022 x64
-- Probe schema implementation: `probe-0.42`
+- Probe schema implementation: `probe-0.44`
 
 The downloaded Qt Core, Gui, and Widgets release DLLs were byte-identical to
 the DLLs shipped by this Nsight installation. The Qt plugin entry point and
@@ -105,9 +105,17 @@ custom UI roles caused unstable Viewer shutdown and revealed no metric IDs.
 
 Large reports also need a selection barrier. The 30-frame report initially
 allowed selection when only one of 88 metric tables existed, which raced the
-Viewer's lazy initialization and spawned CrashReporter. Probe 0.42 can require
+Viewer's lazy initialization and spawned CrashReporter. Probe 0.44 can require
 a minimum table count and stable polls before changing the selected event; the
-same run then completed twice with zero CrashReporters.
+same run then completed twice with zero CrashReporters. When a model view has
+no current row, the bridge uses that empty state as the preflight baseline;
+waiting for a details provider before selecting its producer row would
+otherwise deadlock shader-source extraction.
+
+Selection-metrics runs now derive their bounded poll limit from
+`METRIC_SETTLE_MAX_POLLS` (minimum 120 polls). This prevents a slow asynchronous
+Trace Analysis build from being cut off by the bridge's former fixed 120-poll
+outer limit; the caller's process timeout remains the final bound.
 
 ## Build
 
@@ -197,6 +205,11 @@ Model discovery/export:
 - `MODEL_ATTACHED_VIEW_CLASS_MATCH`, `MODEL_ATTACHED_VIEW_OBJECT_MATCH`, and
   `MODEL_REQUIRE_VISIBLE_VIEW=1` for precise on-demand table selection
 - `MODEL_OFFSET`, `MODEL_LIMIT`, `MODEL_COLUMNS`
+- `MODEL_REQUIRED_MIN_COUNT` to prevent an empty filtered result from being
+  treated as stable while an asynchronous Viewer action is still producing it
+- `EXTERNAL_KILL_ON_TIMEOUT=1` leaves a timed-out asynchronous action alive for
+  the bounded harness to terminate, avoiding an unsafe Viewer shutdown while
+  background analysis work is still running
 - `MODEL_COLUMN_POLICY=all` to override safe view projection
 - `MODEL_FLAT=1`, `MODEL_STRUCTURE_ONLY=1`
 - `MODEL_VALUE_MODE=normal|string|type`
@@ -218,6 +231,8 @@ Shader row selection and downstream panel activation:
 - `MODEL_SELECT_PREPARE_PANEL` and
   `MODEL_SELECT_PREPARE_PANEL_SETTLE_MIN_POLLS` to make a hidden selection view
   visible before emitting a view-level action
+- `MODEL_SELECT_DEFER_PROVIDER_VERIFY_UNTIL_COMBO=1` when the target details
+  provider is created by a subsequent combo selection
 - `MODEL_SELECT_INVOKE_CLASS` and `MODEL_SELECT_INVOKE_METHOD` for an explicit,
   version-pinned Qt meta-object call using the selected source-model item's
   internal pointer (for example `SummaryPage.LoadSource`)
@@ -239,6 +254,8 @@ Controlled UI actions used only to instantiate lazy data surfaces:
   filters, `INVOKE_OCCURRENCE`, and zero-argument `INVOKE_METHOD`
 - `COMBO_*`, `TAB_*`, and `OBJECT_*` filters for cataloging a specific lazy
   panel without screen coordinates
+- `COMBO_SELECT_FROM_MODEL_SELECTION=shader-source` derives the SourceDetails
+  combo identity from the selected shader name and its pipeline parent
 - `CLOSE_MODAL_BEFORE_QUIT=1` closes probe-opened modal windows before Viewer
   shutdown
 
