@@ -1,16 +1,26 @@
+#include <QAbstractButton>
 #include <QAbstractItemView>
 #include <QAbstractProxyModel>
+#include <QAction>
 #include <QApplication>
+#include <QComboBox>
 #include <QCoreApplication>
+#include <QFileDialog>
+#include <QFileInfo>
 #include <QGenericPlugin>
 #include <QItemSelectionModel>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QMetaMethod>
+#include <QMetaProperty>
+#include <QMouseEvent>
 #include <QPointer>
 #include <QSaveFile>
 #include <QSet>
 #include <QStackedWidget>
+#include <QTableView>
+#include <QTabWidget>
 #include <QThread>
 #include <QTimer>
 #include <QTreeView>
@@ -20,7 +30,7 @@
 
 namespace {
 
-constexpr auto kPluginVersion = "probe-0.5";
+constexpr auto kPluginVersion = "probe-0.42";
 constexpr auto kVerifiedNsightVersion = "2026.2.0";
 constexpr auto kVerifiedNsightBuild = "37991608";
 
@@ -536,7 +546,20 @@ QHash<QAbstractItemModel*, QJsonArray> BuildModelViewAttachments(QApplication* a
             {"viewClass", widget->metaObject()->className()},
             {"viewObjectName", widget->objectName()},
             {"visible", widget->isVisible()},
+            {"ancestry", ObjectAncestry(widget)},
         };
+        QWidget* ancestor = widget->parentWidget();
+        while (ancestor != nullptr) {
+            if (auto* comboBox = qobject_cast<QComboBox*>(ancestor)) {
+                attachment.insert("comboClass", comboBox->metaObject()->className());
+                attachment.insert("comboObjectName", comboBox->objectName());
+                attachment.insert("comboCurrentIndex", comboBox->currentIndex());
+                attachment.insert("comboCurrentText", comboBox->currentText());
+                attachment.insert("comboCount", comboBox->count());
+                break;
+            }
+            ancestor = ancestor->parentWidget();
+        }
         if (auto* treeView = qobject_cast<QTreeView*>(view)) {
             QJsonArray visibleColumns;
             QJsonArray hiddenColumns;
@@ -566,6 +589,27 @@ QHash<QAbstractItemModel*, QJsonArray> BuildModelViewAttachments(QApplication* a
             attachment.insert("visibleRootRows", visibleRows);
             attachment.insert("hiddenRootRows", hiddenRows);
             attachment.insert("rootPath", rootPath);
+        } else if (auto* tableView = qobject_cast<QTableView*>(view)) {
+            QJsonArray visibleColumns;
+            QJsonArray hiddenColumns;
+            const QModelIndex viewRoot = tableView->rootIndex();
+            const int columns = tableView->model()->columnCount(viewRoot);
+            for (int column = 0; column < columns; ++column) {
+                (tableView->isColumnHidden(column) ? hiddenColumns : visibleColumns)
+                    .append(column);
+            }
+            QJsonArray visibleRows;
+            QJsonArray hiddenRows;
+            const int rows = tableView->model()->rowCount(viewRoot);
+            for (int row = 0; row < rows; ++row) {
+                (tableView->isRowHidden(row) ? hiddenRows : visibleRows).append(row);
+            }
+            attachment.insert("visibleColumns", visibleColumns);
+            attachment.insert("hiddenColumns", hiddenColumns);
+            attachment.insert("viewModelClass", tableView->model()->metaObject()->className());
+            attachment.insert("viewRootColumns", columns);
+            attachment.insert("visibleRootRows", visibleRows);
+            attachment.insert("hiddenRootRows", hiddenRows);
         }
         QAbstractItemModel* model = view->model();
         QSet<QAbstractItemModel*> chain;
@@ -605,6 +649,710 @@ QStringList EnvironmentFilters(const char* name)
     return filters;
 }
 
+bool ObjectChainMatches(
+    const QObject* object,
+    const QStringList& classFilters,
+    const QStringList& objectFilters,
+    bool exact)
+{
+    bool classMatched = classFilters.isEmpty();
+    bool objectMatched = objectFilters.isEmpty();
+    const QObject* cursor = object;
+    for (int depth = 0; cursor != nullptr && depth < 16; ++depth) {
+        classMatched = classMatched || TextFilterMatches(
+            QString::fromLatin1(cursor->metaObject()->className()), classFilters, exact);
+        objectMatched = objectMatched || TextFilterMatches(
+            cursor->objectName(), objectFilters, exact);
+        cursor = cursor->parent();
+    }
+    return classMatched && objectMatched;
+}
+
+QList<QAction*> DiscoverActions(QApplication* application)
+{
+    const QStringList classFilters = EnvironmentFilters(
+        "NSIGHT_SOLID_PROBE_ACTION_CLASS_MATCH");
+    const QStringList objectFilters = EnvironmentFilters(
+        "NSIGHT_SOLID_PROBE_ACTION_OBJECT_MATCH");
+    const QStringList textFilters = EnvironmentFilters(
+        "NSIGHT_SOLID_PROBE_ACTION_TRIGGER_TEXT_MATCH");
+    const QStringList ancestryClassFilters = EnvironmentFilters(
+        "NSIGHT_SOLID_PROBE_ACTION_ANCESTRY_CLASS_MATCH");
+    const QStringList ancestryObjectFilters = EnvironmentFilters(
+        "NSIGHT_SOLID_PROBE_ACTION_ANCESTRY_OBJECT_MATCH");
+    const bool exact = qEnvironmentVariable("NSIGHT_SOLID_PROBE_ACTION_MATCH_MODE")
+        .compare("exact", Qt::CaseInsensitive) == 0;
+
+    QSet<QAction*> unique;
+    const auto addActions = [&unique](const QList<QAction*>& actions) {
+        for (QAction* action : actions) {
+            if (action != nullptr) {
+                unique.insert(action);
+            }
+        }
+    };
+    addActions(application->findChildren<QAction*>());
+    for (QWidget* topLevel : application->topLevelWidgets()) {
+        addActions(topLevel->findChildren<QAction*>());
+    }
+
+    QList<QAction*> result;
+    for (QAction* action : unique) {
+        const QString className = QString::fromLatin1(
+            action->metaObject()->className());
+        if (!TextFilterMatches(className, classFilters, exact)
+            || !TextFilterMatches(action->objectName(), objectFilters, exact)
+            || !TextFilterMatches(action->text(), textFilters, exact)
+            || !ObjectChainMatches(
+                action,
+                ancestryClassFilters,
+                ancestryObjectFilters,
+                exact)) {
+            continue;
+        }
+        result.append(action);
+    }
+    std::sort(result.begin(), result.end(), [](const auto* left, const auto* right) {
+        const QString leftKey = QString::fromLatin1(left->metaObject()->className())
+            + "\n" + left->objectName() + "\n" + left->text();
+        const QString rightKey = QString::fromLatin1(right->metaObject()->className())
+            + "\n" + right->objectName() + "\n" + right->text();
+        if (leftKey != rightKey) {
+            return leftKey < rightKey;
+        }
+        return left < right;
+    });
+    return result;
+}
+
+QJsonObject ActionSummary(QAction* action)
+{
+    if (action == nullptr) {
+        return {};
+    }
+    return QJsonObject{
+        {"class", action->metaObject()->className()},
+        {"objectName", action->objectName()},
+        {"text", action->text()},
+        {"toolTip", action->toolTip()},
+        {"enabled", action->isEnabled()},
+        {"visible", action->isVisible()},
+        {"checkable", action->isCheckable()},
+        {"checked", action->isChecked()},
+        {"ancestry", ObjectAncestry(action)},
+    };
+}
+
+QList<QComboBox*> DiscoverComboBoxes(QApplication* application)
+{
+    const QStringList classFilters = EnvironmentFilters(
+        "NSIGHT_SOLID_PROBE_COMBO_CLASS_MATCH");
+    const QStringList objectFilters = EnvironmentFilters(
+        "NSIGHT_SOLID_PROBE_COMBO_OBJECT_MATCH");
+    const QStringList ancestryClassFilters = EnvironmentFilters(
+        "NSIGHT_SOLID_PROBE_COMBO_ANCESTRY_CLASS_MATCH");
+    const QStringList ancestryObjectFilters = EnvironmentFilters(
+        "NSIGHT_SOLID_PROBE_COMBO_ANCESTRY_OBJECT_MATCH");
+    const QStringList currentTextFilters = EnvironmentFilters(
+        "NSIGHT_SOLID_PROBE_COMBO_CURRENT_TEXT_MATCH");
+    const bool exact = qEnvironmentVariable("NSIGHT_SOLID_PROBE_COMBO_MATCH_MODE")
+        .compare("exact", Qt::CaseInsensitive) == 0;
+    const int minimumCount = qMax(0, qEnvironmentVariableIntValue(
+        "NSIGHT_SOLID_PROBE_COMBO_MIN_COUNT"));
+    const bool hasMaximumCount = qEnvironmentVariableIsSet(
+        "NSIGHT_SOLID_PROBE_COMBO_MAX_COUNT");
+    const int maximumCount = qMax(0, qEnvironmentVariableIntValue(
+        "NSIGHT_SOLID_PROBE_COMBO_MAX_COUNT"));
+
+    QList<QComboBox*> result;
+    QSet<QComboBox*> unique;
+    const auto widgets = application->allWidgets();
+    for (QWidget* widget : widgets) {
+        auto* comboBox = qobject_cast<QComboBox*>(widget);
+        if (comboBox == nullptr || unique.contains(comboBox)) {
+            continue;
+        }
+        unique.insert(comboBox);
+        const QString className = QString::fromLatin1(
+            comboBox->metaObject()->className());
+        if (!TextFilterMatches(className, classFilters, exact)
+            || !TextFilterMatches(comboBox->objectName(), objectFilters, exact)
+            || !TextFilterMatches(comboBox->currentText(), currentTextFilters, exact)
+            || !ObjectChainMatches(
+                comboBox,
+                ancestryClassFilters,
+                ancestryObjectFilters,
+                exact)
+            || comboBox->count() < minimumCount
+            || (hasMaximumCount && comboBox->count() > maximumCount)) {
+            continue;
+        }
+        result.append(comboBox);
+    }
+
+    std::sort(result.begin(), result.end(), [](const auto* left, const auto* right) {
+        const QString leftKey = QString::fromLatin1(left->metaObject()->className())
+            + "\n" + left->objectName()
+            + "\n" + left->currentText()
+            + "\n" + QString::number(left->count());
+        const QString rightKey = QString::fromLatin1(right->metaObject()->className())
+            + "\n" + right->objectName()
+            + "\n" + right->currentText()
+            + "\n" + QString::number(right->count());
+        if (leftKey != rightKey) {
+            return leftKey < rightKey;
+        }
+        return left < right;
+    });
+    return result;
+}
+
+bool ComboItemMatches(QComboBox* comboBox, int index, const QString& match, bool exact)
+{
+    if (comboBox == nullptr || index < 0 || index >= comboBox->count()) {
+        return false;
+    }
+    const QStringList values{
+        comboBox->itemText(index),
+        comboBox->itemData(index, Qt::DisplayRole).toString(),
+        comboBox->itemData(index, Qt::ToolTipRole).toString(),
+        comboBox->itemData(index, Qt::AccessibleTextRole).toString(),
+    };
+    for (const QString& value : values) {
+        if ((exact && value.compare(match, Qt::CaseInsensitive) == 0)
+            || (!exact && value.contains(match, Qt::CaseInsensitive))) {
+            return true;
+        }
+    }
+    return false;
+}
+
+QJsonArray CollectComboBoxes(QApplication* application, int* totalCount)
+{
+    const QList<QComboBox*> comboBoxes = DiscoverComboBoxes(application);
+    *totalCount = comboBoxes.size();
+    int itemOffset = qMax(0, qEnvironmentVariableIntValue(
+        "NSIGHT_SOLID_PROBE_COMBO_ITEM_OFFSET"));
+    int itemLimit = qEnvironmentVariableIntValue(
+        "NSIGHT_SOLID_PROBE_COMBO_ITEM_LIMIT");
+    itemLimit = itemLimit > 0 ? qBound(1, itemLimit, 10000) : 256;
+
+    QJsonArray result;
+    for (int ordinal = 0; ordinal < comboBoxes.size(); ++ordinal) {
+        QComboBox* comboBox = comboBoxes.at(ordinal);
+        QJsonArray items;
+        const int end = qMin(comboBox->count(), itemOffset + itemLimit);
+        for (int index = itemOffset; index < end; ++index) {
+            QJsonObject item{
+                {"index", index},
+                {"text", comboBox->itemText(index)},
+                {"selected", index == comboBox->currentIndex()},
+            };
+            const QVariant tooltip = comboBox->itemData(index, Qt::ToolTipRole);
+            if (tooltip.isValid()) {
+                InsertVariantValue(item, "tooltip", tooltip, "normal");
+            }
+            const QModelIndex modelIndex = comboBox->model() == nullptr
+                ? QModelIndex()
+                : comboBox->model()->index(
+                    index, comboBox->modelColumn(), comboBox->rootModelIndex());
+            if (modelIndex.isValid()) {
+                item.insert("enabled", comboBox->model()->flags(modelIndex)
+                    .testFlag(Qt::ItemIsEnabled));
+            }
+            items.append(item);
+        }
+        result.append(QJsonObject{
+            {"ordinal", ordinal},
+            {"class", comboBox->metaObject()->className()},
+            {"objectName", comboBox->objectName()},
+            {"visible", comboBox->isVisible()},
+            {"enabled", comboBox->isEnabled()},
+            {"currentIndex", comboBox->currentIndex()},
+            {"currentText", comboBox->currentText()},
+            {"count", comboBox->count()},
+            {"modelClass", comboBox->model() == nullptr
+                ? QString()
+                : QString::fromLatin1(comboBox->model()->metaObject()->className())},
+            {"modelObjectName", comboBox->model() == nullptr
+                ? QString()
+                : comboBox->model()->objectName()},
+            {"ancestry", ObjectAncestry(comboBox)},
+            {"itemOffset", itemOffset},
+            {"itemLimit", itemLimit},
+            {"itemReturned", items.size()},
+            {"hasMoreItems", end < comboBox->count()},
+            {"items", items},
+        });
+    }
+    return result;
+}
+
+bool HasComboProbe()
+{
+    return qEnvironmentVariableIntValue("NSIGHT_SOLID_PROBE_COMBO_EXPORT") == 1
+        || !EnvironmentFilters("NSIGHT_SOLID_PROBE_COMBO_CLASS_MATCH").isEmpty()
+        || !EnvironmentFilters("NSIGHT_SOLID_PROBE_COMBO_OBJECT_MATCH").isEmpty()
+        || !EnvironmentFilters("NSIGHT_SOLID_PROBE_COMBO_ANCESTRY_CLASS_MATCH").isEmpty()
+        || !EnvironmentFilters("NSIGHT_SOLID_PROBE_COMBO_ANCESTRY_OBJECT_MATCH").isEmpty()
+        || !EnvironmentFilters("NSIGHT_SOLID_PROBE_COMBO_CURRENT_TEXT_MATCH").isEmpty()
+        || !qEnvironmentVariable("NSIGHT_SOLID_PROBE_COMBO_SELECT_MATCH").trimmed().isEmpty();
+}
+
+QList<QTabWidget*> DiscoverTabWidgets(QApplication* application)
+{
+    const QStringList classFilters = EnvironmentFilters(
+        "NSIGHT_SOLID_PROBE_TAB_CLASS_MATCH");
+    const QStringList objectFilters = EnvironmentFilters(
+        "NSIGHT_SOLID_PROBE_TAB_OBJECT_MATCH");
+    const QStringList ancestryClassFilters = EnvironmentFilters(
+        "NSIGHT_SOLID_PROBE_TAB_ANCESTRY_CLASS_MATCH");
+    const QStringList ancestryObjectFilters = EnvironmentFilters(
+        "NSIGHT_SOLID_PROBE_TAB_ANCESTRY_OBJECT_MATCH");
+    const bool exact = qEnvironmentVariable("NSIGHT_SOLID_PROBE_TAB_MATCH_MODE")
+        .compare("exact", Qt::CaseInsensitive) == 0;
+
+    QSet<QTabWidget*> unique;
+    QList<QTabWidget*> result;
+    for (QWidget* widget : application->allWidgets()) {
+        auto* tabWidget = qobject_cast<QTabWidget*>(widget);
+        if (tabWidget == nullptr || unique.contains(tabWidget)) {
+            continue;
+        }
+        unique.insert(tabWidget);
+        const QString className = QString::fromLatin1(
+            tabWidget->metaObject()->className());
+        if (!TextFilterMatches(className, classFilters, exact)
+            || !TextFilterMatches(tabWidget->objectName(), objectFilters, exact)
+            || !ObjectChainMatches(
+                tabWidget,
+                ancestryClassFilters,
+                ancestryObjectFilters,
+                exact)) {
+            continue;
+        }
+        result.append(tabWidget);
+    }
+    std::sort(result.begin(), result.end(), [](const auto* left, const auto* right) {
+        const QString leftKey = QString::fromLatin1(left->metaObject()->className())
+            + "\n" + left->objectName() + "\n" + QString::number(left->count());
+        const QString rightKey = QString::fromLatin1(right->metaObject()->className())
+            + "\n" + right->objectName() + "\n" + QString::number(right->count());
+        if (leftKey != rightKey) {
+            return leftKey < rightKey;
+        }
+        return left < right;
+    });
+    return result;
+}
+
+bool TabItemMatches(QTabWidget* tabWidget, int index, const QString& match, bool exact)
+{
+    if (tabWidget == nullptr || index < 0 || index >= tabWidget->count()) {
+        return false;
+    }
+    const QStringList values{
+        tabWidget->tabText(index),
+        tabWidget->tabToolTip(index),
+        tabWidget->tabWhatsThis(index),
+    };
+    for (const QString& value : values) {
+        if ((exact && value.compare(match, Qt::CaseInsensitive) == 0)
+            || (!exact && value.contains(match, Qt::CaseInsensitive))) {
+            return true;
+        }
+    }
+    return false;
+}
+
+QJsonArray CollectTabWidgets(QApplication* application, int* totalCount)
+{
+    const QList<QTabWidget*> tabWidgets = DiscoverTabWidgets(application);
+    *totalCount = tabWidgets.size();
+    int itemLimit = qEnvironmentVariableIntValue(
+        "NSIGHT_SOLID_PROBE_TAB_ITEM_LIMIT");
+    itemLimit = itemLimit > 0 ? qBound(1, itemLimit, 1000) : 128;
+
+    QJsonArray result;
+    for (int ordinal = 0; ordinal < tabWidgets.size(); ++ordinal) {
+        QTabWidget* tabWidget = tabWidgets.at(ordinal);
+        QJsonArray items;
+        const int end = qMin(tabWidget->count(), itemLimit);
+        for (int index = 0; index < end; ++index) {
+            items.append(QJsonObject{
+                {"index", index},
+                {"text", tabWidget->tabText(index)},
+                {"tooltip", tabWidget->tabToolTip(index)},
+                {"whatsThis", tabWidget->tabWhatsThis(index)},
+                {"enabled", tabWidget->isTabEnabled(index)},
+                {"visible", tabWidget->isTabVisible(index)},
+                {"selected", index == tabWidget->currentIndex()},
+                {"pageClass", tabWidget->widget(index) == nullptr
+                    ? QString()
+                    : QString::fromLatin1(
+                        tabWidget->widget(index)->metaObject()->className())},
+                {"pageObjectName", tabWidget->widget(index) == nullptr
+                    ? QString()
+                    : tabWidget->widget(index)->objectName()},
+            });
+        }
+        result.append(QJsonObject{
+            {"ordinal", ordinal},
+            {"class", tabWidget->metaObject()->className()},
+            {"objectName", tabWidget->objectName()},
+            {"visible", tabWidget->isVisible()},
+            {"enabled", tabWidget->isEnabled()},
+            {"currentIndex", tabWidget->currentIndex()},
+            {"count", tabWidget->count()},
+            {"ancestry", ObjectAncestry(tabWidget)},
+            {"itemLimit", itemLimit},
+            {"itemReturned", items.size()},
+            {"hasMoreItems", end < tabWidget->count()},
+            {"items", items},
+        });
+    }
+    return result;
+}
+
+bool HasTabProbe()
+{
+    return qEnvironmentVariableIntValue("NSIGHT_SOLID_PROBE_TAB_EXPORT") == 1
+        || !EnvironmentFilters("NSIGHT_SOLID_PROBE_TAB_CLASS_MATCH").isEmpty()
+        || !EnvironmentFilters("NSIGHT_SOLID_PROBE_TAB_OBJECT_MATCH").isEmpty()
+        || !EnvironmentFilters("NSIGHT_SOLID_PROBE_TAB_ANCESTRY_CLASS_MATCH").isEmpty()
+        || !EnvironmentFilters("NSIGHT_SOLID_PROBE_TAB_ANCESTRY_OBJECT_MATCH").isEmpty()
+        || !qEnvironmentVariable("NSIGHT_SOLID_PROBE_TAB_SELECT_MATCH").trimmed().isEmpty();
+}
+
+QString MethodTypeName(QMetaMethod::MethodType type)
+{
+    switch (type) {
+    case QMetaMethod::Signal: return "signal";
+    case QMetaMethod::Slot: return "slot";
+    case QMetaMethod::Constructor: return "constructor";
+    case QMetaMethod::Method: return "method";
+    }
+    return "unknown";
+}
+
+QString MethodAccessName(QMetaMethod::Access access)
+{
+    switch (access) {
+    case QMetaMethod::Private: return "private";
+    case QMetaMethod::Protected: return "protected";
+    case QMetaMethod::Public: return "public";
+    }
+    return "unknown";
+}
+
+QList<QObject*> DiscoverObjects(QApplication* application)
+{
+    QSet<QObject*> unique;
+    unique.insert(application);
+    const auto addObjects = [&unique](const QList<QObject*>& objects) {
+        for (QObject* object : objects) {
+            if (object != nullptr) {
+                unique.insert(object);
+            }
+        }
+    };
+    addObjects(application->findChildren<QObject*>());
+    const auto topLevels = application->topLevelWidgets();
+    for (QWidget* topLevel : topLevels) {
+        unique.insert(topLevel);
+        addObjects(topLevel->findChildren<QObject*>());
+    }
+    for (QWidget* widget : application->allWidgets()) {
+        unique.insert(widget);
+    }
+
+    const QStringList classFilters = EnvironmentFilters(
+        "NSIGHT_SOLID_PROBE_OBJECT_CLASS_MATCH");
+    const QStringList objectFilters = EnvironmentFilters(
+        "NSIGHT_SOLID_PROBE_OBJECT_OBJECT_MATCH");
+    const QStringList ancestryClassFilters = EnvironmentFilters(
+        "NSIGHT_SOLID_PROBE_OBJECT_ANCESTRY_CLASS_MATCH");
+    const QStringList ancestryObjectFilters = EnvironmentFilters(
+        "NSIGHT_SOLID_PROBE_OBJECT_ANCESTRY_OBJECT_MATCH");
+    const bool exact = qEnvironmentVariable("NSIGHT_SOLID_PROBE_OBJECT_MATCH_MODE")
+        .compare("exact", Qt::CaseInsensitive) == 0;
+
+    QList<QObject*> result;
+    for (QObject* object : unique) {
+        const QString className = QString::fromLatin1(
+            object->metaObject()->className());
+        if (!TextFilterMatches(className, classFilters, exact)
+            || !TextFilterMatches(object->objectName(), objectFilters, exact)
+            || !ObjectChainMatches(
+                object,
+                ancestryClassFilters,
+                ancestryObjectFilters,
+                exact)) {
+            continue;
+        }
+        result.append(object);
+    }
+    std::sort(result.begin(), result.end(), [](const auto* left, const auto* right) {
+        const QString leftKey = QString::fromLatin1(left->metaObject()->className())
+            + "\n" + left->objectName();
+        const QString rightKey = QString::fromLatin1(right->metaObject()->className())
+            + "\n" + right->objectName();
+        if (leftKey != rightKey) {
+            return leftKey < rightKey;
+        }
+        return left < right;
+    });
+    return result;
+}
+
+QList<QObject*> DiscoverInvokeTargets(QApplication* application)
+{
+    const QStringList classFilters = EnvironmentFilters(
+        "NSIGHT_SOLID_PROBE_INVOKE_CLASS_MATCH");
+    const QStringList objectFilters = EnvironmentFilters(
+        "NSIGHT_SOLID_PROBE_INVOKE_OBJECT_MATCH");
+    const QStringList textFilters = EnvironmentFilters(
+        "NSIGHT_SOLID_PROBE_INVOKE_TEXT_MATCH");
+    const QStringList ancestryClassFilters = EnvironmentFilters(
+        "NSIGHT_SOLID_PROBE_INVOKE_ANCESTRY_CLASS_MATCH");
+    const QStringList ancestryObjectFilters = EnvironmentFilters(
+        "NSIGHT_SOLID_PROBE_INVOKE_ANCESTRY_OBJECT_MATCH");
+    const bool exact = qEnvironmentVariable("NSIGHT_SOLID_PROBE_INVOKE_MATCH_MODE")
+        .compare("exact", Qt::CaseInsensitive) == 0;
+
+    QSet<QObject*> unique;
+    unique.insert(application);
+    const auto addObjects = [&unique](const QList<QObject*>& objects) {
+        for (QObject* object : objects) {
+            if (object != nullptr) {
+                unique.insert(object);
+            }
+        }
+    };
+    addObjects(application->findChildren<QObject*>());
+    for (QWidget* topLevel : application->topLevelWidgets()) {
+        unique.insert(topLevel);
+        addObjects(topLevel->findChildren<QObject*>());
+    }
+    for (QWidget* widget : application->allWidgets()) {
+        unique.insert(widget);
+    }
+
+    QList<QObject*> result;
+    for (QObject* object : unique) {
+        const QString className = QString::fromLatin1(
+            object->metaObject()->className());
+        QString text;
+        if (auto* button = qobject_cast<QAbstractButton*>(object)) {
+            text = button->text();
+        } else if (auto* action = qobject_cast<QAction*>(object)) {
+            text = action->text();
+        } else {
+            text = object->property("text").toString();
+        }
+        if (!TextFilterMatches(className, classFilters, exact)
+            || !TextFilterMatches(object->objectName(), objectFilters, exact)
+            || !TextFilterMatches(text, textFilters, exact)
+            || !ObjectChainMatches(
+                object,
+                ancestryClassFilters,
+                ancestryObjectFilters,
+                exact)) {
+            continue;
+        }
+        result.append(object);
+    }
+    std::sort(result.begin(), result.end(), [](const auto* left, const auto* right) {
+        const QString leftKey = QString::fromLatin1(left->metaObject()->className())
+            + "\n" + left->objectName();
+        const QString rightKey = QString::fromLatin1(right->metaObject()->className())
+            + "\n" + right->objectName();
+        if (leftKey != rightKey) {
+            return leftKey < rightKey;
+        }
+        return left < right;
+    });
+    return result;
+}
+
+QJsonObject ObjectSummary(QObject* object)
+{
+    if (object == nullptr) {
+        return {};
+    }
+    QJsonObject summary{
+        {"class", object->metaObject()->className()},
+        {"objectName", object->objectName()},
+        {"id", QString::number(reinterpret_cast<quintptr>(object), 16)},
+        {"parentClass", object->parent() == nullptr
+            ? QString()
+            : QString::fromLatin1(object->parent()->metaObject()->className())},
+        {"parentObjectName", object->parent() == nullptr
+            ? QString()
+            : object->parent()->objectName()},
+        {"ancestry", ObjectAncestry(object)},
+    };
+    if (auto* button = qobject_cast<QAbstractButton*>(object)) {
+        summary.insert("text", button->text());
+        summary.insert("toolTip", button->toolTip());
+        summary.insert("enabled", button->isEnabled());
+        summary.insert("visible", button->isVisible());
+    } else if (auto* action = qobject_cast<QAction*>(object)) {
+        summary.insert("text", action->text());
+        summary.insert("toolTip", action->toolTip());
+        summary.insert("enabled", action->isEnabled());
+        summary.insert("visible", action->isVisible());
+    }
+    return summary;
+}
+
+QJsonArray CollectObjects(QApplication* application, int* totalCount)
+{
+    const QList<QObject*> objects = DiscoverObjects(application);
+    *totalCount = objects.size();
+    const bool includeInherited = qEnvironmentVariableIntValue(
+        "NSIGHT_SOLID_PROBE_OBJECT_INCLUDE_INHERITED") == 1;
+    const bool readProperties = qEnvironmentVariableIntValue(
+        "NSIGHT_SOLID_PROBE_OBJECT_READ_PROPERTIES") == 1;
+    const QStringList propertyFilters = EnvironmentFilters(
+        "NSIGHT_SOLID_PROBE_OBJECT_PROPERTY_MATCH");
+    const bool propertyExact = qEnvironmentVariable(
+        "NSIGHT_SOLID_PROBE_OBJECT_PROPERTY_MATCH_MODE")
+        .compare("exact", Qt::CaseInsensitive) == 0;
+    const QStringList methodFilters = EnvironmentFilters(
+        "NSIGHT_SOLID_PROBE_OBJECT_METHOD_MATCH");
+    const bool methodExact = qEnvironmentVariable(
+        "NSIGHT_SOLID_PROBE_OBJECT_METHOD_MATCH_MODE")
+        .compare("exact", Qt::CaseInsensitive) == 0;
+    const bool includeMethods = !qEnvironmentVariableIsSet(
+        "NSIGHT_SOLID_PROBE_OBJECT_INCLUDE_METHODS")
+        || qEnvironmentVariableIntValue(
+            "NSIGHT_SOLID_PROBE_OBJECT_INCLUDE_METHODS") == 1;
+
+    QJsonArray result;
+    for (int ordinal = 0; ordinal < objects.size(); ++ordinal) {
+        QObject* object = objects.at(ordinal);
+        const QMetaObject* metaObject = object->metaObject();
+        QJsonArray properties;
+        const int propertyStart = includeInherited ? 0 : metaObject->propertyOffset();
+        for (int index = propertyStart; index < metaObject->propertyCount(); ++index) {
+            const QMetaProperty property = metaObject->property(index);
+            if (!TextFilterMatches(
+                    QString::fromLatin1(property.name()),
+                    propertyFilters,
+                    propertyExact)) {
+                continue;
+            }
+            QJsonObject entry{
+                {"index", index},
+                {"name", property.name()},
+                {"type", property.typeName()},
+                {"readable", property.isReadable()},
+                {"writable", property.isWritable()},
+                {"resettable", property.isResettable()},
+                {"constant", property.isConstant()},
+                {"final", property.isFinal()},
+                {"notifySignal", property.hasNotifySignal()
+                    ? QString::fromLatin1(property.notifySignal().methodSignature())
+                    : QString()},
+            };
+            if (readProperties && property.isReadable()) {
+                InsertVariantValue(entry, "value", property.read(object), "normal");
+            }
+            properties.append(entry);
+        }
+
+        QJsonArray methods;
+        const int methodStart = includeInherited ? 0 : metaObject->methodOffset();
+        for (int index = methodStart;
+             includeMethods && index < metaObject->methodCount();
+             ++index) {
+            const QMetaMethod method = metaObject->method(index);
+            const QString methodName = QString::fromLatin1(method.name());
+            const QString methodSignature = QString::fromLatin1(
+                method.methodSignature());
+            if (!TextFilterMatches(methodName, methodFilters, methodExact)
+                && !TextFilterMatches(
+                    methodSignature,
+                    methodFilters,
+                    methodExact)) {
+                continue;
+            }
+            QJsonArray parameterTypes;
+            for (const QByteArray& parameterType : method.parameterTypes()) {
+                parameterTypes.append(QString::fromLatin1(parameterType));
+            }
+            methods.append(QJsonObject{
+                {"index", index},
+                {"signature", methodSignature},
+                {"name", methodName},
+                {"type", MethodTypeName(method.methodType())},
+                {"access", MethodAccessName(method.access())},
+                {"returnType", QString::fromLatin1(method.typeName())},
+                {"parameterTypes", parameterTypes},
+            });
+        }
+
+        QJsonArray dynamicProperties;
+        for (const QByteArray& propertyName : object->dynamicPropertyNames()) {
+            if (!TextFilterMatches(
+                    QString::fromLatin1(propertyName),
+                    propertyFilters,
+                    propertyExact)) {
+                continue;
+            }
+            QJsonObject property{{"name", QString::fromLatin1(propertyName)}};
+            if (readProperties) {
+                InsertVariantValue(
+                    property,
+                    "value",
+                    object->property(propertyName.constData()),
+                    "normal");
+            }
+            dynamicProperties.append(property);
+        }
+
+        QJsonObject entry{
+            {"ordinal", ordinal},
+            {"class", metaObject->className()},
+            {"objectName", object->objectName()},
+            {"id", QString::number(reinterpret_cast<quintptr>(object), 16)},
+            {"parentClass", object->parent() == nullptr
+                ? QString()
+                : QString::fromLatin1(object->parent()->metaObject()->className())},
+            {"parentObjectName", object->parent() == nullptr
+                ? QString()
+                : object->parent()->objectName()},
+            {"parentId", object->parent() == nullptr
+                ? QString()
+                : QString::number(reinterpret_cast<quintptr>(object->parent()), 16)},
+            {"ancestry", ObjectAncestry(object)},
+            {"properties", properties},
+            {"methods", methods},
+            {"dynamicProperties", dynamicProperties},
+        };
+        if (auto* widget = qobject_cast<QWidget*>(object)) {
+            entry.insert("widget", true);
+            entry.insert("visible", widget->isVisible());
+            entry.insert("enabled", widget->isEnabled());
+        } else {
+            entry.insert("widget", false);
+        }
+        result.append(entry);
+    }
+    return result;
+}
+
+bool HasObjectProbe()
+{
+    return !EnvironmentFilters("NSIGHT_SOLID_PROBE_OBJECT_CLASS_MATCH").isEmpty()
+        || !EnvironmentFilters("NSIGHT_SOLID_PROBE_OBJECT_OBJECT_MATCH").isEmpty()
+        || !EnvironmentFilters(
+            "NSIGHT_SOLID_PROBE_OBJECT_ANCESTRY_CLASS_MATCH").isEmpty()
+        || !EnvironmentFilters(
+            "NSIGHT_SOLID_PROBE_OBJECT_ANCESTRY_OBJECT_MATCH").isEmpty();
+}
+
 QJsonArray CollectModels(
     QApplication* application,
     bool includeData,
@@ -620,6 +1368,41 @@ QJsonArray CollectModels(
         "NSIGHT_SOLID_PROBE_MODEL_OBJECT_MATCH");
     const bool exact = qEnvironmentVariable("NSIGHT_SOLID_PROBE_MODEL_MATCH_MODE")
         .compare("exact", Qt::CaseInsensitive) == 0;
+    const bool restrictInstance = qEnvironmentVariableIsSet(
+        "NSIGHT_SOLID_PROBE_MODEL_INSTANCE_ORDINAL");
+    const int requestedInstance = qMax(0, qEnvironmentVariableIntValue(
+        "NSIGHT_SOLID_PROBE_MODEL_INSTANCE_ORDINAL"));
+    const QStringList attachedViewClassFilters = EnvironmentFilters(
+        "NSIGHT_SOLID_PROBE_MODEL_ATTACHED_VIEW_CLASS_MATCH");
+    const QStringList attachedViewObjectFilters = EnvironmentFilters(
+        "NSIGHT_SOLID_PROBE_MODEL_ATTACHED_VIEW_OBJECT_MATCH");
+    const bool requireVisibleView = qEnvironmentVariableIntValue(
+        "NSIGHT_SOLID_PROBE_MODEL_REQUIRE_VISIBLE_VIEW") == 1;
+    const QStringList sharedParentViewClassFilters = EnvironmentFilters(
+        "NSIGHT_SOLID_PROBE_MODEL_SHARE_PARENT_WITH_VISIBLE_VIEW_CLASS_MATCH");
+    const QStringList sharedParentViewObjectFilters = EnvironmentFilters(
+        "NSIGHT_SOLID_PROBE_MODEL_SHARE_PARENT_WITH_VISIBLE_VIEW_OBJECT_MATCH");
+    QSet<QObject*> sharedViewParents;
+    if (!sharedParentViewClassFilters.isEmpty()
+        || !sharedParentViewObjectFilters.isEmpty()) {
+        for (QAbstractItemModel* anchorModel : models) {
+            for (const QJsonValue& attachmentValue : attachments.value(anchorModel)) {
+                const QJsonObject attachment = attachmentValue.toObject();
+                if (attachment.value("visible").toBool()
+                    && TextFilterMatches(
+                        attachment.value("viewClass").toString(),
+                        sharedParentViewClassFilters,
+                        exact)
+                    && TextFilterMatches(
+                        attachment.value("viewObjectName").toString(),
+                        sharedParentViewObjectFilters,
+                        exact)
+                    && anchorModel->parent() != nullptr) {
+                    sharedViewParents.insert(anchorModel->parent());
+                }
+            }
+        }
+    }
     *totalCount = models.size();
     *missingRequiredFilter = includeData && classFilters.isEmpty() && objectFilters.isEmpty();
 
@@ -635,20 +1418,63 @@ QJsonArray CollectModels(
             || !TextFilterMatches(objectName, objectFilters, exact)) {
             continue;
         }
+        if ((!sharedParentViewClassFilters.isEmpty()
+                || !sharedParentViewObjectFilters.isEmpty())
+            && !sharedViewParents.contains(model->parent())) {
+            continue;
+        }
+
+        const QJsonArray modelAttachments = attachments.value(model);
+        if (!attachedViewClassFilters.isEmpty()
+            || !attachedViewObjectFilters.isEmpty()
+            || requireVisibleView) {
+            bool attachmentMatched = false;
+            for (const QJsonValue& attachmentValue : modelAttachments) {
+                const QJsonObject attachment = attachmentValue.toObject();
+                if (TextFilterMatches(
+                        attachment.value("viewClass").toString(),
+                        attachedViewClassFilters,
+                        exact)
+                    && TextFilterMatches(
+                        attachment.value("viewObjectName").toString(),
+                        attachedViewObjectFilters,
+                        exact)
+                    && (!requireVisibleView
+                        || attachment.value("visible").toBool())) {
+                    attachmentMatched = true;
+                    break;
+                }
+            }
+            if (!attachmentMatched) {
+                continue;
+            }
+        }
 
         const QString identity = className + "\n" + objectName;
         const int instanceOrdinal = instanceOrdinals.value(identity, 0);
         instanceOrdinals.insert(identity, instanceOrdinal + 1);
+        if (restrictInstance && instanceOrdinal != requestedInstance) {
+            continue;
+        }
         QJsonArray dynamicProperties;
         for (const QByteArray& propertyName : model->dynamicPropertyNames()) {
             dynamicProperties.append(QString::fromLatin1(propertyName));
         }
 
-        const QJsonArray modelAttachments = attachments.value(model);
         QJsonObject entry{
             {"class", className},
             {"objectName", objectName},
             {"instanceOrdinal", instanceOrdinal},
+            {"parentClass", model->parent() == nullptr
+                ? QString()
+                : QString::fromLatin1(model->parent()->metaObject()->className())},
+            {"parentObjectName", model->parent() == nullptr
+                ? QString()
+                : model->parent()->objectName()},
+            {"parentId", model->parent() == nullptr
+                ? QString()
+                : QString::number(
+                    reinterpret_cast<quintptr>(model->parent()), 16)},
             {"ancestry", ObjectAncestry(model)},
             {"dynamicPropertyNames", dynamicProperties},
             {"attachedViews", modelAttachments},
@@ -1007,6 +1833,25 @@ bool SameIndexPath(const QJsonObject& left, const QJsonObject& right)
         == QJsonDocument(right.value("path").toArray()).toJson(QJsonDocument::Compact);
 }
 
+bool SameIndexCellValue(
+    const QJsonObject& left,
+    const QJsonObject& right,
+    int column)
+{
+    if (!left.value("valid").toBool() || !right.value("valid").toBool()) {
+        return false;
+    }
+    const QJsonArray leftCells = left.value("cells").toArray();
+    const QJsonArray rightCells = right.value("cells").toArray();
+    if (column < 0 || column >= leftCells.size() || column >= rightCells.size()) {
+        return SameIndexPath(left, right);
+    }
+    return QJsonDocument(QJsonArray{leftCells.at(column)})
+        .toJson(QJsonDocument::Compact)
+        == QJsonDocument(QJsonArray{rightCells.at(column)})
+            .toJson(QJsonDocument::Compact);
+}
+
 int CountChangedMetricViews(const QJsonArray& before, const QJsonArray& after)
 {
     QHash<QString, QByteArray> beforeByIdentity;
@@ -1036,6 +1881,81 @@ bool HasModelExportFilters()
 {
     return !EnvironmentFilters("NSIGHT_SOLID_PROBE_MODEL_CLASS_MATCH").isEmpty()
         || !EnvironmentFilters("NSIGHT_SOLID_PROBE_MODEL_OBJECT_MATCH").isEmpty();
+}
+
+QByteArray ModelsSnapshot(const QJsonArray& models)
+{
+    return QJsonDocument(models).toJson(QJsonDocument::Compact);
+}
+
+bool HasPopulatedModel(const QJsonArray& models)
+{
+    for (const QJsonValue& value : models) {
+        const QJsonObject exportObject = value.toObject().value("export").toObject();
+        if (exportObject.value("rootRows").toInt() > 0
+            || exportObject.value("totalCount").toInt() > 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool AddJsonNumbers(const QJsonValue& value, qint64* total)
+{
+    if (value.isDouble()) {
+        *total += static_cast<qint64>(value.toDouble());
+        return true;
+    }
+    if (value.isString()) {
+        bool ok = false;
+        const qint64 number = value.toString().toLongLong(&ok);
+        if (ok) {
+            *total += number;
+        }
+        return ok;
+    }
+    if (value.isArray()) {
+        bool found = false;
+        for (const QJsonValue& child : value.toArray()) {
+            found = AddJsonNumbers(child, total) || found;
+        }
+        return found;
+    }
+    return false;
+}
+
+bool IndexSummaryColumnSum(
+    const QJsonObject& summary,
+    int column,
+    qint64* total)
+{
+    const QJsonArray cells = summary.value("cells").toArray();
+    if (column < 0 || column >= cells.size()) {
+        return false;
+    }
+    *total = 0;
+    return AddJsonNumbers(cells.at(column), total);
+}
+
+bool ModelsColumnSum(const QJsonArray& models, int column, qint64* total)
+{
+    *total = 0;
+    bool found = false;
+    for (const QJsonValue& modelValue : models) {
+        const QJsonArray nodes = modelValue.toObject()
+            .value("export").toObject().value("nodes").toArray();
+        for (const QJsonValue& nodeValue : nodes) {
+            const QJsonArray cells = nodeValue.toObject().value("cells").toArray();
+            for (const QJsonValue& cellValue : cells) {
+                const QJsonObject cell = cellValue.toObject();
+                if (cell.value("column").toInt(-1) != column) {
+                    continue;
+                }
+                found = AddJsonNumbers(cell.value("display"), total) || found;
+            }
+        }
+    }
+    return found;
 }
 
 bool IsKnownMode(const QString& mode)
@@ -1087,6 +2007,10 @@ public:
         , m_outputPath(qEnvironmentVariable("NSIGHT_SOLID_PROBE_OUTPUT"))
         , m_mode(qEnvironmentVariable("NSIGHT_SOLID_PROBE_MODE", "heartbeat"))
     {
+        if (!qEnvironmentVariable(
+                "NSIGHT_SOLID_PROBE_DIALOG_AUTO_PATH").trimmed().isEmpty()) {
+            QCoreApplication::setAttribute(Qt::AA_DontUseNativeDialogs, true);
+        }
         m_timer.setInterval(500);
         connect(&m_timer, &QTimer::timeout, this, &SolidProbeAgent::Poll);
         QTimer::singleShot(0, this, [this] {
@@ -1138,6 +2062,7 @@ private slots:
             root.insert("applicationVersion", QCoreApplication::applicationVersion());
             root.insert("applicationFilePath", QCoreApplication::applicationFilePath());
             root.insert("topLevelWindowCount", application->topLevelWidgets().size());
+            HandleDialogAutomation(application, root);
         }
 
         if (!IsKnownMode(m_mode)) {
@@ -1162,7 +2087,20 @@ private slots:
             if (complete || m_pollCount >= 120) {
                 m_timer.stop();
                 if (qEnvironmentVariableIntValue("NSIGHT_SOLID_PROBE_QUIT_WHEN_READY") == 1) {
-                    QTimer::singleShot(0, QCoreApplication::instance(), &QCoreApplication::quit);
+                    const bool closeModalBeforeQuit = qEnvironmentVariableIntValue(
+                        "NSIGHT_SOLID_PROBE_CLOSE_MODAL_BEFORE_QUIT") == 1;
+                    if (closeModalBeforeQuit) {
+                        const auto topLevels = application->topLevelWidgets();
+                        for (QWidget* topLevel : topLevels) {
+                            if (topLevel != nullptr && topLevel->isModal()) {
+                                topLevel->close();
+                            }
+                        }
+                    }
+                    QTimer::singleShot(
+                        closeModalBeforeQuit ? 250 : 0,
+                        QCoreApplication::instance(),
+                        &QCoreApplication::quit);
                 }
             }
             return;
@@ -1354,6 +2292,69 @@ private slots:
     }
 
 private:
+    void HandleDialogAutomation(QApplication* application, QJsonObject& root)
+    {
+        const QString configuredPath = qEnvironmentVariable(
+            "NSIGHT_SOLID_PROBE_DIALOG_AUTO_PATH").trimmed();
+        if (configuredPath.isEmpty()) {
+            return;
+        }
+        root.insert("dialogAutoPath", configuredPath);
+        root.insert("dialogSeen", m_dialogSeen);
+        root.insert("dialogAcceptQueued", m_dialogAcceptQueued);
+        root.insert("dialogSelectedFiles", m_dialogSelectedFiles);
+
+        QSet<QFileDialog*> unique;
+        for (QFileDialog* dialog : application->findChildren<QFileDialog*>()) {
+            if (dialog != nullptr) {
+                unique.insert(dialog);
+            }
+        }
+        for (QWidget* widget : application->allWidgets()) {
+            if (auto* dialog = qobject_cast<QFileDialog*>(widget)) {
+                unique.insert(dialog);
+            }
+        }
+        QFileDialog* targetDialog = nullptr;
+        for (QFileDialog* dialog : unique) {
+            if (dialog->isVisible()) {
+                targetDialog = dialog;
+                break;
+            }
+            if (targetDialog == nullptr) {
+                targetDialog = dialog;
+            }
+        }
+        if (targetDialog == nullptr) {
+            return;
+        }
+
+        m_dialogSeen = true;
+        root.insert("dialogSeen", true);
+        root.insert("dialogClass", targetDialog->metaObject()->className());
+        root.insert("dialogWindowTitle", targetDialog->windowTitle());
+        root.insert("dialogFileMode", static_cast<int>(targetDialog->fileMode()));
+        root.insert("dialogAcceptMode", static_cast<int>(targetDialog->acceptMode()));
+        if (m_dialogAcceptQueued) {
+            return;
+        }
+
+        targetDialog->setOption(QFileDialog::DontUseNativeDialog, true);
+        const QFileInfo targetInfo(configuredPath);
+        if (targetDialog->fileMode() == QFileDialog::Directory) {
+            targetDialog->setDirectory(configuredPath);
+        } else {
+            targetDialog->setDirectory(targetInfo.absolutePath());
+            targetDialog->selectFile(targetInfo.fileName());
+        }
+        m_dialogSelectedFiles = QJsonArray::fromStringList(
+            targetDialog->selectedFiles());
+        m_dialogAcceptQueued = QMetaObject::invokeMethod(
+            targetDialog, "accept", Qt::QueuedConnection);
+        root.insert("dialogAcceptQueued", m_dialogAcceptQueued);
+        root.insert("dialogSelectedFiles", m_dialogSelectedFiles);
+    }
+
     bool HandleSelectionMetrics(QApplication* application, QJsonObject& root)
     {
         root.insert("schema", "NsightSolidProbeSelectionMetricsV1");
@@ -1407,12 +2408,42 @@ private:
 
             bool baselineReady = false;
             int baselineTotal = 0;
+            const QJsonArray baselineCatalog = CollectMetricViews(
+                application, false, &baselineReady, &baselineTotal);
+            int baselineMinimumCount = qEnvironmentVariableIntValue(
+                "NSIGHT_SOLID_PROBE_SELECTION_BASELINE_METRIC_MIN_COUNT");
+            baselineMinimumCount = baselineMinimumCount > 0
+                ? baselineMinimumCount
+                : 1;
+            int baselineStableMinimumPolls = qEnvironmentVariableIntValue(
+                "NSIGHT_SOLID_PROBE_SELECTION_BASELINE_METRIC_STABLE_MIN_POLLS");
+            baselineStableMinimumPolls = qMax(0, baselineStableMinimumPolls);
+            if (baselineTotal > 0 && baselineTotal == m_lastBaselineMetricTotal) {
+                ++m_stableBaselineMetricCountSamples;
+            } else {
+                m_stableBaselineMetricCountSamples = 0;
+            }
+            m_lastBaselineMetricTotal = baselineTotal;
+            const bool baselineCatalogReady = baselineReady
+                && baselineTotal >= baselineMinimumCount
+                && m_stableBaselineMetricCountSamples >= baselineStableMinimumPolls;
+            root.insert("metricViewTotal", baselineTotal);
+            root.insert("metricViewReturned", baselineCatalog.size());
+            root.insert("selectionBaselineMetricMinimumCount", baselineMinimumCount);
+            root.insert("selectionBaselineMetricStableMinimumPolls",
+                baselineStableMinimumPolls);
+            root.insert("stableBaselineMetricCountSamples",
+                m_stableBaselineMetricCountSamples);
+            root.insert("baselineMetricCatalogReady", baselineCatalogReady);
+            if (!baselineCatalogReady) {
+                root.insert("stage", "waiting-baseline-metrics");
+                return false;
+            }
+
             const QJsonArray baseline = CollectMetricViews(
                 application, true, &baselineReady, &baselineTotal);
-            root.insert("metricViewTotal", baselineTotal);
-            root.insert("metricViewReturned", baseline.size());
-            if (!baselineReady) {
-                root.insert("stage", "waiting-baseline-metrics");
+            if (!baselineReady || baselineTotal < baselineMinimumCount) {
+                root.insert("stage", "waiting-baseline-metrics-data");
                 return false;
             }
             if (eventView->selectionModel() == nullptr) {
@@ -1479,7 +2510,9 @@ private:
             maximumSettlePolls = qMax(minimumModelSettlePolls + 2, maximumSettlePolls);
         }
         if (HasModelRowSelector()
-            || !qEnvironmentVariable("NSIGHT_SOLID_PROBE_ACTIVATE_PANEL").trimmed().isEmpty()) {
+            || !qEnvironmentVariable("NSIGHT_SOLID_PROBE_ACTIVATE_PANEL").trimmed().isEmpty()
+            || !qEnvironmentVariable(
+                "NSIGHT_SOLID_PROBE_ACTION_TRIGGER_TEXT_MATCH").trimmed().isEmpty()) {
             maximumSettlePolls = qMax(40, maximumSettlePolls);
         }
         root.insert("minimumSettlePolls", minimumSettlePolls);
@@ -1518,6 +2551,174 @@ private:
                 ? modelSelectionSettlePolls
                 : 6;
             root.insert("minimumModelSelectionSettlePolls", modelSelectionSettlePolls);
+            const QString modelSelectionTrigger = qEnvironmentVariable(
+                "NSIGHT_SOLID_PROBE_MODEL_SELECT_TRIGGER").trimmed();
+            const bool hasModelSelectionTriggerColumn = qEnvironmentVariableIsSet(
+                "NSIGHT_SOLID_PROBE_MODEL_SELECT_TRIGGER_COLUMN");
+            const int modelSelectionTriggerColumn = qMax(0,
+                qEnvironmentVariableIntValue(
+                    "NSIGHT_SOLID_PROBE_MODEL_SELECT_TRIGGER_COLUMN"));
+            const bool hasModelSelectionTriggerXOffset = qEnvironmentVariableIsSet(
+                "NSIGHT_SOLID_PROBE_MODEL_SELECT_TRIGGER_X_OFFSET");
+            const int modelSelectionTriggerXOffset = qMax(0,
+                qEnvironmentVariableIntValue(
+                    "NSIGHT_SOLID_PROBE_MODEL_SELECT_TRIGGER_X_OFFSET"));
+            root.insert("modelSelectionTrigger", modelSelectionTrigger);
+            root.insert("modelSelectionTriggerColumn",
+                hasModelSelectionTriggerColumn ? modelSelectionTriggerColumn : -1);
+            root.insert("modelSelectionTriggerXOffset",
+                hasModelSelectionTriggerXOffset ? modelSelectionTriggerXOffset : -1);
+            root.insert("modelSelectionTriggerInvoked", m_modelSelectionTriggerInvoked);
+            root.insert("modelSelectionTriggerViewVisible",
+                m_modelSelectionTriggerViewVisible);
+            root.insert("modelSelectionTriggerCellRectValid",
+                m_modelSelectionTriggerCellRectValid);
+            root.insert("modelSelectionTriggerCellRect",
+                m_modelSelectionTriggerCellRect);
+            root.insert("modelSelectionAfterTrigger",
+                m_modelSelectionAfterTrigger);
+            const bool hasProviderSummaryColumn = qEnvironmentVariableIsSet(
+                "NSIGHT_SOLID_PROBE_MODEL_SELECT_PROVIDER_SUMMARY_COLUMN");
+            const bool hasProviderModelColumn = qEnvironmentVariableIsSet(
+                "NSIGHT_SOLID_PROBE_MODEL_SELECT_PROVIDER_MODEL_COLUMN");
+            const bool verifyProviderSum = hasProviderSummaryColumn
+                && hasProviderModelColumn;
+            const int providerSummaryColumn = qMax(0, qEnvironmentVariableIntValue(
+                "NSIGHT_SOLID_PROBE_MODEL_SELECT_PROVIDER_SUMMARY_COLUMN"));
+            const int providerModelColumn = qMax(0, qEnvironmentVariableIntValue(
+                "NSIGHT_SOLID_PROBE_MODEL_SELECT_PROVIDER_MODEL_COLUMN"));
+            root.insert("modelSelectionVerifyProviderSum", verifyProviderSum);
+            root.insert("modelSelectionProviderSummaryColumn",
+                verifyProviderSum ? providerSummaryColumn : -1);
+            root.insert("modelSelectionProviderModelColumn",
+                verifyProviderSum ? providerModelColumn : -1);
+            root.insert("modelSelectionNudgeApplied", m_modelSelectionNudgeApplied);
+            root.insert("modelSelectionPreflightHasCurrent",
+                m_modelSelectionPreflightHasCurrent);
+            root.insert("modelSelectionNudgeTarget", m_modelSelectionNudgeTarget);
+            root.insert("modelSelectionNudgeProviderChanged",
+                m_modelSelectionNudgeProviderChanged);
+            root.insert("modelSelectionNudgeProviderPopulated",
+                m_modelSelectionNudgeProviderPopulated);
+            root.insert("modelSelectionNudgeProviderStableSamples",
+                m_modelSelectionNudgeProviderStableSamples);
+            root.insert("modelSelectionNudgeProviderReady",
+                m_modelSelectionNudgeProviderReady);
+            root.insert("modelSelectionNudgeProviderExpectedSum",
+                m_modelSelectionNudgeProviderExpectedSum);
+            root.insert("modelSelectionNudgeProviderActualSum",
+                m_modelSelectionNudgeProviderActualSum);
+            root.insert("modelSelectionNudgeProviderSumMatches",
+                m_modelSelectionNudgeProviderSumMatches);
+            root.insert("modelSelectionTargetProviderChanged",
+                m_modelSelectionTargetProviderChanged);
+            root.insert("modelSelectionTargetProviderPopulated",
+                m_modelSelectionTargetProviderPopulated);
+            root.insert("modelSelectionTargetProviderStableSamples",
+                m_modelSelectionTargetProviderStableSamples);
+            root.insert("modelSelectionTargetProviderReady",
+                m_modelSelectionTargetProviderReady);
+            root.insert("modelSelectionTargetProviderExpectedSum",
+                m_modelSelectionTargetProviderExpectedSum);
+            root.insert("modelSelectionTargetProviderActualSum",
+                m_modelSelectionTargetProviderActualSum);
+            root.insert("modelSelectionTargetProviderSumMatches",
+                m_modelSelectionTargetProviderSumMatches);
+            const QString modelSelectionInvokeClass = qEnvironmentVariable(
+                "NSIGHT_SOLID_PROBE_MODEL_SELECT_INVOKE_CLASS",
+                "NV::ShaderProfiler::UI::SummaryPage").trimmed();
+            const QString modelSelectionInvokeMethod = qEnvironmentVariable(
+                "NSIGHT_SOLID_PROBE_MODEL_SELECT_INVOKE_METHOD").trimmed();
+            root.insert("modelSelectionInvokeClass", modelSelectionInvokeClass);
+            root.insert("modelSelectionInvokeMethod", modelSelectionInvokeMethod);
+            root.insert("modelSelectionInvokeSucceeded", m_modelSelectionInvokeSucceeded);
+            root.insert("modelSelectionInvokeTargetFound",
+                m_modelSelectionInvokeTargetFound);
+            root.insert("modelSelectionInvokeMethodFound",
+                m_modelSelectionInvokeMethodFound);
+            root.insert("modelSelectionInvokeInternalPointerAvailable",
+                m_modelSelectionInvokeInternalPointerAvailable);
+            root.insert("modelSelectionInvokeInternalId",
+                m_modelSelectionInvokeInternalId);
+            root.insert("modelSelectionInvokeParameterType",
+                m_modelSelectionInvokeParameterType);
+            root.insert("modelSelectionInvokeSourceModelClass",
+                m_modelSelectionInvokeSourceModelClass);
+            const bool allowUnsafePointerInvoke = qEnvironmentVariableIntValue(
+                "NSIGHT_SOLID_PROBE_MODEL_SELECT_INVOKE_ALLOW_UNSAFE_POINTER") == 1;
+            root.insert("modelSelectionInvokeAllowUnsafePointer",
+                allowUnsafePointerInvoke);
+
+            const QString preparePanelName = qEnvironmentVariable(
+                "NSIGHT_SOLID_PROBE_MODEL_SELECT_PREPARE_PANEL").trimmed();
+            if (!preparePanelName.isEmpty() && m_modelSelectionAppliedPoll == 0) {
+                int preparePanelSettlePolls = qEnvironmentVariableIntValue(
+                    "NSIGHT_SOLID_PROBE_MODEL_SELECT_PREPARE_PANEL_SETTLE_MIN_POLLS");
+                preparePanelSettlePolls = preparePanelSettlePolls > 0
+                    ? preparePanelSettlePolls
+                    : 4;
+                root.insert("modelSelectionPreparePanel", preparePanelName);
+                root.insert("minimumModelSelectionPreparePanelSettlePolls",
+                    preparePanelSettlePolls);
+
+                QWidget* preparePanel = FindNamedWidget(application, preparePanelName);
+                auto* prepareOwner = preparePanel == nullptr
+                    ? nullptr
+                    : qobject_cast<QStackedWidget*>(preparePanel->parentWidget());
+                const int preparePanelIndex = prepareOwner == nullptr
+                    ? -1
+                    : prepareOwner->indexOf(preparePanel);
+                if (preparePanel == nullptr || prepareOwner == nullptr
+                    || preparePanelIndex < 0) {
+                    root.insert("status", "selection-applied");
+                    root.insert("stage", "waiting-model-selection-prepare-panel");
+                    return false;
+                }
+
+                QString prepareButtonName = preparePanelName;
+                prepareButtonName.replace("FlatTabPanel_", "FlatTabButton_");
+                auto* prepareButton = qobject_cast<QAbstractButton*>(
+                    FindNamedWidget(application, prepareButtonName));
+                root.insert("modelSelectionPreparePanelButton",
+                    prepareButton == nullptr ? QString() : prepareButton->objectName());
+                if (m_modelPreparePanelActivatedPoll == 0) {
+                    if (prepareButton != nullptr) {
+                        prepareButton->click();
+                    }
+                    if (prepareOwner->currentWidget() != preparePanel) {
+                        prepareOwner->setCurrentWidget(preparePanel);
+                    }
+                    m_modelPreparePanelActivatedPoll = m_pollCount;
+                    root.insert("status", "selection-applied");
+                    root.insert("stage", "waiting-model-selection-prepare-panel-update");
+                    return false;
+                }
+
+                const bool preparePanelMatches = prepareOwner->currentWidget()
+                    == preparePanel;
+                const int pollsSincePreparePanel = m_pollCount
+                    - m_modelPreparePanelActivatedPoll;
+                root.insert("modelSelectionPreparePanelMatches", preparePanelMatches);
+                root.insert("pollsSinceModelSelectionPreparePanel",
+                    pollsSincePreparePanel);
+                if (!preparePanelMatches) {
+                    if (prepareButton != nullptr) {
+                        prepareButton->click();
+                    }
+                    if (prepareOwner->currentWidget() != preparePanel) {
+                        prepareOwner->setCurrentWidget(preparePanel);
+                    }
+                    m_modelPreparePanelActivatedPoll = m_pollCount;
+                    root.insert("status", "selection-applied");
+                    root.insert("stage", "reactivated-model-selection-prepare-panel");
+                    return false;
+                }
+                if (pollsSincePreparePanel < preparePanelSettlePolls) {
+                    root.insert("status", "selection-applied");
+                    root.insert("stage", "waiting-model-selection-prepare-panel-update");
+                    return false;
+                }
+            }
 
             QAbstractItemView* modelView = FindModelSelectionView(application);
             if (modelView == nullptr || modelView->model() == nullptr) {
@@ -1549,12 +2750,366 @@ private:
                     return true;
                 }
 
-                m_beforeModelSelection = IndexSummary(
-                    selectionModel, modelView->currentIndex());
+                if (m_beforeModelSelection.isEmpty()) {
+                    m_beforeModelSelection = IndexSummary(
+                        selectionModel, modelView->currentIndex());
+                }
                 m_targetModelSelection = IndexSummary(selectionModel, target);
-                modelView->selectionModel()->setCurrentIndex(
-                    target,
-                    QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+                int nudgeSettlePolls = qEnvironmentVariableIntValue(
+                    "NSIGHT_SOLID_PROBE_MODEL_SELECT_NUDGE_SETTLE_MIN_POLLS");
+                nudgeSettlePolls = nudgeSettlePolls > 0 ? nudgeSettlePolls : 2;
+                int providerStablePolls = qEnvironmentVariableIntValue(
+                    "NSIGHT_SOLID_PROBE_MODEL_SELECT_PROVIDER_STABLE_MIN_POLLS");
+                providerStablePolls = providerStablePolls > 0
+                    ? providerStablePolls
+                    : 2;
+                root.insert("minimumModelSelectionNudgeSettlePolls",
+                    nudgeSettlePolls);
+                root.insert("minimumModelSelectionProviderStablePolls",
+                    providerStablePolls);
+                root.insert("modelSelectionNudgeApplied",
+                    m_modelSelectionNudgeApplied);
+                root.insert("modelSelectionNudgeTarget",
+                    m_modelSelectionNudgeTarget);
+                if (m_modelSelectionNudgeApplied) {
+                    const QJsonObject currentPreflightSelection = IndexSummary(
+                        selectionModel, modelView->currentIndex());
+                    if (m_modelSelectionPreflightHasCurrent
+                        && !SameIndexCellValue(
+                            currentPreflightSelection,
+                            m_modelSelectionNudgeTarget,
+                            qMax(0, qEnvironmentVariableIntValue(
+                                "NSIGHT_SOLID_PROBE_MODEL_SELECT_COLUMN")))) {
+                        m_modelSelectionNudgeApplied = false;
+                        m_modelSelectionNudgeProviderReady = false;
+                        m_modelSelectionNudgeLastProviderSnapshot.clear();
+                        m_modelSelectionNudgeProviderSnapshot.clear();
+                        m_modelSelectionNudgeProviderStableSamples = 0;
+                        root.insert("status", "model-selection-preflight-reset");
+                        root.insert("stage",
+                            "waiting-model-selection-preflight-current");
+                        return false;
+                    }
+                    const int pollsSinceNudge = m_pollCount
+                        - m_modelSelectionNudgePoll;
+                    root.insert("pollsSinceModelSelectionNudge", pollsSinceNudge);
+                    if (pollsSinceNudge < nudgeSettlePolls) {
+                        root.insert("status", "model-selection-nudged");
+                        root.insert("stage", "waiting-model-selection-nudge-update");
+                        return false;
+                    }
+                    if (!m_modelSelectionNudgeProviderReady) {
+                        int providerModelTotal = 0;
+                        bool missingRequiredFilter = false;
+                        const QJsonArray providerModels = CollectModels(
+                            application,
+                            true,
+                            &providerModelTotal,
+                            &missingRequiredFilter);
+                        const QByteArray providerSnapshot = ModelsSnapshot(providerModels);
+                        m_modelSelectionNudgeProviderPopulated =
+                            HasPopulatedModel(providerModels);
+                        m_modelSelectionNudgeProviderChanged =
+                            providerSnapshot != m_modelSelectionNudgeInitialProviderSnapshot;
+                        const bool hasActualProviderSum = verifyProviderSum
+                            && ModelsColumnSum(
+                                providerModels,
+                                providerModelColumn,
+                                &m_modelSelectionNudgeProviderActualSum);
+                        m_modelSelectionNudgeProviderSumMatches = verifyProviderSum
+                            && m_modelSelectionNudgeProviderHasExpectedSum
+                            && hasActualProviderSum
+                            && m_modelSelectionNudgeProviderExpectedSum
+                                == m_modelSelectionNudgeProviderActualSum;
+                        if (!m_modelSelectionNudgeLastProviderSnapshot.isEmpty()
+                            && providerSnapshot
+                                == m_modelSelectionNudgeLastProviderSnapshot) {
+                            ++m_modelSelectionNudgeProviderStableSamples;
+                        } else {
+                            m_modelSelectionNudgeProviderStableSamples = 0;
+                        }
+                        m_modelSelectionNudgeLastProviderSnapshot = providerSnapshot;
+                        m_modelSelectionNudgeProviderReady =
+                            m_modelSelectionNudgeProviderPopulated
+                            && m_modelSelectionNudgeProviderStableSamples
+                                >= providerStablePolls;
+                        root.insert("modelSelectionNudgeProviderModelTotal",
+                            providerModelTotal);
+                        root.insert("modelSelectionNudgeProviderChanged",
+                            m_modelSelectionNudgeProviderChanged);
+                        root.insert("modelSelectionNudgeProviderPopulated",
+                            m_modelSelectionNudgeProviderPopulated);
+                        root.insert("modelSelectionNudgeProviderStableSamples",
+                            m_modelSelectionNudgeProviderStableSamples);
+                        root.insert("modelSelectionNudgeProviderReady",
+                            m_modelSelectionNudgeProviderReady);
+                        root.insert("modelSelectionNudgeProviderExpectedSum",
+                            m_modelSelectionNudgeProviderExpectedSum);
+                        root.insert("modelSelectionNudgeProviderActualSum",
+                            m_modelSelectionNudgeProviderActualSum);
+                        root.insert("modelSelectionNudgeProviderSumMatches",
+                            m_modelSelectionNudgeProviderSumMatches);
+                        if (!m_modelSelectionNudgeProviderReady) {
+                            root.insert("status", "model-selection-preflight");
+                            root.insert("stage",
+                                "waiting-model-selection-preflight-provider");
+                            return false;
+                        }
+                        m_modelSelectionNudgeProviderSnapshot = providerSnapshot;
+                    }
+                } else {
+                    const QModelIndex preflightTarget = modelView->currentIndex();
+                    if (!preflightTarget.isValid()
+                        || selectionModel->flags(preflightTarget).testFlag(
+                            Qt::ItemIsSelectable)) {
+                        int providerModelTotal = 0;
+                        bool missingRequiredFilter = false;
+                        const QJsonArray initialProviderModels = CollectModels(
+                            application,
+                            true,
+                            &providerModelTotal,
+                            &missingRequiredFilter);
+                        m_modelSelectionNudgeInitialProviderSnapshot =
+                            ModelsSnapshot(initialProviderModels);
+                        m_modelSelectionNudgeLastProviderSnapshot.clear();
+                        m_modelSelectionNudgeProviderSnapshot.clear();
+                        m_modelSelectionNudgeProviderStableSamples = 0;
+                        m_modelSelectionNudgeProviderChanged = false;
+                        m_modelSelectionNudgeProviderPopulated = false;
+                        m_modelSelectionNudgeProviderReady = false;
+                        m_modelSelectionNudgeProviderExpectedSum = 0;
+                        m_modelSelectionNudgeProviderActualSum = 0;
+                        m_modelSelectionNudgeProviderHasExpectedSum = false;
+                        m_modelSelectionNudgeProviderSumMatches = false;
+                        m_modelSelectionTargetLastProviderSnapshot.clear();
+                        m_modelSelectionTargetProviderStableSamples = 0;
+                        m_modelSelectionTargetProviderChanged = false;
+                        m_modelSelectionTargetProviderPopulated = false;
+                        m_modelSelectionTargetProviderReady = false;
+                        m_modelSelectionNudgeApplied = true;
+                        m_modelSelectionPreflightHasCurrent =
+                            preflightTarget.isValid();
+                        m_modelSelectionNudgePoll = m_pollCount;
+                        m_modelSelectionNudgeTarget = preflightTarget.isValid()
+                            ? IndexSummary(selectionModel, preflightTarget)
+                            : QJsonObject{};
+                        m_modelSelectionNudgeProviderHasExpectedSum =
+                            verifyProviderSum
+                            && IndexSummaryColumnSum(
+                                m_modelSelectionNudgeTarget,
+                                providerSummaryColumn,
+                                &m_modelSelectionNudgeProviderExpectedSum);
+                        m_modelSelectionTargetProviderExpectedSum = 0;
+                        m_modelSelectionTargetProviderActualSum = 0;
+                        m_modelSelectionTargetProviderHasExpectedSum =
+                            verifyProviderSum
+                            && IndexSummaryColumnSum(
+                                m_targetModelSelection,
+                                providerSummaryColumn,
+                                &m_modelSelectionTargetProviderExpectedSum);
+                        m_modelSelectionTargetProviderSumMatches = false;
+                        root.insert("modelSelectionNudgeApplied", true);
+                        root.insert("modelSelectionNudgeTarget",
+                            m_modelSelectionNudgeTarget);
+                        root.insert("status", "model-selection-preflight");
+                        root.insert("stage",
+                            "waiting-model-selection-preflight-provider");
+                        return false;
+                    }
+                    root.insert("status", "selection-applied");
+                    root.insert("stage", "waiting-model-selection-current");
+                    return false;
+                }
+                if (SameIndexCellValue(
+                        m_modelSelectionNudgeTarget,
+                        m_targetModelSelection,
+                        qMax(0, qEnvironmentVariableIntValue(
+                            "NSIGHT_SOLID_PROBE_MODEL_SELECT_COLUMN")))
+                    && (!verifyProviderSum
+                        || m_modelSelectionNudgeProviderSumMatches)) {
+                    m_modelSelectionTargetProviderChanged = true;
+                    m_modelSelectionTargetProviderPopulated =
+                        m_modelSelectionNudgeProviderPopulated;
+                    m_modelSelectionTargetProviderReady =
+                        m_modelSelectionNudgeProviderReady;
+                    m_modelSelectionTargetProviderExpectedSum =
+                        m_modelSelectionNudgeProviderExpectedSum;
+                    m_modelSelectionTargetProviderActualSum =
+                        m_modelSelectionNudgeProviderActualSum;
+                    m_modelSelectionTargetProviderHasExpectedSum =
+                        m_modelSelectionNudgeProviderHasExpectedSum;
+                    m_modelSelectionTargetProviderSumMatches =
+                        m_modelSelectionNudgeProviderSumMatches;
+                }
+                if (modelSelectionTrigger != "mouseClick") {
+                    modelView->selectionModel()->setCurrentIndex(
+                        target,
+                        QItemSelectionModel::ClearAndSelect
+                            | QItemSelectionModel::Rows);
+                }
+                if (modelSelectionTrigger == "activated"
+                    || modelSelectionTrigger == "clicked"
+                    || modelSelectionTrigger == "doubleClicked"
+                    || modelSelectionTrigger == "mouseClick") {
+                    const QModelIndex triggerTarget = hasModelSelectionTriggerColumn
+                        ? target.siblingAtColumn(qMin(
+                            modelSelectionTriggerColumn,
+                            selectionModel->columnCount(target.parent()) - 1))
+                        : target;
+                    if (modelSelectionTrigger == "mouseClick") {
+                        m_modelSelectionTriggerViewVisible = modelView->isVisible();
+                        if (auto* treeView = qobject_cast<QTreeView*>(modelView)) {
+                            QList<QModelIndex> ancestors;
+                            QModelIndex ancestor = triggerTarget.parent();
+                            while (ancestor.isValid()) {
+                                ancestors.prepend(ancestor);
+                                ancestor = ancestor.parent();
+                            }
+                            for (const QModelIndex& item : ancestors) {
+                                treeView->expand(item);
+                            }
+                        }
+                        modelView->scrollTo(
+                            triggerTarget, QAbstractItemView::PositionAtCenter);
+                        const QRect cellRect = modelView->visualRect(triggerTarget);
+                        m_modelSelectionTriggerCellRectValid = cellRect.isValid();
+                        m_modelSelectionTriggerCellRect = QJsonObject{
+                            {"x", cellRect.x()},
+                            {"y", cellRect.y()},
+                            {"width", cellRect.width()},
+                            {"height", cellRect.height()},
+                        };
+                        QWidget* viewport = modelView->viewport();
+                        if (viewport != nullptr && cellRect.isValid()) {
+                            const QPoint localPoint = hasModelSelectionTriggerXOffset
+                                ? QPoint(
+                                    cellRect.left() + qMin(
+                                        modelSelectionTriggerXOffset,
+                                        qMax(0, cellRect.width() - 1)),
+                                    cellRect.center().y())
+                                : cellRect.center();
+                            const QPoint globalPoint = viewport->mapToGlobal(localPoint);
+                            QMouseEvent press(
+                                QEvent::MouseButtonPress,
+                                QPointF(localPoint),
+                                QPointF(globalPoint),
+                                Qt::LeftButton,
+                                Qt::LeftButton,
+                                Qt::NoModifier);
+                            QMouseEvent release(
+                                QEvent::MouseButtonRelease,
+                                QPointF(localPoint),
+                                QPointF(globalPoint),
+                                Qt::LeftButton,
+                                Qt::NoButton,
+                                Qt::NoModifier);
+                            const bool pressAccepted = QCoreApplication::sendEvent(
+                                viewport, &press);
+                            const bool releaseAccepted = QCoreApplication::sendEvent(
+                                viewport, &release);
+                            m_modelSelectionTriggerInvoked = pressAccepted
+                                && releaseAccepted;
+                            m_modelSelectionAfterTrigger = IndexSummary(
+                                selectionModel, modelView->currentIndex());
+                        }
+                    } else {
+                        m_modelSelectionTriggerInvoked = QMetaObject::invokeMethod(
+                            modelView,
+                            modelSelectionTrigger.toLatin1().constData(),
+                            Qt::DirectConnection,
+                        Q_ARG(QModelIndex, triggerTarget));
+                    }
+                }
+                if (modelSelectionTrigger == "mouseClick"
+                    && !m_modelSelectionTriggerInvoked) {
+                    modelView->selectionModel()->setCurrentIndex(
+                        target,
+                        QItemSelectionModel::ClearAndSelect
+                            | QItemSelectionModel::Rows);
+                }
+                if (!modelSelectionInvokeMethod.isEmpty()) {
+                    QModelIndex sourceTarget = target;
+                    QAbstractItemModel* sourceModel = selectionModel;
+                    while (auto* proxy = qobject_cast<QAbstractProxyModel*>(sourceModel)) {
+                        if (proxy->sourceModel() == nullptr) {
+                            break;
+                        }
+                        sourceTarget = proxy->mapToSource(sourceTarget);
+                        sourceModel = proxy->sourceModel();
+                    }
+                    m_modelSelectionInvokeSourceModelClass = sourceModel == nullptr
+                        ? QString()
+                        : QString::fromLatin1(sourceModel->metaObject()->className());
+
+                    QObject* invokeTarget = nullptr;
+                    const auto widgets = application->allWidgets();
+                    for (QWidget* widget : widgets) {
+                        if (QString::fromLatin1(widget->metaObject()->className())
+                            == modelSelectionInvokeClass) {
+                            invokeTarget = widget;
+                            break;
+                        }
+                    }
+                    if (invokeTarget == nullptr) {
+                        const auto topLevels = application->topLevelWidgets();
+                        for (QWidget* topLevel : topLevels) {
+                            const auto objects = topLevel->findChildren<QObject*>();
+                            for (QObject* object : objects) {
+                                if (QString::fromLatin1(
+                                        object->metaObject()->className())
+                                    == modelSelectionInvokeClass) {
+                                    invokeTarget = object;
+                                    break;
+                                }
+                            }
+                            if (invokeTarget != nullptr) {
+                                break;
+                            }
+                        }
+                    }
+                    m_modelSelectionInvokeTargetFound = invokeTarget != nullptr;
+                    if (sourceTarget.isValid()) {
+                        m_modelSelectionInvokeInternalPointerAvailable =
+                            sourceTarget.internalPointer() != nullptr;
+                        m_modelSelectionInvokeInternalId = QString::number(
+                            sourceTarget.internalId(), 16);
+                    }
+                    if (invokeTarget != nullptr && sourceTarget.isValid()) {
+                        const QMetaObject* metaObject = invokeTarget->metaObject();
+                        for (int methodIndex = 0;
+                             methodIndex < metaObject->methodCount();
+                             ++methodIndex) {
+                            const QMetaMethod method = metaObject->method(methodIndex);
+                            if (QString::fromLatin1(method.name())
+                                != modelSelectionInvokeMethod) {
+                                continue;
+                            }
+                            if (method.parameterCount() == 0) {
+                                m_modelSelectionInvokeMethodFound = true;
+                                m_modelSelectionInvokeSucceeded = method.invoke(
+                                    invokeTarget, Qt::DirectConnection);
+                                break;
+                            }
+                            if (method.parameterCount() != 1
+                                || !allowUnsafePointerInvoke) {
+                                continue;
+                            }
+                            m_modelSelectionInvokeMethodFound = true;
+                            const QByteArray parameterType = method.parameterTypeName(0);
+                            void* argumentValue = sourceTarget.internalPointer();
+                            m_modelSelectionInvokeParameterType =
+                                QString::fromLatin1(parameterType);
+                            if (argumentValue != nullptr) {
+                                m_modelSelectionInvokeSucceeded = method.invoke(
+                                    invokeTarget,
+                                    Qt::DirectConnection,
+                                    QGenericArgument(
+                                        parameterType.constData(), &argumentValue));
+                            }
+                            break;
+                        }
+                    }
+                }
                 m_modelSelectionAppliedPoll = m_pollCount;
                 m_lastMetricSnapshot.clear();
                 m_stableMetricSamples = 0;
@@ -1574,8 +3129,14 @@ private:
             root.insert("pollsSinceModelSelection", pollsSinceModelSelection);
             const QJsonObject currentModelSelection = IndexSummary(
                 selectionModel, modelView->currentIndex());
-            const bool modelSelectionMatchesTarget = SameIndexPath(
-                currentModelSelection, m_targetModelSelection);
+            const bool modelSelectionMatchesTarget = SameIndexCellValue(
+                    currentModelSelection,
+                    m_targetModelSelection,
+                    qMax(0, qEnvironmentVariableIntValue(
+                        "NSIGHT_SOLID_PROBE_MODEL_SELECT_COLUMN")))
+                || (modelSelectionTrigger == "mouseClick"
+                    && m_modelSelectionTriggerInvoked
+                    && m_modelSelectionTriggerCellRectValid);
             root.insert("currentModelSelection", currentModelSelection);
             root.insert("modelSelectionMatchesTarget", modelSelectionMatchesTarget);
             if (!modelSelectionMatchesTarget
@@ -1585,6 +3146,86 @@ private:
                     ? "waiting-model-selection-update"
                     : "waiting-model-selection-current");
                 return false;
+            }
+            const QString providerPanelName = qEnvironmentVariable(
+                "NSIGHT_SOLID_PROBE_ACTIVATE_PANEL").trimmed();
+            bool providerPanelReady = true;
+            if (!providerPanelName.isEmpty()) {
+                QWidget* providerPanel = FindNamedWidget(
+                    application, providerPanelName);
+                auto* providerPanelOwner = providerPanel == nullptr
+                    ? nullptr
+                    : qobject_cast<QStackedWidget*>(providerPanel->parentWidget());
+                providerPanelReady = providerPanel != nullptr
+                    && providerPanelOwner != nullptr
+                    && providerPanelOwner->currentWidget() == providerPanel;
+            }
+            root.insert("modelSelectionProviderPanelReady", providerPanelReady);
+            if (m_modelSelectionNudgeProviderReady
+                && !m_modelSelectionTargetProviderReady
+                && providerPanelReady) {
+                int providerStablePolls = qEnvironmentVariableIntValue(
+                    "NSIGHT_SOLID_PROBE_MODEL_SELECT_PROVIDER_STABLE_MIN_POLLS");
+                providerStablePolls = providerStablePolls > 0
+                    ? providerStablePolls
+                    : 2;
+                int providerModelTotal = 0;
+                bool missingRequiredFilter = false;
+                const QJsonArray providerModels = CollectModels(
+                    application,
+                    true,
+                    &providerModelTotal,
+                    &missingRequiredFilter);
+                const QByteArray providerSnapshot = ModelsSnapshot(providerModels);
+                m_modelSelectionTargetProviderPopulated =
+                    HasPopulatedModel(providerModels);
+                m_modelSelectionTargetProviderChanged =
+                    providerSnapshot != m_modelSelectionNudgeProviderSnapshot;
+                const bool hasActualProviderSum = verifyProviderSum
+                    && ModelsColumnSum(
+                        providerModels,
+                        providerModelColumn,
+                        &m_modelSelectionTargetProviderActualSum);
+                m_modelSelectionTargetProviderSumMatches = verifyProviderSum
+                    && m_modelSelectionTargetProviderHasExpectedSum
+                    && hasActualProviderSum
+                    && m_modelSelectionTargetProviderExpectedSum
+                        == m_modelSelectionTargetProviderActualSum;
+                if (!m_modelSelectionTargetLastProviderSnapshot.isEmpty()
+                    && providerSnapshot == m_modelSelectionTargetLastProviderSnapshot) {
+                    ++m_modelSelectionTargetProviderStableSamples;
+                } else {
+                    m_modelSelectionTargetProviderStableSamples = 0;
+                }
+                m_modelSelectionTargetLastProviderSnapshot = providerSnapshot;
+                m_modelSelectionTargetProviderReady =
+                    m_modelSelectionTargetProviderPopulated
+                    && m_modelSelectionTargetProviderChanged
+                    && (!verifyProviderSum
+                        || m_modelSelectionTargetProviderSumMatches)
+                    && m_modelSelectionTargetProviderStableSamples
+                        >= providerStablePolls;
+                root.insert("modelSelectionTargetProviderModelTotal",
+                    providerModelTotal);
+                root.insert("modelSelectionTargetProviderChanged",
+                    m_modelSelectionTargetProviderChanged);
+                root.insert("modelSelectionTargetProviderPopulated",
+                    m_modelSelectionTargetProviderPopulated);
+                root.insert("modelSelectionTargetProviderStableSamples",
+                    m_modelSelectionTargetProviderStableSamples);
+                root.insert("modelSelectionTargetProviderReady",
+                    m_modelSelectionTargetProviderReady);
+                root.insert("modelSelectionTargetProviderExpectedSum",
+                    m_modelSelectionTargetProviderExpectedSum);
+                root.insert("modelSelectionTargetProviderActualSum",
+                    m_modelSelectionTargetProviderActualSum);
+                root.insert("modelSelectionTargetProviderSumMatches",
+                    m_modelSelectionTargetProviderSumMatches);
+                if (!m_modelSelectionTargetProviderReady) {
+                    root.insert("status", "model-selection-applied");
+                    root.insert("stage", "waiting-model-selection-target-provider");
+                    return false;
+                }
             }
         }
 
@@ -1612,11 +3253,26 @@ private:
             root.insert("panelIndex", panelIndex);
             root.insert("panelOwnerClass", owner->metaObject()->className());
             root.insert("panelOwnerObjectName", owner->objectName());
+            const bool activateViaButton = qEnvironmentVariableIntValue(
+                "NSIGHT_SOLID_PROBE_ACTIVATE_PANEL_VIA_BUTTON") == 1;
+            QString panelButtonName = requestedPanel;
+            panelButtonName.replace("FlatTabPanel_", "FlatTabButton_");
+            auto* panelButton = qobject_cast<QAbstractButton*>(
+                FindNamedWidget(application, panelButtonName));
+            root.insert("activatePanelViaButton", activateViaButton);
+            root.insert("panelButtonObjectName", panelButton == nullptr
+                ? QString()
+                : panelButton->objectName());
             if (m_panelActivatedPoll == 0) {
                 QWidget* before = owner->currentWidget();
                 m_beforePanelObjectName = before == nullptr ? QString() : before->objectName();
                 m_beforePanelIndex = owner->currentIndex();
-                owner->setCurrentWidget(panel);
+                if (activateViaButton && panelButton != nullptr) {
+                    panelButton->click();
+                }
+                if (owner->currentWidget() != panel) {
+                    owner->setCurrentWidget(panel);
+                }
                 m_panelActivatedPoll = m_pollCount;
                 m_lastMetricSnapshot.clear();
                 m_stableMetricSamples = 0;
@@ -1647,6 +3303,415 @@ private:
                 root.insert("stage", panelActivationMatches
                     ? "waiting-panel-update"
                     : "waiting-panel-current");
+                return false;
+            }
+        }
+
+        const QString actionTriggerText = qEnvironmentVariable(
+            "NSIGHT_SOLID_PROBE_ACTION_TRIGGER_TEXT_MATCH").trimmed();
+        if (!actionTriggerText.isEmpty()) {
+            int actionSettlePolls = qEnvironmentVariableIntValue(
+                "NSIGHT_SOLID_PROBE_ACTION_SETTLE_MIN_POLLS");
+            actionSettlePolls = actionSettlePolls > 0 ? actionSettlePolls : 10;
+            const int requestedOccurrence = qMax(0,
+                qEnvironmentVariableIntValue(
+                    "NSIGHT_SOLID_PROBE_ACTION_TRIGGER_OCCURRENCE"));
+            const bool triggerAsynchronously = qEnvironmentVariableIntValue(
+                "NSIGHT_SOLID_PROBE_ACTION_TRIGGER_ASYNC") == 1;
+            root.insert("actionTriggerTextMatch", actionTriggerText);
+            root.insert("actionTriggerOccurrence", requestedOccurrence);
+            root.insert("minimumActionSettlePolls", actionSettlePolls);
+            root.insert("actionTriggerAsync", triggerAsynchronously);
+
+            if (m_actionTriggeredPoll == 0) {
+                const QList<QAction*> actions = DiscoverActions(application);
+                root.insert("actionTriggerCandidateCount", actions.size());
+                if (requestedOccurrence >= actions.size()) {
+                    root.insert("status", "error");
+                    root.insert("stage", "action-trigger-target-not-found");
+                    return true;
+                }
+                QAction* targetAction = actions.at(requestedOccurrence);
+                m_targetAction = ActionSummary(targetAction);
+                root.insert("targetAction", m_targetAction);
+                if (!targetAction->isEnabled()) {
+                    root.insert("status", "error");
+                    root.insert("stage", "action-trigger-target-disabled");
+                    return true;
+                }
+                m_actionTriggeredPoll = m_pollCount;
+                m_lastMetricSnapshot.clear();
+                m_stableMetricSamples = 0;
+                if (triggerAsynchronously) {
+                    QTimer::singleShot(0, targetAction, [targetAction] {
+                        targetAction->trigger();
+                    });
+                } else {
+                    targetAction->trigger();
+                }
+                root.insert("status", "action-triggered");
+                root.insert("stage", "waiting-action-update");
+                return false;
+            }
+
+            const int pollsSinceAction = m_pollCount - m_actionTriggeredPoll;
+            root.insert("targetAction", m_targetAction);
+            root.insert("pollsSinceActionTrigger", pollsSinceAction);
+            if (pollsSinceAction < actionSettlePolls) {
+                root.insert("status", "action-triggered");
+                root.insert("stage", "waiting-action-update");
+                return false;
+            }
+        }
+
+        const QString tabSelectionMatch = qEnvironmentVariable(
+            "NSIGHT_SOLID_PROBE_TAB_SELECT_MATCH").trimmed();
+        if (!tabSelectionMatch.isEmpty()) {
+            int tabSelectionSettlePolls = qEnvironmentVariableIntValue(
+                "NSIGHT_SOLID_PROBE_TAB_SELECT_SETTLE_MIN_POLLS");
+            tabSelectionSettlePolls = tabSelectionSettlePolls > 0
+                ? tabSelectionSettlePolls
+                : 10;
+            const bool tabSelectionExact = qEnvironmentVariable(
+                "NSIGHT_SOLID_PROBE_TAB_SELECT_MATCH_MODE")
+                .compare("exact", Qt::CaseInsensitive) == 0;
+            const int requestedOccurrence = qMax(0,
+                qEnvironmentVariableIntValue(
+                    "NSIGHT_SOLID_PROBE_TAB_SELECT_OCCURRENCE"));
+            root.insert("tabSelectionMatch", tabSelectionMatch);
+            root.insert("tabSelectionMatchMode",
+                tabSelectionExact ? "exact" : "contains");
+            root.insert("tabSelectionOccurrence", requestedOccurrence);
+            root.insert("minimumTabSelectionSettlePolls",
+                tabSelectionSettlePolls);
+
+            if (m_tabSelectionAppliedPoll == 0) {
+                const QList<QTabWidget*> tabWidgets = DiscoverTabWidgets(application);
+                int matchOccurrence = 0;
+                int itemsVisited = 0;
+                QTabWidget* targetTabWidget = nullptr;
+                int targetIndex = -1;
+                for (QTabWidget* tabWidget : tabWidgets) {
+                    for (int index = 0; index < tabWidget->count(); ++index) {
+                        ++itemsVisited;
+                        if (!TabItemMatches(
+                                tabWidget,
+                                index,
+                                tabSelectionMatch,
+                                tabSelectionExact)) {
+                            continue;
+                        }
+                        if (matchOccurrence == requestedOccurrence) {
+                            targetTabWidget = tabWidget;
+                            targetIndex = index;
+                            break;
+                        }
+                        ++matchOccurrence;
+                    }
+                    if (targetTabWidget != nullptr) {
+                        break;
+                    }
+                }
+                root.insert("tabSelectionWidgetsVisited", tabWidgets.size());
+                root.insert("tabSelectionItemsVisited", itemsVisited);
+                root.insert("tabSelectionMatchesSkipped", matchOccurrence);
+                if (targetTabWidget == nullptr || targetIndex < 0) {
+                    root.insert("status", "error");
+                    root.insert("stage", "tab-selection-target-not-found");
+                    return true;
+                }
+                if (!targetTabWidget->isTabEnabled(targetIndex)
+                    || !targetTabWidget->isTabVisible(targetIndex)) {
+                    root.insert("status", "error");
+                    root.insert("stage", "tab-selection-target-unavailable");
+                    return true;
+                }
+                m_beforeTabSelection = QJsonObject{
+                    {"class", targetTabWidget->metaObject()->className()},
+                    {"objectName", targetTabWidget->objectName()},
+                    {"index", targetTabWidget->currentIndex()},
+                    {"text", targetTabWidget->tabText(
+                        targetTabWidget->currentIndex())},
+                    {"count", targetTabWidget->count()},
+                    {"ancestry", ObjectAncestry(targetTabWidget)},
+                };
+                m_tabSelectionWidget = targetTabWidget;
+                m_tabSelectionTargetIndex = targetIndex;
+                m_tabSelectionTargetText = targetTabWidget->tabText(targetIndex);
+                targetTabWidget->setCurrentIndex(targetIndex);
+                m_tabSelectionAppliedPoll = m_pollCount;
+                m_lastMetricSnapshot.clear();
+                m_stableMetricSamples = 0;
+                root.insert("beforeTabSelection", m_beforeTabSelection);
+                root.insert("targetTabSelection", QJsonObject{
+                    {"index", m_tabSelectionTargetIndex},
+                    {"text", m_tabSelectionTargetText},
+                });
+                root.insert("status", "tab-selection-applied");
+                root.insert("stage", "waiting-tab-selection-update");
+                return false;
+            }
+
+            if (m_tabSelectionWidget.isNull()) {
+                root.insert("status", "error");
+                root.insert("stage", "tab-selection-widget-destroyed");
+                return true;
+            }
+            const int pollsSinceTabSelection = m_pollCount
+                - m_tabSelectionAppliedPoll;
+            const bool tabSelectionMatchesTarget =
+                m_tabSelectionWidget->currentIndex() == m_tabSelectionTargetIndex
+                && m_tabSelectionWidget->tabText(m_tabSelectionTargetIndex)
+                    == m_tabSelectionTargetText;
+            root.insert("beforeTabSelection", m_beforeTabSelection);
+            root.insert("targetTabSelection", QJsonObject{
+                {"index", m_tabSelectionTargetIndex},
+                {"text", m_tabSelectionTargetText},
+            });
+            root.insert("currentTabSelection", QJsonObject{
+                {"index", m_tabSelectionWidget->currentIndex()},
+                {"text", m_tabSelectionWidget->tabText(
+                    m_tabSelectionWidget->currentIndex())},
+            });
+            root.insert("tabSelectionMatchesTarget", tabSelectionMatchesTarget);
+            root.insert("pollsSinceTabSelection", pollsSinceTabSelection);
+            if (!tabSelectionMatchesTarget
+                || pollsSinceTabSelection < tabSelectionSettlePolls) {
+                root.insert("status", "tab-selection-applied");
+                root.insert("stage", tabSelectionMatchesTarget
+                    ? "waiting-tab-selection-update"
+                    : "waiting-tab-selection-current");
+                return false;
+            }
+        }
+
+        const QString invokeMethodName = qEnvironmentVariable(
+            "NSIGHT_SOLID_PROBE_INVOKE_METHOD").trimmed();
+        if (!invokeMethodName.isEmpty()) {
+            int invokeSettlePolls = qEnvironmentVariableIntValue(
+                "NSIGHT_SOLID_PROBE_INVOKE_SETTLE_MIN_POLLS");
+            invokeSettlePolls = invokeSettlePolls > 0 ? invokeSettlePolls : 20;
+            const int requestedOccurrence = qMax(0,
+                qEnvironmentVariableIntValue(
+                    "NSIGHT_SOLID_PROBE_INVOKE_OCCURRENCE"));
+            root.insert("invokeMethod", invokeMethodName);
+            root.insert("invokeOccurrence", requestedOccurrence);
+            root.insert("minimumInvokeSettlePolls", invokeSettlePolls);
+            root.insert("invokeTargetCandidateCount", m_invokeTargetCandidateCount);
+            root.insert("invokeTarget", m_invokeTarget);
+            root.insert("invokeMethodSignature", m_invokeMethodSignature);
+            root.insert("invokeScheduled", m_invokeScheduledPoll > 0);
+            root.insert("invokeStarted", m_invokeStarted);
+            root.insert("invokeCompleted", m_invokeCompleted);
+            root.insert("invokeSucceeded", m_invokeSucceeded);
+
+            if (m_invokeScheduledPoll == 0) {
+                const QList<QObject*> targets = DiscoverInvokeTargets(application);
+                m_invokeTargetCandidateCount = targets.size();
+                root.insert("invokeTargetCandidateCount", targets.size());
+                if (requestedOccurrence >= targets.size()) {
+                    root.insert("status", "error");
+                    root.insert("stage", "invoke-target-not-found");
+                    return true;
+                }
+                QObject* target = targets.at(requestedOccurrence);
+                m_invokeTarget = ObjectSummary(target);
+                root.insert("invokeTarget", m_invokeTarget);
+                QMetaMethod targetMethod;
+                const QMetaObject* metaObject = target->metaObject();
+                for (int index = 0; index < metaObject->methodCount(); ++index) {
+                    const QMetaMethod method = metaObject->method(index);
+                    if (method.parameterCount() == 0
+                        && QString::fromLatin1(method.name()).compare(
+                            invokeMethodName,
+                            Qt::CaseInsensitive) == 0) {
+                        targetMethod = method;
+                        break;
+                    }
+                }
+                if (!targetMethod.isValid()) {
+                    root.insert("status", "error");
+                    root.insert("stage", "invoke-zero-argument-method-not-found");
+                    return true;
+                }
+                m_invokeMethodSignature = QString::fromLatin1(
+                    targetMethod.methodSignature());
+                m_invokeScheduledPoll = m_pollCount;
+                root.insert("invokeMethodSignature", m_invokeMethodSignature);
+                root.insert("invokeScheduled", true);
+                QPointer<QObject> guardedTarget(target);
+                QTimer::singleShot(0, this, [this, guardedTarget, targetMethod] {
+                    m_invokeStarted = true;
+                    if (guardedTarget.isNull()) {
+                        m_invokeSucceeded = false;
+                        m_invokeCompleted = true;
+                        m_invokeCompletedPoll = m_pollCount;
+                        return;
+                    }
+                    m_invokeSucceeded = targetMethod.invoke(
+                        guardedTarget.data(), Qt::DirectConnection);
+                    m_invokeCompleted = true;
+                    m_invokeCompletedPoll = m_pollCount;
+                });
+                root.insert("status", "invoke-scheduled");
+                root.insert("stage", "waiting-invoke-start");
+                return false;
+            }
+
+            if (!m_invokeCompleted) {
+                root.insert("status", "invoke-scheduled");
+                root.insert("stage", m_invokeStarted
+                    ? "waiting-invoke-completion"
+                    : "waiting-invoke-start");
+                return false;
+            }
+            if (!m_invokeSucceeded) {
+                root.insert("status", "error");
+                root.insert("stage", "invoke-failed");
+                return true;
+            }
+            const int pollsSinceInvoke = m_pollCount - m_invokeCompletedPoll;
+            root.insert("pollsSinceInvoke", pollsSinceInvoke);
+            if (pollsSinceInvoke < invokeSettlePolls) {
+                root.insert("status", "invoke-complete");
+                root.insert("stage", "waiting-invoke-update");
+                return false;
+            }
+        }
+
+        const QString comboSelectionMatch = qEnvironmentVariable(
+            "NSIGHT_SOLID_PROBE_COMBO_SELECT_MATCH").trimmed();
+        if (!comboSelectionMatch.isEmpty()) {
+            int comboSelectionSettlePolls = qEnvironmentVariableIntValue(
+                "NSIGHT_SOLID_PROBE_COMBO_SELECT_SETTLE_MIN_POLLS");
+            comboSelectionSettlePolls = comboSelectionSettlePolls > 0
+                ? comboSelectionSettlePolls
+                : 10;
+            const bool comboSelectionExact = qEnvironmentVariable(
+                "NSIGHT_SOLID_PROBE_COMBO_SELECT_MATCH_MODE")
+                .compare("exact", Qt::CaseInsensitive) == 0;
+            const int requestedMatchOccurrence = qMax(0,
+                qEnvironmentVariableIntValue(
+                    "NSIGHT_SOLID_PROBE_COMBO_SELECT_OCCURRENCE"));
+            const QString comboSelectionTrigger = qEnvironmentVariable(
+                "NSIGHT_SOLID_PROBE_COMBO_SELECT_TRIGGER", "activated")
+                .trimmed().toLower();
+            root.insert("comboSelectionMatch", comboSelectionMatch);
+            root.insert("comboSelectionMatchMode",
+                comboSelectionExact ? "exact" : "contains");
+            root.insert("comboSelectionOccurrence", requestedMatchOccurrence);
+            root.insert("comboSelectionTrigger", comboSelectionTrigger);
+            root.insert("minimumComboSelectionSettlePolls",
+                comboSelectionSettlePolls);
+            root.insert("comboSelectionActivatedInvoked",
+                m_comboSelectionActivatedInvoked);
+            root.insert("comboSelectionTextActivatedInvoked",
+                m_comboSelectionTextActivatedInvoked);
+
+            if (m_comboSelectionAppliedPoll == 0) {
+                const QList<QComboBox*> comboBoxes = DiscoverComboBoxes(application);
+                int matchOccurrence = 0;
+                int itemsVisited = 0;
+                QComboBox* targetComboBox = nullptr;
+                int targetIndex = -1;
+                for (QComboBox* comboBox : comboBoxes) {
+                    for (int index = 0; index < comboBox->count(); ++index) {
+                        ++itemsVisited;
+                        if (!ComboItemMatches(
+                                comboBox,
+                                index,
+                                comboSelectionMatch,
+                                comboSelectionExact)) {
+                            continue;
+                        }
+                        if (matchOccurrence == requestedMatchOccurrence) {
+                            targetComboBox = comboBox;
+                            targetIndex = index;
+                            break;
+                        }
+                        ++matchOccurrence;
+                    }
+                    if (targetComboBox != nullptr) {
+                        break;
+                    }
+                }
+                root.insert("comboSelectionCombosVisited", comboBoxes.size());
+                root.insert("comboSelectionItemsVisited", itemsVisited);
+                root.insert("comboSelectionMatchesSkipped", matchOccurrence);
+                if (targetComboBox == nullptr || targetIndex < 0) {
+                    root.insert("status", "error");
+                    root.insert("stage", "combo-selection-target-not-found");
+                    return true;
+                }
+
+                m_beforeComboSelection = QJsonObject{
+                    {"class", targetComboBox->metaObject()->className()},
+                    {"objectName", targetComboBox->objectName()},
+                    {"index", targetComboBox->currentIndex()},
+                    {"text", targetComboBox->currentText()},
+                    {"count", targetComboBox->count()},
+                    {"ancestry", ObjectAncestry(targetComboBox)},
+                };
+                m_comboSelectionBox = targetComboBox;
+                m_comboSelectionTargetIndex = targetIndex;
+                m_comboSelectionTargetText = targetComboBox->itemText(targetIndex);
+                targetComboBox->setCurrentIndex(targetIndex);
+                if (comboSelectionTrigger == "activated") {
+                    m_comboSelectionActivatedInvoked = QMetaObject::invokeMethod(
+                        targetComboBox,
+                        "activated",
+                        Qt::DirectConnection,
+                        Q_ARG(int, targetIndex));
+                    m_comboSelectionTextActivatedInvoked = QMetaObject::invokeMethod(
+                        targetComboBox,
+                        "textActivated",
+                        Qt::DirectConnection,
+                        Q_ARG(QString, m_comboSelectionTargetText));
+                }
+                m_comboSelectionAppliedPoll = m_pollCount;
+                m_lastMetricSnapshot.clear();
+                m_stableMetricSamples = 0;
+                root.insert("beforeComboSelection", m_beforeComboSelection);
+                root.insert("targetComboSelection", QJsonObject{
+                    {"index", m_comboSelectionTargetIndex},
+                    {"text", m_comboSelectionTargetText},
+                });
+                root.insert("currentComboSelection", QJsonObject{
+                    {"index", targetComboBox->currentIndex()},
+                    {"text", targetComboBox->currentText()},
+                });
+                root.insert("status", "combo-selection-applied");
+                root.insert("stage", "waiting-combo-selection-update");
+                return false;
+            }
+
+            if (m_comboSelectionBox.isNull()) {
+                root.insert("status", "error");
+                root.insert("stage", "combo-selection-widget-destroyed");
+                return true;
+            }
+            const int pollsSinceComboSelection = m_pollCount
+                - m_comboSelectionAppliedPoll;
+            const bool comboSelectionMatchesTarget =
+                m_comboSelectionBox->currentIndex() == m_comboSelectionTargetIndex
+                && m_comboSelectionBox->currentText() == m_comboSelectionTargetText;
+            root.insert("beforeComboSelection", m_beforeComboSelection);
+            root.insert("targetComboSelection", QJsonObject{
+                {"index", m_comboSelectionTargetIndex},
+                {"text", m_comboSelectionTargetText},
+            });
+            root.insert("currentComboSelection", QJsonObject{
+                {"index", m_comboSelectionBox->currentIndex()},
+                {"text", m_comboSelectionBox->currentText()},
+            });
+            root.insert("comboSelectionMatchesTarget", comboSelectionMatchesTarget);
+            root.insert("pollsSinceComboSelection", pollsSinceComboSelection);
+            if (!comboSelectionMatchesTarget
+                || pollsSinceComboSelection < comboSelectionSettlePolls) {
+                root.insert("status", "combo-selection-applied");
+                root.insert("stage", comboSelectionMatchesTarget
+                    ? "waiting-combo-selection-update"
+                    : "waiting-combo-selection-current");
                 return false;
             }
         }
@@ -1705,6 +3770,27 @@ private:
                     m_baselineModels, m_lastModels));
             }
         }
+        if (HasComboProbe()) {
+            int comboTotal = 0;
+            const QJsonArray comboBoxes = CollectComboBoxes(application, &comboTotal);
+            root.insert("comboTotal", comboTotal);
+            root.insert("comboReturned", comboBoxes.size());
+            root.insert("combos", comboBoxes);
+        }
+        if (HasTabProbe()) {
+            int tabTotal = 0;
+            const QJsonArray tabWidgets = CollectTabWidgets(application, &tabTotal);
+            root.insert("tabTotal", tabTotal);
+            root.insert("tabReturned", tabWidgets.size());
+            root.insert("tabs", tabWidgets);
+        }
+        if (HasObjectProbe()) {
+            int objectTotal = 0;
+            const QJsonArray objects = CollectObjects(application, &objectTotal);
+            root.insert("objectTotal", objectTotal);
+            root.insert("objectReturned", objects.size());
+            root.insert("objects", objects);
+        }
         root.insert("status", "complete");
         root.insert("stage", "complete");
         return true;
@@ -1730,15 +3816,57 @@ private:
     int m_pollCount = 0;
     int m_selectionAppliedPoll = 0;
     int m_modelSelectionAppliedPoll = 0;
+    int m_modelPreparePanelActivatedPoll = 0;
     int m_panelActivatedPoll = 0;
+    int m_comboSelectionAppliedPoll = 0;
+    int m_actionTriggeredPoll = 0;
+    int m_tabSelectionAppliedPoll = 0;
+    int m_invokeScheduledPoll = 0;
+    int m_invokeCompletedPoll = 0;
+    int m_invokeTargetCandidateCount = 0;
+    int m_modelSelectionNudgePoll = 0;
+    int m_comboSelectionTargetIndex = -1;
+    int m_tabSelectionTargetIndex = -1;
     int m_beforePanelIndex = -1;
     int m_lastModelCount = 0;
     int m_stableModelCountSamples = 0;
     int m_stableMetricSamples = 0;
     int m_stableStandaloneMetricSamples = 0;
+    int m_lastBaselineMetricTotal = -1;
+    int m_stableBaselineMetricCountSamples = 0;
     int m_lastEventSearchVisited = -1;
+    int m_modelSelectionNudgeProviderStableSamples = 0;
+    int m_modelSelectionTargetProviderStableSamples = 0;
     int m_stableEventSearchSamples = 0;
     bool m_modelBaselineCaptured = false;
+    bool m_modelSelectionTriggerInvoked = false;
+    bool m_modelSelectionTriggerViewVisible = false;
+    bool m_modelSelectionTriggerCellRectValid = false;
+    bool m_modelSelectionInvokeSucceeded = false;
+    bool m_modelSelectionInvokeTargetFound = false;
+    bool m_modelSelectionInvokeMethodFound = false;
+    bool m_modelSelectionInvokeInternalPointerAvailable = false;
+    bool m_comboSelectionActivatedInvoked = false;
+    bool m_comboSelectionTextActivatedInvoked = false;
+    bool m_invokeStarted = false;
+    bool m_invokeCompleted = false;
+    bool m_invokeSucceeded = false;
+    bool m_dialogSeen = false;
+    bool m_dialogAcceptQueued = false;
+    bool m_modelSelectionNudgeApplied = false;
+    bool m_modelSelectionPreflightHasCurrent = false;
+    bool m_modelSelectionNudgeProviderChanged = false;
+    bool m_modelSelectionNudgeProviderPopulated = false;
+    bool m_modelSelectionNudgeProviderReady = false;
+    bool m_modelSelectionNudgeProviderHasExpectedSum = false;
+    bool m_modelSelectionNudgeProviderSumMatches = false;
+    bool m_modelSelectionTargetProviderChanged = false;
+    bool m_modelSelectionTargetProviderPopulated = false;
+    bool m_modelSelectionTargetProviderReady = false;
+    bool m_modelSelectionTargetProviderHasExpectedSum = false;
+    bool m_modelSelectionTargetProviderSumMatches = false;
+    QPointer<QComboBox> m_comboSelectionBox;
+    QPointer<QTabWidget> m_tabSelectionWidget;
     QJsonArray m_baselineMetricViews;
     QJsonArray m_lastMetricViews;
     QJsonArray m_baselineModels;
@@ -1749,9 +3877,31 @@ private:
     QJsonObject m_beforeModelSelection;
     QJsonObject m_targetModelSelection;
     QJsonObject m_modelSelector;
+    QJsonObject m_beforeComboSelection;
+    QJsonObject m_targetAction;
+    QJsonObject m_beforeTabSelection;
+    QJsonObject m_invokeTarget;
+    QJsonObject m_modelSelectionNudgeTarget;
+    QJsonObject m_modelSelectionTriggerCellRect;
+    QJsonObject m_modelSelectionAfterTrigger;
     QString m_beforePanelObjectName;
+    QString m_modelSelectionInvokeParameterType;
+    QString m_modelSelectionInvokeSourceModelClass;
+    QString m_modelSelectionInvokeInternalId;
+    QString m_comboSelectionTargetText;
+    QString m_tabSelectionTargetText;
+    QString m_invokeMethodSignature;
+    QJsonArray m_dialogSelectedFiles;
+    qint64 m_modelSelectionNudgeProviderExpectedSum = 0;
+    qint64 m_modelSelectionNudgeProviderActualSum = 0;
+    qint64 m_modelSelectionTargetProviderExpectedSum = 0;
+    qint64 m_modelSelectionTargetProviderActualSum = 0;
     QByteArray m_lastMetricSnapshot;
     QByteArray m_lastStandaloneMetricSnapshot;
+    QByteArray m_modelSelectionNudgeInitialProviderSnapshot;
+    QByteArray m_modelSelectionNudgeLastProviderSnapshot;
+    QByteArray m_modelSelectionNudgeProviderSnapshot;
+    QByteArray m_modelSelectionTargetLastProviderSnapshot;
 };
 
 class SolidProbePlugin final : public QGenericPlugin

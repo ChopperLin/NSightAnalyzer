@@ -16,7 +16,7 @@ synthesize mouse/keyboard input.
 - Viewer application version:
   `2026.2.0.0 (build 37991608) (public-release)`
 - Qt 6.8.1, MSVC 2022 x64
-- Probe schema implementation: `probe-0.5`
+- Probe schema implementation: `probe-0.42`
 
 The downloaded Qt Core, Gui, and Widgets release DLLs were byte-identical to
 the DLLs shipped by this Nsight installation. The Qt plugin entry point and
@@ -36,31 +36,47 @@ The following paths were verified against generated and real reports:
 - Stable Event selectors by path, preorder ordinal, event range, or description
   plus occurrence. Missing selectors return `event-target-not-found` after the
   loaded tree count stabilizes.
-- 88 Warp Metrics tables, including SM register occupancy, warp occupancy,
-  SysL2/VidL2 hit rate and throughput, VRAM bandwidth, memory traffic, and
-  pipeline utilization.
+- 88 Warp Metrics tables (409 rows for the tested `GBufferPass`), including SM
+  register occupancy, warp occupancy/stalls/latency, SysL2/VidL2 hit rate and
+  throughput, VRAM bandwidth, memory traffic, queues, draw counts, and pipeline
+  utilization. Header units, display values, full-precision Tooltip values,
+  and metric descriptions are all recoverable.
+- Warp Metrics are directly available after selecting a pass; Trace Compare is
+  not required. Attached-view filters returned only `SM Register Occupancy`
+  and `VidL2 Throughput` from the 88-table surface in a 73 KB result.
 - Per-pass refresh. Selecting `DeferredLightingPass` (events 3507-3555) changed
   all five requested Register/L2/VRAM tables and produced, among other values,
   89.2% Pixel Register Allocation, 73.8% VidL2 hit rate, and 20.2% VRAM read
   bandwidth.
+- Per-frame refresh on the real 30-frame report. Frame 0 and frame 29 each
+  returned 88 tables/409 rows for their own `GBufferPass`; 258 of 376 unique
+  logical metrics changed. The selections retained distinct event ranges and
+  frame values, so repeated marker names did not alias across frames.
 - Structured Event Parameters. Selecting draw event 1661 returned typed fields
   for `DrawIndexedInstanced`, including `InstanceCount=94206` and
   `StartInstanceLocation=262176`.
-- Shader inventory and static properties from `SampleItemTreeModel`: type,
-  entry point, shader hash, samples, warps, registers, shared memory, CTA
-  dimensions, live registers, instruction mix, and stall columns. One real
-  report exposed 676 shader rows; 469 had register values.
+- Shader inventory and static/dynamic properties from `SampleItemTreeModel`:
+  type, entry point, shader hash, pipeline name (when grouped by pipeline),
+  samples, warps, registers, shared memory, CTA dimensions, live registers,
+  instruction mix, dependency-attributed samples, and stall columns. The
+  30-frame report's frame-0 `GBufferPass` exposed 1,020 shader hashes, 133 with
+  PC samples, totaling 27,432 samples.
 - Shader-hash drilldown into PC sampling. Pixel shader
-  `0x664f0abcd2665646` exposed `# Warp=6`, `# Reg=96`, shared-memory range
-  `300-2400`, and 56 Instruction Mix rows.
-- Instruction Mix raw values: `Pipe`, `Family`, `Operation`, a 17-element stall
-  sample vector, and instruction count. Tooltip values preserve totals,
-  percentages, and stall labels. For the shader above, FP32 FMA accounted for
-  61,179 instructions and 10.3K samples; Long Scoreboard was 42.04% of those
-  samples.
-- Explicit absence. A tested Pixel shader had Instruction Mix data but no
-  correlated Hotspot rows, so source/function hotspot data is represented as
-  unavailable for that selection rather than as a probing failure.
+  `0xc7096045a5804ec3` exposed 3,592 samples, `# Warp=24`, `# Reg=30`, 14 live
+  registers, 544 static instructions, and 1,501 Long Scoreboard samples.
+- The shader row's instruction-mix vector is shader-specific. The separate
+  `InstructionMixModel` is range aggregate, not shader-specific: every shader
+  selection under the tested `GBufferPass` retained 39,508 samples, 130,656
+  executed instructions, and 56 categories; `DeferredLightingPass` instead
+  produced 42,801 samples, 93,400 instructions, and 52 categories.
+- DXIL/source-correlation export for the shader above returned 480 DXIL rows
+  with per-line samples, stalls, latency, instruction mix, dependency samples,
+  and live registers. The driver also supplied 242 SASS addresses and a
+  SASS-to-DXIL line table, allowing address association without screenshots.
+- Trace Analysis exposes its generated rules/metrics as Qt models; the tested
+  30-frame report exposed per-frame analysis rather than only an aggregate
+  screenshot. The Viewer's built-in counter export also produced 226 ranges by
+  647 raw columns on the single-frame report.
 
 On the generated validation trace, 18 values across two markers matched the
 official `GPUTRACE_REGIMES.xls` export exactly, covering register allocation,
@@ -86,6 +102,12 @@ the five-column view projection and defaults to columns 0-4. Explicit
 Generic model and metric `itemData()` enumeration is also opt-in. Display and
 high-precision Tooltip roles contain the useful facts; eager enumeration of
 custom UI roles caused unstable Viewer shutdown and revealed no metric IDs.
+
+Large reports also need a selection barrier. The 30-frame report initially
+allowed selection when only one of 88 metric tables existed, which raced the
+Viewer's lazy initialization and spawned CrashReporter. Probe 0.42 can require
+a minimum table count and stable polls before changing the selected event; the
+same run then completed twice with zero CrashReporters.
 
 ## Build
 
@@ -163,11 +185,17 @@ Warp Metrics:
 - `METRIC_OFFSET`, `METRIC_LIMIT`
 - `METRIC_INCLUDE_ITEM_DATA=1` for explicit role probing only
 - `METRICS_MIN_POLL` (safe default 10)
+- `SELECTION_BASELINE_METRIC_MIN_COUNT` and
+  `SELECTION_BASELINE_METRIC_STABLE_MIN_POLLS` gate event selection on a stable
+  metric surface (the verified 30-frame profile used `80` and `2`)
 
 Model discovery/export:
 
 - `MODEL_CLASS_MATCH`, `MODEL_OBJECT_MATCH`
+- `MODEL_INSTANCE_ORDINAL` to isolate one matching class/object instance
 - `MODEL_MATCH_MODE=exact|contains`
+- `MODEL_ATTACHED_VIEW_CLASS_MATCH`, `MODEL_ATTACHED_VIEW_OBJECT_MATCH`, and
+  `MODEL_REQUIRE_VISIBLE_VIEW=1` for precise on-demand table selection
 - `MODEL_OFFSET`, `MODEL_LIMIT`, `MODEL_COLUMNS`
 - `MODEL_COLUMN_POLICY=all` to override safe view projection
 - `MODEL_FLAT=1`, `MODEL_STRUCTURE_ONLY=1`
@@ -181,10 +209,38 @@ Shader row selection and downstream panel activation:
 - `MODEL_SELECT_PATH` or `MODEL_SELECT_ROW` for session-local probing
 - `MODEL_SELECT_MATCH`, `MODEL_SELECT_COLUMN`,
   `MODEL_SELECT_MATCH_MODE`, `MODEL_SELECT_OCCURRENCE`
+- `MODEL_SELECT_TRIGGER=activated|clicked|doubleClicked|mouseClick` to reproduce a
+  view-level row action after changing the current selection
+- `MODEL_SELECT_TRIGGER_COLUMN` to emit that action on a link-bearing sibling
+  cell such as a shader's File Name column
+- `MODEL_SELECT_TRIGGER_X_OFFSET` to target link text near the left edge of a
+  view cell instead of its center
+- `MODEL_SELECT_PREPARE_PANEL` and
+  `MODEL_SELECT_PREPARE_PANEL_SETTLE_MIN_POLLS` to make a hidden selection view
+  visible before emitting a view-level action
+- `MODEL_SELECT_INVOKE_CLASS` and `MODEL_SELECT_INVOKE_METHOD` for an explicit,
+  version-pinned Qt meta-object call using the selected source-model item's
+  internal pointer (for example `SummaryPage.LoadSource`)
+- One-parameter internal-pointer calls additionally require
+  `MODEL_SELECT_INVOKE_ALLOW_UNSAFE_POINTER=1`; the default only permits safer
+  no-argument slots such as `SummaryPage.SelectionChanged`
 - `ACTIVATE_PANEL`, for example `FlatTabPanel_Instruction Mix`
+- `ACTIVATE_PANEL_VIA_BUTTON=1` for panels whose provider initializes only
+  through the corresponding `FlatTabButton_*` action
 
 Shader hash matching is stable across runs; row/path identifiers can change
 when Nsight asynchronously sorts the shader table.
+
+Controlled UI actions used only to instantiate lazy data surfaces:
+
+- `ACTION_TRIGGER_TEXT_MATCH`, `ACTION_MATCH_MODE`,
+  `ACTION_TRIGGER_OCCURRENCE`, `ACTION_TRIGGER_ASYNC=1`
+- `INVOKE_CLASS_MATCH`, `INVOKE_OBJECT_MATCH`, `INVOKE_TEXT_MATCH`, ancestry
+  filters, `INVOKE_OCCURRENCE`, and zero-argument `INVOKE_METHOD`
+- `COMBO_*`, `TAB_*`, and `OBJECT_*` filters for cataloging a specific lazy
+  panel without screen coordinates
+- `CLOSE_MODAL_BEFORE_QUIT=1` closes probe-opened modal windows before Viewer
+  shutdown
 
 ## Boundary
 
@@ -194,6 +250,34 @@ offline API shape. No discovered public Nsight Graphics SDK currently exposes
 all of these decoded report models. Nsight Perf SDK remains useful for live
 counter collection and instrumentation, but it is not the decoder used by
 this existing-report probe.
+
+The tested Standard Viewer does not expose full SASS opcode text. Its own
+`ShaderProfilerPlugin.dll` states that SASS instructions/disassembly require
+the Pro edition. The probe still recovers the PC address line table and all
+DXIL-correlated samples, but it does not bypass that license boundary.
+
+HLSL and function-level hotspots require matching shader PDBs. For
+`0xc7096045a5804ec3`, the Viewer requested
+`a20651a4fd7e9710dfaaa90fdfd2aed0.pdb`; it was not present, while the Viewer
+reported successful SASS debug-info and SASS-to-IL line-table loading. Empty
+HLSL/function models in that case are an explicit input-data limitation.
+
+PC sampling is not reliably scoped to one draw. Selecting draw 1661 expanded
+the shader-tree sample total from the enclosing marker's 39,508 to 494,565;
+the same shader retained 3,592 samples but changed from 9.09% to 0.73% of the
+selection. Draw selection remains useful for API parameters and pipeline
+membership, while pass/marker ranges are the supported attribution grain.
+
+`RangesView`/`RangesModel` symbols exist in WarpViz, but no such model was
+instantiated by the normal GPU Trace document, Trace Analysis, or a completed
+Trace Compare operation. Timeline action/range data is nevertheless available
+through the complete Event List hierarchy. Do not keep probing this private
+view unless a future Viewer build exposes it in the GPU Trace UI.
+
+A GPU Trace report contains performance and execution metadata, not a Graphics
+Capture's replayable render targets and resource contents. It can diagnose
+performance and correlate suspicious work, but it cannot independently prove
+a pixel-level visual-correctness issue.
 
 This mechanism remains a probe until a supported NVIDIA surface or a second
 independent implementation exists. Product operations must not silently depend
