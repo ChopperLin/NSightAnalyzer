@@ -1,0 +1,14 @@
+bin/
+obj/
+.local/
+dist/
+aqtinstall.log
+*.user
+*.suo
+
+# NVIDIA capture/profile artifacts are machine-local and may contain paths,
+# command lines, environment variables, shaders, or application resources.
+*.ngfx-capture
+*.ngfx-bincap
+*.ngfx-gputrace
+*.nsight-gfx
