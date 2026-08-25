@@ -10,6 +10,24 @@
 
 Generic model discovery is never part of product verification.
 
+## Contract test project
+
+`tests/NsightAnalyzer.Tests` runs layers 1 and 2 with `dotnet test`. It needs no GPU, no Nsight
+installation, and no real report; the whole suite completes in well under a second.
+
+Fixtures under `tests/NsightAnalyzer.Tests/Fixtures` are real bridge output passed through
+`tools/fixtures/sanitize-bridge-output.py`. That script renames only caller-authored
+instrumentation names (dotted, underscored, or interior-CamelCase tokens such as
+`GBufferPass` or `MeshSkinning.SkinOnGPU`), pointers, and machine paths. Viewer vocabulary is
+preserved exactly, because the projection asserts on it: column headers, role names, metric
+table/row names, units, and D3D12 call text. Every number, row/column position, occurrence,
+source ordinal, and availability state is preserved verbatim, so a fixture still closes the
+same structural oracles as the report it came from — 88 tables, 409 rows, 801 metric values,
+56 instruction categories, and a 100-of-4,951 event page.
+
+Regenerating a fixture is deliberate: run the script against a run directory under `.local/runs`
+and confirm the oracle counts above still hold.
+
 ## Fixed real-trace oracles
 
 ### Generated validation trace

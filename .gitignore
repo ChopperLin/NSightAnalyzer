@@ -12,3 +12,7 @@ aqtinstall.log
 *.ngfx-bincap
 *.ngfx-gputrace
 *.nsight-gfx
+
+# Python bytecode from local tooling
+__pycache__/
+*.pyc

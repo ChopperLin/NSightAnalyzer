@@ -1,0 +1,7527 @@
+{
+ "applicationClass": "QApplication",
+ "applicationFilePath": "fixture",
+ "applicationFound": true,
+ "applicationName": "NVIDIA Nsight Graphics",
+ "applicationVersion": "2026.2.0.0 (build 37991608) (public-release)",
+ "eventListReady": true,
+ "eventViews": [
+  {
+   "columns": 12,
+   "export": {
+    "flat": false,
+    "hasMore": true,
+    "headers": [
+     {
+      "column": 0,
+      "display": "Description",
+      "displayType": "QString"
+     },
+     {
+      "column": 1,
+      "display": "Event",
+      "displayType": "QString"
+     },
+     {
+      "column": 2,
+      "display": null,
+      "displayType": ""
+     },
+     {
+      "column": 3,
+      "display": null,
+      "displayType": ""
+     },
+     {
+      "column": 4,
+      "display": "Object",
+      "displayType": "QString"
+     },
+     {
+      "column": 5,
+      "display": "Thread",
+      "displayType": "QString"
+     },
+     {
+      "column": 6,
+      "display": "\u0394t (CPU)",
+      "displayType": "QString"
+     },
+     {
+      "column": 7,
+      "display": "\u0394t (GPU)",
+      "displayType": "QString"
+     },
+     {
+      "column": 8,
+      "display": "Start",
+      "displayType": "QString"
+     },
+     {
+      "column": 9,
+      "display": "End",
+      "displayType": "QString"
+     },
+     {
+      "column": 10,
+      "display": "\u0394t",
+      "displayType": "QString"
+     },
+     {
+      "column": 11,
+      "display": null,
+      "displayType": ""
+     }
+    ],
+    "includeHeaders": true,
+    "includeItemData": false,
+    "limit": 100,
+    "maxDepth": 64,
+    "maxNodes": 100,
+    "modelClass": "NV::EventList::EventTreeModel",
+    "modelObjectName": "EventList_EventTreeModel",
+    "nodeCount": 100,
+    "nodes": [
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "Graphics CommandQueue (D3D12 Direct Q:0)",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": "0 - 4384",
+        "displayType": "QString"
+       },
+       {
+        "column": 2,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 9,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 10,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 3,
+      "depth": 0,
+      "ordinal": 0,
+      "path": [
+       0
+      ],
+      "row": 0
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ExecuteCommandLists(ID3D12CommandList** ppCommandLists = { '0x0000000000000000', '0x0000000000000000' })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 0,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 1,
+      "ordinal": 1,
+      "path": [
+       0,
+       0
+      ],
+      "row": 0
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ExecuteCommandLists(ID3D12CommandList** ppCommandLists = { '0x0000000000000000' })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 1,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "0.02ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "0.02ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "0.00ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 1,
+      "ordinal": 2,
+      "path": [
+       0,
+       1
+      ],
+      "row": 1
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ExecuteCommandLists(ID3D12CommandList** ppCommandLists = { '0x0000000000000000', '0x0000000000000000', '0x0000000000000000', '0x0000000000000000', '0x0000000000000000', '0x0000000000000000', '0x0000000000000000', '0x0000000000000000', '0x0000000000000000', '0x0000000000000000', '0x0000000000000000', '0x0000000000000000', '0x0000000000000000', '0x0000000000000000', '0x0000000000000000', '0x0000000000000000', ... })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": "2 - 4384",
+        "displayType": "QString"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.57ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "16.44ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "8.88ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 38,
+      "depth": 1,
+      "ordinal": 3,
+      "path": [
+       0,
+       2
+      ],
+      "row": 2
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ID3D12CommandList (3)",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 3,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.57ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.57ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 1,
+      "depth": 2,
+      "ordinal": 4,
+      "path": [
+       0,
+       2,
+       0
+      ],
+      "row": 0
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ResourceBarrier(UINT NumBarriers = 110, const D3D12_RESOURCE_BARRIER* pBarriers = { { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 192, .StateAfter = 1024 } }, { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 2755, .StateAfter = 1024 } }, { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 2755, .StateAfter = 8 } }, { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 64, .StateAfter = 1024 } }, { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 2755, .StateAfter = 8 } }, { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 2755, .StateAfter = 8 } }, { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 2755, .StateAfter = 8 } }, { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 2755, .StateAfter = 1024 } }, { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 1, .StateAfter = 1024 } }, { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 2755, .StateAfter = 8 } }, { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 2755, .StateAfter = 8 } }, { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 64, .StateAfter = 1024 } }, { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 2755, .StateAfter = 1024 } }, { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 64, .StateAfter = 1024 } }, { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 2755, .StateAfter = 8 } }, { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 64, .StateAfter = 1024 } }, ... })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 3,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.57ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.57ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 5,
+      "path": [
+       0,
+       2,
+       0,
+       0
+      ],
+      "row": 0
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ID3D12CommandList (4)",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": "4 - 609",
+        "displayType": "QString"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.57ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.97ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "0.40ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 600,
+      "depth": 2,
+      "ordinal": 6,
+      "path": [
+       0,
+       2,
+       1
+      ],
+      "row": 1
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "BeginEvent(UINT Metadata = 2, UINT Size = 48, const void* pData = \"Pass01\")",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 4,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 9,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 10,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 7,
+      "path": [
+       0,
+       2,
+       1,
+       0
+      ],
+      "row": 0
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "Pass01",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 5,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.57ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.57ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "0.00ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 8,
+      "path": [
+       0,
+       2,
+       1,
+       1
+      ],
+      "row": 1
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "EndEvent()",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 5,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 9,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 10,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 9,
+      "path": [
+       0,
+       2,
+       1,
+       2
+      ],
+      "row": 2
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "CopyBufferRegion(ID3D12Resource* pDstBuffer = '0x0000000000000000', UINT64 DstOffset = 6073215491780902912, ID3D12Resource* pSrcBuffer = '0x0000000000000000', UINT64 SrcOffset = 5153960755200, UINT64 NumBytes = 0)",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 6,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.57ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.57ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 10,
+      "path": [
+       0,
+       2,
+       1,
+       3
+      ],
+      "row": 3
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "BeginEvent(UINT Metadata = 2, UINT Size = 56, const void* pData = \"Pass02\")",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 7,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 9,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 10,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 11,
+      "path": [
+       0,
+       2,
+       1,
+       4
+      ],
+      "row": 4
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "Pass02",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 8,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.57ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.57ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "0.00ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 12,
+      "path": [
+       0,
+       2,
+       1,
+       5
+      ],
+      "row": 5
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "EndEvent()",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 8,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 9,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 10,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 13,
+      "path": [
+       0,
+       2,
+       1,
+       6
+      ],
+      "row": 6
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "BeginEvent(UINT Metadata = 2, UINT Size = 56, const void* pData = \"Pass03\")",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 9,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 9,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 10,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 14,
+      "path": [
+       0,
+       2,
+       1,
+       7
+      ],
+      "row": 7
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "Pass03",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": "10 - 180",
+        "displayType": "QString"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.57ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.66ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "0.09ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 15,
+      "path": [
+       0,
+       2,
+       1,
+       8
+      ],
+      "row": 8
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "BeginEvent(UINT Metadata = 2, UINT Size = 56, const void* pData = \"Pass04\")",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 10,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 9,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 10,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 16,
+      "path": [
+       0,
+       2,
+       1,
+       9
+      ],
+      "row": 9
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "Pass04",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": "11 - 22",
+        "displayType": "QString"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.57ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.57ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 17,
+      "path": [
+       0,
+       2,
+       1,
+       10
+      ],
+      "row": 10
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "SetPipelineState(ID3D12PipelineState* pPipelineState = '0x0000000000000000')",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 11,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 9,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 10,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 18,
+      "path": [
+       0,
+       2,
+       1,
+       11
+      ],
+      "row": 11
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "SetDescriptorHeaps(UINT NumDescriptorHeaps = 2, ID3D12DescriptorHeap** ppDescriptorHeaps = { '0x0000000000000000', '0x0000000000000000' })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 12,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 9,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 10,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 19,
+      "path": [
+       0,
+       2,
+       1,
+       12
+      ],
+      "row": 12
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "Dispatch(UINT ThreadGroupCountX = 1, UINT ThreadGroupCountY = 1, UINT ThreadGroupCountZ = 65537)",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 13,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.57ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.57ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 20,
+      "path": [
+       0,
+       2,
+       1,
+       13
+      ],
+      "row": 13
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ResourceBarrier(UINT NumBarriers = 1, const D3D12_RESOURCE_BARRIER* pBarriers = { { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 8, .StateAfter = 2755 } } })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 14,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.57ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.57ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 21,
+      "path": [
+       0,
+       2,
+       1,
+       14
+      ],
+      "row": 14
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ResourceBarrier(UINT NumBarriers = 1, const D3D12_RESOURCE_BARRIER* pBarriers = { { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 8, .StateAfter = 2755 } } })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 15,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.57ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.57ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 22,
+      "path": [
+       0,
+       2,
+       1,
+       15
+      ],
+      "row": 15
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ResourceBarrier(UINT NumBarriers = 1, const D3D12_RESOURCE_BARRIER* pBarriers = { { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 8, .StateAfter = 2755 } } })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 16,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.57ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.57ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 23,
+      "path": [
+       0,
+       2,
+       1,
+       16
+      ],
+      "row": 16
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ResourceBarrier(UINT NumBarriers = 1, const D3D12_RESOURCE_BARRIER* pBarriers = { { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 8, .StateAfter = 2755 } } })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 17,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.57ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.57ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 24,
+      "path": [
+       0,
+       2,
+       1,
+       17
+      ],
+      "row": 17
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ResourceBarrier(UINT NumBarriers = 1, const D3D12_RESOURCE_BARRIER* pBarriers = { { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 8, .StateAfter = 2755 } } })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 18,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.57ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.57ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 25,
+      "path": [
+       0,
+       2,
+       1,
+       18
+      ],
+      "row": 18
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ResourceBarrier(UINT NumBarriers = 1, const D3D12_RESOURCE_BARRIER* pBarriers = { { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 8, .StateAfter = 2755 } } })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 19,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.57ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.57ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 26,
+      "path": [
+       0,
+       2,
+       1,
+       19
+      ],
+      "row": 19
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ResourceBarrier(UINT NumBarriers = 1, const D3D12_RESOURCE_BARRIER* pBarriers = { { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 8, .StateAfter = 2755 } } })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 20,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.57ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.57ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 27,
+      "path": [
+       0,
+       2,
+       1,
+       20
+      ],
+      "row": 20
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ResourceBarrier(UINT NumBarriers = 1, const D3D12_RESOURCE_BARRIER* pBarriers = { { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 8, .StateAfter = 2755 } } })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 21,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.57ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.57ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 28,
+      "path": [
+       0,
+       2,
+       1,
+       21
+      ],
+      "row": 21
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "EndEvent()",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 22,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 9,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 10,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 29,
+      "path": [
+       0,
+       2,
+       1,
+       22
+      ],
+      "row": 22
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "BeginEvent(UINT Metadata = 2, UINT Size = 72, const void* pData = \"Pass05\")",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 23,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 9,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 10,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 30,
+      "path": [
+       0,
+       2,
+       1,
+       23
+      ],
+      "row": 23
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "Pass05",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": "24 - 146",
+        "displayType": "QString"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.57ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.62ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "0.05ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 31,
+      "path": [
+       0,
+       2,
+       1,
+       24
+      ],
+      "row": 24
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "SetPipelineState(ID3D12PipelineState* pPipelineState = '0x0000000000000000')",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 24,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 9,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 10,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 32,
+      "path": [
+       0,
+       2,
+       1,
+       25
+      ],
+      "row": 25
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "SetDescriptorHeaps(UINT NumDescriptorHeaps = 2, ID3D12DescriptorHeap** ppDescriptorHeaps = { '0x0000000000000000', '0x0000000000000000' })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 25,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 9,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 10,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 33,
+      "path": [
+       0,
+       2,
+       1,
+       26
+      ],
+      "row": 26
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ResourceBarrier(UINT NumBarriers = 8, const D3D12_RESOURCE_BARRIER* pBarriers = { { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 2755, .StateAfter = 8 } }, { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 2755, .StateAfter = 8 } }, { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 2755, .StateAfter = 8 } }, { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 2755, .StateAfter = 8 } }, { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 2755, .StateAfter = 8 } }, { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 2755, .StateAfter = 8 } }, { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 2755, .StateAfter = 8 } }, { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 2755, .StateAfter = 8 } } })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 26,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.57ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.57ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 34,
+      "path": [
+       0,
+       2,
+       1,
+       27
+      ],
+      "row": 27
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "Dispatch(UINT ThreadGroupCountX = 1, UINT ThreadGroupCountY = 1, UINT ThreadGroupCountZ = 65537)",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 27,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.57ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.58ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 35,
+      "path": [
+       0,
+       2,
+       1,
+       28
+      ],
+      "row": 28
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ResourceBarrier(UINT NumBarriers = 1, const D3D12_RESOURCE_BARRIER* pBarriers = { { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 8, .StateAfter = 2755 } } })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 28,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.58ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.58ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 36,
+      "path": [
+       0,
+       2,
+       1,
+       29
+      ],
+      "row": 29
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ResourceBarrier(UINT NumBarriers = 1, const D3D12_RESOURCE_BARRIER* pBarriers = { { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 8, .StateAfter = 2755 } } })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 29,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.58ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.58ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 37,
+      "path": [
+       0,
+       2,
+       1,
+       30
+      ],
+      "row": 30
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ResourceBarrier(UINT NumBarriers = 1, const D3D12_RESOURCE_BARRIER* pBarriers = { { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 8, .StateAfter = 2755 } } })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 30,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.58ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.58ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 38,
+      "path": [
+       0,
+       2,
+       1,
+       31
+      ],
+      "row": 31
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ResourceBarrier(UINT NumBarriers = 1, const D3D12_RESOURCE_BARRIER* pBarriers = { { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 8, .StateAfter = 2755 } } })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 31,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.58ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.58ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 39,
+      "path": [
+       0,
+       2,
+       1,
+       32
+      ],
+      "row": 32
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ResourceBarrier(UINT NumBarriers = 1, const D3D12_RESOURCE_BARRIER* pBarriers = { { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 8, .StateAfter = 2755 } } })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 32,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.58ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.58ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 40,
+      "path": [
+       0,
+       2,
+       1,
+       33
+      ],
+      "row": 33
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ResourceBarrier(UINT NumBarriers = 1, const D3D12_RESOURCE_BARRIER* pBarriers = { { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 8, .StateAfter = 2755 } } })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 33,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.58ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.58ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 41,
+      "path": [
+       0,
+       2,
+       1,
+       34
+      ],
+      "row": 34
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ResourceBarrier(UINT NumBarriers = 1, const D3D12_RESOURCE_BARRIER* pBarriers = { { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 8, .StateAfter = 2755 } } })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 34,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.58ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.58ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 42,
+      "path": [
+       0,
+       2,
+       1,
+       35
+      ],
+      "row": 35
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ResourceBarrier(UINT NumBarriers = 1, const D3D12_RESOURCE_BARRIER* pBarriers = { { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 8, .StateAfter = 2755 } } })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 35,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.58ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.58ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 43,
+      "path": [
+       0,
+       2,
+       1,
+       36
+      ],
+      "row": 36
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "SetDescriptorHeaps(UINT NumDescriptorHeaps = 2, ID3D12DescriptorHeap** ppDescriptorHeaps = { '0x0000000000000000', '0x0000000000000000' })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 36,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 9,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 10,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 44,
+      "path": [
+       0,
+       2,
+       1,
+       37
+      ],
+      "row": 37
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ResourceBarrier(UINT NumBarriers = 8, const D3D12_RESOURCE_BARRIER* pBarriers = { { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 2755, .StateAfter = 8 } }, { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 2755, .StateAfter = 8 } }, { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 2755, .StateAfter = 8 } }, { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 2755, .StateAfter = 8 } }, { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 2755, .StateAfter = 8 } }, { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 2755, .StateAfter = 8 } }, { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 2755, .StateAfter = 8 } }, { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 2755, .StateAfter = 8 } } })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 37,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.58ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.58ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 45,
+      "path": [
+       0,
+       2,
+       1,
+       38
+      ],
+      "row": 38
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "Dispatch(UINT ThreadGroupCountX = 1, UINT ThreadGroupCountY = 1, UINT ThreadGroupCountZ = 65537)",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 38,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.58ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.58ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 46,
+      "path": [
+       0,
+       2,
+       1,
+       39
+      ],
+      "row": 39
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ResourceBarrier(UINT NumBarriers = 1, const D3D12_RESOURCE_BARRIER* pBarriers = { { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 8, .StateAfter = 2755 } } })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 39,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.58ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.58ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 47,
+      "path": [
+       0,
+       2,
+       1,
+       40
+      ],
+      "row": 40
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ResourceBarrier(UINT NumBarriers = 1, const D3D12_RESOURCE_BARRIER* pBarriers = { { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 8, .StateAfter = 2755 } } })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 40,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.58ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.58ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 48,
+      "path": [
+       0,
+       2,
+       1,
+       41
+      ],
+      "row": 41
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ResourceBarrier(UINT NumBarriers = 1, const D3D12_RESOURCE_BARRIER* pBarriers = { { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 8, .StateAfter = 2755 } } })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 41,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.58ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.58ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 49,
+      "path": [
+       0,
+       2,
+       1,
+       42
+      ],
+      "row": 42
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ResourceBarrier(UINT NumBarriers = 1, const D3D12_RESOURCE_BARRIER* pBarriers = { { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 8, .StateAfter = 2755 } } })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 42,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.58ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.58ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 50,
+      "path": [
+       0,
+       2,
+       1,
+       43
+      ],
+      "row": 43
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ResourceBarrier(UINT NumBarriers = 1, const D3D12_RESOURCE_BARRIER* pBarriers = { { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 8, .StateAfter = 2755 } } })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 43,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.58ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.58ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 51,
+      "path": [
+       0,
+       2,
+       1,
+       44
+      ],
+      "row": 44
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ResourceBarrier(UINT NumBarriers = 1, const D3D12_RESOURCE_BARRIER* pBarriers = { { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 8, .StateAfter = 2755 } } })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 44,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.58ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.58ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 52,
+      "path": [
+       0,
+       2,
+       1,
+       45
+      ],
+      "row": 45
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ResourceBarrier(UINT NumBarriers = 1, const D3D12_RESOURCE_BARRIER* pBarriers = { { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 8, .StateAfter = 2755 } } })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 45,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.58ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.58ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 53,
+      "path": [
+       0,
+       2,
+       1,
+       46
+      ],
+      "row": 46
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ResourceBarrier(UINT NumBarriers = 1, const D3D12_RESOURCE_BARRIER* pBarriers = { { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 8, .StateAfter = 2755 } } })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 46,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.58ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.58ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 54,
+      "path": [
+       0,
+       2,
+       1,
+       47
+      ],
+      "row": 47
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "SetDescriptorHeaps(UINT NumDescriptorHeaps = 2, ID3D12DescriptorHeap** ppDescriptorHeaps = { '0x0000000000000000', '0x0000000000000000' })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 47,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 9,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 10,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 55,
+      "path": [
+       0,
+       2,
+       1,
+       48
+      ],
+      "row": 48
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ResourceBarrier(UINT NumBarriers = 8, const D3D12_RESOURCE_BARRIER* pBarriers = { { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 2755, .StateAfter = 8 } }, { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 2755, .StateAfter = 8 } }, { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 2755, .StateAfter = 8 } }, { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 2755, .StateAfter = 8 } }, { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 2755, .StateAfter = 8 } }, { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 2755, .StateAfter = 8 } }, { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 2755, .StateAfter = 8 } }, { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 2755, .StateAfter = 8 } } })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 48,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.58ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.58ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 56,
+      "path": [
+       0,
+       2,
+       1,
+       49
+      ],
+      "row": 49
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "Dispatch(UINT ThreadGroupCountX = 1, UINT ThreadGroupCountY = 1, UINT ThreadGroupCountZ = 65537)",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 49,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.58ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.58ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 57,
+      "path": [
+       0,
+       2,
+       1,
+       50
+      ],
+      "row": 50
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ResourceBarrier(UINT NumBarriers = 1, const D3D12_RESOURCE_BARRIER* pBarriers = { { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 8, .StateAfter = 2755 } } })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 50,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.58ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.58ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 58,
+      "path": [
+       0,
+       2,
+       1,
+       51
+      ],
+      "row": 51
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ResourceBarrier(UINT NumBarriers = 1, const D3D12_RESOURCE_BARRIER* pBarriers = { { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 8, .StateAfter = 2755 } } })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 51,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.58ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.59ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 59,
+      "path": [
+       0,
+       2,
+       1,
+       52
+      ],
+      "row": 52
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ResourceBarrier(UINT NumBarriers = 1, const D3D12_RESOURCE_BARRIER* pBarriers = { { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 8, .StateAfter = 2755 } } })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 52,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.59ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.59ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 60,
+      "path": [
+       0,
+       2,
+       1,
+       53
+      ],
+      "row": 53
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ResourceBarrier(UINT NumBarriers = 1, const D3D12_RESOURCE_BARRIER* pBarriers = { { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 8, .StateAfter = 2755 } } })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 53,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.59ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.59ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 61,
+      "path": [
+       0,
+       2,
+       1,
+       54
+      ],
+      "row": 54
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ResourceBarrier(UINT NumBarriers = 1, const D3D12_RESOURCE_BARRIER* pBarriers = { { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 8, .StateAfter = 2755 } } })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 54,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.59ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.59ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 62,
+      "path": [
+       0,
+       2,
+       1,
+       55
+      ],
+      "row": 55
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ResourceBarrier(UINT NumBarriers = 1, const D3D12_RESOURCE_BARRIER* pBarriers = { { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 8, .StateAfter = 2755 } } })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 55,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.59ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.59ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 63,
+      "path": [
+       0,
+       2,
+       1,
+       56
+      ],
+      "row": 56
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ResourceBarrier(UINT NumBarriers = 1, const D3D12_RESOURCE_BARRIER* pBarriers = { { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 8, .StateAfter = 2755 } } })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 56,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.59ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.59ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 64,
+      "path": [
+       0,
+       2,
+       1,
+       57
+      ],
+      "row": 57
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ResourceBarrier(UINT NumBarriers = 1, const D3D12_RESOURCE_BARRIER* pBarriers = { { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 8, .StateAfter = 2755 } } })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 57,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.59ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.59ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 65,
+      "path": [
+       0,
+       2,
+       1,
+       58
+      ],
+      "row": 58
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "SetDescriptorHeaps(UINT NumDescriptorHeaps = 2, ID3D12DescriptorHeap** ppDescriptorHeaps = { '0x0000000000000000', '0x0000000000000000' })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 58,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 9,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 10,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 66,
+      "path": [
+       0,
+       2,
+       1,
+       59
+      ],
+      "row": 59
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ResourceBarrier(UINT NumBarriers = 8, const D3D12_RESOURCE_BARRIER* pBarriers = { { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 2755, .StateAfter = 8 } }, { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 2755, .StateAfter = 8 } }, { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 2755, .StateAfter = 8 } }, { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 2755, .StateAfter = 8 } }, { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 2755, .StateAfter = 8 } }, { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 2755, .StateAfter = 8 } }, { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 2755, .StateAfter = 8 } }, { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 2755, .StateAfter = 8 } } })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 59,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.59ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.59ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 67,
+      "path": [
+       0,
+       2,
+       1,
+       60
+      ],
+      "row": 60
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "Dispatch(UINT ThreadGroupCountX = 1, UINT ThreadGroupCountY = 1, UINT ThreadGroupCountZ = 65537)",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 60,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.59ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.59ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 68,
+      "path": [
+       0,
+       2,
+       1,
+       61
+      ],
+      "row": 61
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ResourceBarrier(UINT NumBarriers = 1, const D3D12_RESOURCE_BARRIER* pBarriers = { { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 8, .StateAfter = 2755 } } })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 61,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.59ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.59ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 69,
+      "path": [
+       0,
+       2,
+       1,
+       62
+      ],
+      "row": 62
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ResourceBarrier(UINT NumBarriers = 1, const D3D12_RESOURCE_BARRIER* pBarriers = { { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 8, .StateAfter = 2755 } } })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 62,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.59ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.59ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 70,
+      "path": [
+       0,
+       2,
+       1,
+       63
+      ],
+      "row": 63
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ResourceBarrier(UINT NumBarriers = 1, const D3D12_RESOURCE_BARRIER* pBarriers = { { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 8, .StateAfter = 2755 } } })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 63,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.59ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.59ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 71,
+      "path": [
+       0,
+       2,
+       1,
+       64
+      ],
+      "row": 64
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ResourceBarrier(UINT NumBarriers = 1, const D3D12_RESOURCE_BARRIER* pBarriers = { { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 8, .StateAfter = 2755 } } })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 64,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.59ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.59ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 72,
+      "path": [
+       0,
+       2,
+       1,
+       65
+      ],
+      "row": 65
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ResourceBarrier(UINT NumBarriers = 1, const D3D12_RESOURCE_BARRIER* pBarriers = { { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 8, .StateAfter = 2755 } } })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 65,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.59ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.59ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 73,
+      "path": [
+       0,
+       2,
+       1,
+       66
+      ],
+      "row": 66
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ResourceBarrier(UINT NumBarriers = 1, const D3D12_RESOURCE_BARRIER* pBarriers = { { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 8, .StateAfter = 2755 } } })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 66,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.59ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.59ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 74,
+      "path": [
+       0,
+       2,
+       1,
+       67
+      ],
+      "row": 67
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ResourceBarrier(UINT NumBarriers = 1, const D3D12_RESOURCE_BARRIER* pBarriers = { { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 8, .StateAfter = 2755 } } })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 67,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.59ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.59ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 75,
+      "path": [
+       0,
+       2,
+       1,
+       68
+      ],
+      "row": 68
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ResourceBarrier(UINT NumBarriers = 1, const D3D12_RESOURCE_BARRIER* pBarriers = { { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 8, .StateAfter = 2755 } } })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 68,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.59ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.59ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 76,
+      "path": [
+       0,
+       2,
+       1,
+       69
+      ],
+      "row": 69
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "SetDescriptorHeaps(UINT NumDescriptorHeaps = 2, ID3D12DescriptorHeap** ppDescriptorHeaps = { '0x0000000000000000', '0x0000000000000000' })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 69,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 9,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 10,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 77,
+      "path": [
+       0,
+       2,
+       1,
+       70
+      ],
+      "row": 70
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ResourceBarrier(UINT NumBarriers = 8, const D3D12_RESOURCE_BARRIER* pBarriers = { { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 2755, .StateAfter = 8 } }, { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 2755, .StateAfter = 8 } }, { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 2755, .StateAfter = 8 } }, { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 2755, .StateAfter = 8 } }, { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 2755, .StateAfter = 8 } }, { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 2755, .StateAfter = 8 } }, { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 2755, .StateAfter = 8 } }, { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 2755, .StateAfter = 8 } } })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 70,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.59ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.59ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 78,
+      "path": [
+       0,
+       2,
+       1,
+       71
+      ],
+      "row": 71
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "Dispatch(UINT ThreadGroupCountX = 1, UINT ThreadGroupCountY = 1, UINT ThreadGroupCountZ = 65537)",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 71,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.59ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.59ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 79,
+      "path": [
+       0,
+       2,
+       1,
+       72
+      ],
+      "row": 72
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ResourceBarrier(UINT NumBarriers = 1, const D3D12_RESOURCE_BARRIER* pBarriers = { { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 8, .StateAfter = 2755 } } })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 72,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.59ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.59ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 80,
+      "path": [
+       0,
+       2,
+       1,
+       73
+      ],
+      "row": 73
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ResourceBarrier(UINT NumBarriers = 1, const D3D12_RESOURCE_BARRIER* pBarriers = { { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 8, .StateAfter = 2755 } } })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 73,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.59ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.59ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 81,
+      "path": [
+       0,
+       2,
+       1,
+       74
+      ],
+      "row": 74
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ResourceBarrier(UINT NumBarriers = 1, const D3D12_RESOURCE_BARRIER* pBarriers = { { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 8, .StateAfter = 2755 } } })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 74,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.59ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.59ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 82,
+      "path": [
+       0,
+       2,
+       1,
+       75
+      ],
+      "row": 75
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ResourceBarrier(UINT NumBarriers = 1, const D3D12_RESOURCE_BARRIER* pBarriers = { { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 8, .StateAfter = 2755 } } })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 75,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.59ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.59ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 83,
+      "path": [
+       0,
+       2,
+       1,
+       76
+      ],
+      "row": 76
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ResourceBarrier(UINT NumBarriers = 1, const D3D12_RESOURCE_BARRIER* pBarriers = { { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 8, .StateAfter = 2755 } } })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 76,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.59ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.59ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 84,
+      "path": [
+       0,
+       2,
+       1,
+       77
+      ],
+      "row": 77
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ResourceBarrier(UINT NumBarriers = 1, const D3D12_RESOURCE_BARRIER* pBarriers = { { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 8, .StateAfter = 2755 } } })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 77,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.59ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.59ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 85,
+      "path": [
+       0,
+       2,
+       1,
+       78
+      ],
+      "row": 78
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ResourceBarrier(UINT NumBarriers = 1, const D3D12_RESOURCE_BARRIER* pBarriers = { { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 8, .StateAfter = 2755 } } })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 78,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.59ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.59ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 86,
+      "path": [
+       0,
+       2,
+       1,
+       79
+      ],
+      "row": 79
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ResourceBarrier(UINT NumBarriers = 1, const D3D12_RESOURCE_BARRIER* pBarriers = { { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 8, .StateAfter = 2755 } } })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 79,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.59ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.59ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 87,
+      "path": [
+       0,
+       2,
+       1,
+       80
+      ],
+      "row": 80
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "SetDescriptorHeaps(UINT NumDescriptorHeaps = 2, ID3D12DescriptorHeap** ppDescriptorHeaps = { '0x0000000000000000', '0x0000000000000000' })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 80,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 9,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 10,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 88,
+      "path": [
+       0,
+       2,
+       1,
+       81
+      ],
+      "row": 81
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ResourceBarrier(UINT NumBarriers = 8, const D3D12_RESOURCE_BARRIER* pBarriers = { { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 2755, .StateAfter = 8 } }, { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 2755, .StateAfter = 8 } }, { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 2755, .StateAfter = 8 } }, { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 2755, .StateAfter = 8 } }, { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 2755, .StateAfter = 8 } }, { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 2755, .StateAfter = 8 } }, { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 2755, .StateAfter = 8 } }, { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 2755, .StateAfter = 8 } } })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 81,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.59ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.59ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 89,
+      "path": [
+       0,
+       2,
+       1,
+       82
+      ],
+      "row": 82
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "Dispatch(UINT ThreadGroupCountX = 1, UINT ThreadGroupCountY = 1, UINT ThreadGroupCountZ = 65537)",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 82,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.59ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.60ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 90,
+      "path": [
+       0,
+       2,
+       1,
+       83
+      ],
+      "row": 83
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ResourceBarrier(UINT NumBarriers = 1, const D3D12_RESOURCE_BARRIER* pBarriers = { { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 8, .StateAfter = 2755 } } })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 83,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.60ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.60ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 91,
+      "path": [
+       0,
+       2,
+       1,
+       84
+      ],
+      "row": 84
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ResourceBarrier(UINT NumBarriers = 1, const D3D12_RESOURCE_BARRIER* pBarriers = { { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 8, .StateAfter = 2755 } } })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 84,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.60ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.60ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 92,
+      "path": [
+       0,
+       2,
+       1,
+       85
+      ],
+      "row": 85
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ResourceBarrier(UINT NumBarriers = 1, const D3D12_RESOURCE_BARRIER* pBarriers = { { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 8, .StateAfter = 2755 } } })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 85,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.60ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.60ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 93,
+      "path": [
+       0,
+       2,
+       1,
+       86
+      ],
+      "row": 86
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ResourceBarrier(UINT NumBarriers = 1, const D3D12_RESOURCE_BARRIER* pBarriers = { { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 8, .StateAfter = 2755 } } })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 86,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.60ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.60ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 94,
+      "path": [
+       0,
+       2,
+       1,
+       87
+      ],
+      "row": 87
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ResourceBarrier(UINT NumBarriers = 1, const D3D12_RESOURCE_BARRIER* pBarriers = { { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 8, .StateAfter = 2755 } } })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 87,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.60ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.60ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 95,
+      "path": [
+       0,
+       2,
+       1,
+       88
+      ],
+      "row": 88
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ResourceBarrier(UINT NumBarriers = 1, const D3D12_RESOURCE_BARRIER* pBarriers = { { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 8, .StateAfter = 2755 } } })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 88,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.60ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.60ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 96,
+      "path": [
+       0,
+       2,
+       1,
+       89
+      ],
+      "row": 89
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ResourceBarrier(UINT NumBarriers = 1, const D3D12_RESOURCE_BARRIER* pBarriers = { { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 8, .StateAfter = 2755 } } })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 89,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.60ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.60ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 97,
+      "path": [
+       0,
+       2,
+       1,
+       90
+      ],
+      "row": 90
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ResourceBarrier(UINT NumBarriers = 1, const D3D12_RESOURCE_BARRIER* pBarriers = { { .Flags = 0, .Transition = { .pResource = '0x0000000000000000', .Subresource = 4294967295, .StateBefore = 8, .StateAfter = 2755 } } })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 90,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.60ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "7.60ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "<0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 98,
+      "path": [
+       0,
+       2,
+       1,
+       91
+      ],
+      "row": 91
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "SetDescriptorHeaps(UINT NumDescriptorHeaps = 2, ID3D12DescriptorHeap** ppDescriptorHeaps = { '0x0000000000000000', '0x0000000000000000' })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": 91,
+        "displayType": "int"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 9,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 10,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 3,
+      "ordinal": 99,
+      "path": [
+       0,
+       2,
+       1,
+       92
+      ],
+      "row": 92
+     }
+    ],
+    "offset": 0,
+    "returnedCount": 100,
+    "roleNames": [],
+    "rootColumns": 12,
+    "rootRows": 2,
+    "selectedColumns": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     11
+    ],
+    "totalCount": 4951,
+    "totalCountExact": true,
+    "truncated": true,
+    "valueMode": "normal"
+   },
+   "exportReady": true,
+   "extractionModel": "source",
+   "minimumEventPoll": 6,
+   "minimumExportPoll": 6,
+   "modelClass": "NV::EventList::EventProxyModel",
+   "modelObjectName": "EventList_EventProxyModel",
+   "modelPopulated": true,
+   "rows": 2,
+   "viewClass": "NV::EventList::EventTreeView",
+   "viewObjectName": "EventList_EventTreeView"
+  }
+ ],
+ "guiThread": true,
+ "mode": "event-export",
+ "pid": "fixture",
+ "pluginVersion": "probe-0.45",
+ "pollCount": 6,
+ "qtCompileVersion": "6.8.1",
+ "qtRuntimeVersion": "6.8.1",
+ "reportId": "fixture.ngfx-gputrace:50103728:639231352154469065",
+ "requestId": "fixture",
+ "schema": "NsightSolidProbeEventListV1",
+ "status": "complete",
+ "topLevelWindowCount": 293,
+ "verifiedHostTarget": {
+  "nsightBuild": "37991608",
+  "nsightVersion": "2026.2.0"
+ }
+}
