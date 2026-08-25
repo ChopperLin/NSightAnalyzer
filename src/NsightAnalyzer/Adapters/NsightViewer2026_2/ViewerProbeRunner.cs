@@ -48,7 +48,7 @@ internal static class ViewerProbeRunner
     public const string ExpectedProductBuild = "37991608";
     public const string ExpectedProductSku = "public-release";
     public const string ExpectedQtVersion = "6.8.1";
-    public const string ExpectedBridgeVersion = "probe-0.46";
+    public const string ExpectedBridgeVersion = "probe-0.47";
     public const string DefaultViewerPath =
         @"C:\Program Files\NVIDIA Corporation\Nsight Graphics 2026.2.0\host\windows-desktop-nomad-x64\ngfx-ui.exe";
 
@@ -74,6 +74,7 @@ internal static class ViewerProbeRunner
         "COMBO_SELECT_TRIGGER",
         "DIALOG_AUTO_PATH",
         "EVENT_FILTER_COLUMN",
+        "EVENT_STABLE_SAMPLES",
         "EVENT_FILTER_CONTAINS",
         "EVENT_INCLUDE_ITEM_DATA",
         "EVENT_LIMIT",

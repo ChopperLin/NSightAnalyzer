@@ -10,7 +10,7 @@ The first supported decoder is exactly:
 - Nsight Graphics Viewer 2026.2.0.0
 - build 37991608, public-release
 - Qt 6.8.1, MSVC 2022 x64
-- SolidProbe bridge schema `probe-0.46` (`probe-0.44` remains the frozen semantic oracle)
+- SolidProbe bridge schema `probe-0.47` (`probe-0.44` remains the frozen semantic oracle)
 
 Other Viewer builds are unavailable until separately re-probed and accepted.
 

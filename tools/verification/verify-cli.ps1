@@ -64,7 +64,7 @@ Assert-True (@($capabilities.Document.result.value.operations.items |
 Assert-True (@($capabilities.Document.result.value.operations.items |
         Where-Object layer -eq 'wrapper').Count -eq 4) `
     'Unexpected wrapper count.'
-Assert-True ($capabilities.Document.result.value.decoder.bridgeVersion -eq 'probe-0.46') `
+Assert-True ($capabilities.Document.result.value.decoder.bridgeVersion -eq 'probe-0.47') `
     'Unexpected bridge version.'
 Assert-True (@($capabilities.Document.result.value.operations.items |
         Where-Object { -not $_.parameters -or $_.parameters.Count -eq 0 }).Count -eq 0) `
@@ -468,7 +468,7 @@ if ($MultiFrameTrace) {
 [pscustomobject]@{
     status = 'passed'
     configuration = $Configuration
-    bridgeVersion = 'probe-0.46'
+    bridgeVersion = 'probe-0.47'
     singleFrameChecked = $singleChecked
     multiFrameChecked = $multiChecked
     slowViewerChecked = $slowChecked

@@ -34,7 +34,7 @@
 
 namespace {
 
-constexpr auto kPluginVersion = "probe-0.46";
+constexpr auto kPluginVersion = "probe-0.47";
 constexpr auto kVerifiedNsightVersion = "2026.2.0";
 constexpr auto kVerifiedNsightBuild = "37991608";
 constexpr auto kSessionSchema = "NsightSolidProbeSessionV1";
@@ -2063,6 +2063,7 @@ const QSet<QString>& ProductSessionSettingNames()
         "COMBO_SELECT_TRIGGER",
         "DIALOG_AUTO_PATH",
         "EVENT_FILTER_COLUMN",
+        "EVENT_STABLE_SAMPLES",
         "EVENT_FILTER_CONTAINS",
         "EVENT_INCLUDE_ITEM_DATA",
         "EVENT_LIMIT",
@@ -2291,7 +2292,7 @@ private slots:
             QJsonArray matches;
             int minimumEventPoll = qEnvironmentVariableIntValue(
                 "NSIGHT_SOLID_PROBE_EVENT_MIN_POLL");
-            minimumEventPoll = minimumEventPoll > 0 ? minimumEventPoll : 6;
+            minimumEventPoll = minimumEventPoll > 0 ? minimumEventPoll : 2;
             const auto widgets = application->allWidgets();
             for (QWidget* widget : widgets) {
                 if (widget == nullptr || widget->objectName() != "EventList_EventTreeView") {
@@ -2311,10 +2312,32 @@ private slots:
                         match.insert("rows", rows);
                         match.insert("columns", columns);
                         const bool eventModelPopulated = rows > 0 && columns > 0;
+                        // The event tree loads asynchronously. Waiting a fixed
+                        // number of polls costs the full wait even when the
+                        // tree settled immediately, so readiness is decided by
+                        // the model's own shape holding still, with the poll
+                        // count kept only as a floor for very large reports.
+                        const QByteArray shapeSnapshot =
+                            QByteArray::number(rows) + "x" + QByteArray::number(columns);
+                        if (eventModelPopulated
+                            && !m_lastEventShapeSnapshot.isEmpty()
+                            && m_lastEventShapeSnapshot == shapeSnapshot) {
+                            ++m_stableEventShapeSamples;
+                        } else {
+                            m_stableEventShapeSamples = 0;
+                        }
+                        m_lastEventShapeSnapshot = shapeSnapshot;
+                        int requiredStableSamples = qEnvironmentVariableIntValue(
+                            "NSIGHT_SOLID_PROBE_EVENT_STABLE_SAMPLES");
+                        requiredStableSamples = requiredStableSamples > 0
+                            ? requiredStableSamples
+                            : 2;
                         eventListReady = eventListReady || (eventModelPopulated
+                            && m_stableEventShapeSamples >= requiredStableSamples
                             && m_pollCount >= minimumEventPoll);
                         match.insert("modelPopulated", eventModelPopulated);
                         match.insert("minimumEventPoll", minimumEventPoll);
+                        match.insert("stableEventShapeSamples", m_stableEventShapeSamples);
 
                         if (eventListReady && m_mode == "event-export") {
                             int minimumPoll = qEnvironmentVariableIntValue(
@@ -4085,6 +4108,8 @@ private:
     int m_stableModelCountSamples = 0;
     int m_stableMetricSamples = 0;
     int m_stableStandaloneMetricSamples = 0;
+    QByteArray m_lastEventShapeSnapshot;
+    int m_stableEventShapeSamples = 0;
     int m_lastBaselineMetricTotal = -1;
     int m_stableBaselineMetricCountSamples = 0;
     int m_lastEventSearchVisited = -1;
