@@ -127,6 +127,82 @@ internal static class BridgeProjection
             next));
     }
 
+    /// <summary>
+    /// Projects the range-grain skeleton. The bridge filters rows; this keeps
+    /// each row's true preorder ordinal, so an outline ordinal addresses the
+    /// same event as trace.events without a second lookup.
+    /// </summary>
+    public static TraceOutlineValue ProjectOutline(
+        JsonElement root,
+        int requestedCursor,
+        int requestedLimit)
+    {
+        var views = RequiredArray(root, "eventViews");
+        if (views.GetArrayLength() != 1)
+        {
+            throw new BridgeSchemaException(
+                $"Expected one Event List view, observed {views.GetArrayLength()}.");
+        }
+
+        var export = RequiredObject(views[0], "export");
+        if (!RequiredBoolean(export, "totalCountExact"))
+        {
+            throw new BridgeSchemaException("The Event List total count is not exact.");
+        }
+        var offset = RequiredInt32(export, "offset");
+        var rawLimit = RequiredInt32(export, "limit");
+        if (offset != requestedCursor || rawLimit != requestedLimit)
+        {
+            throw new BridgeSchemaException(
+                $"Outline page mismatch: requested {requestedCursor}/{requestedLimit}, " +
+                $"observed {offset}/{rawLimit}.");
+        }
+        if (RequiredInt32(export, "filterColumn") != 1)
+        {
+            throw new BridgeSchemaException(
+                "The outline projection requires the bridge event-range filter.");
+        }
+
+        var nodes = RequiredArray(export, "nodes");
+        var items = new List<OutlineFact>(nodes.GetArrayLength());
+        foreach (var node in nodes.EnumerateArray())
+        {
+            var description = CellText(node, 0) ?? string.Empty;
+            var eventRange = CellText(node, 1);
+            if (eventRange is null || !eventRange.Contains('-', StringComparison.Ordinal))
+            {
+                throw new BridgeSchemaException(
+                    "The outline filter returned a row that is not a range.");
+            }
+            var key = new EventKey(
+                RequiredInt32(node, "ordinal"),
+                RequiredInt32Array(node, "path"),
+                eventRange,
+                description);
+            items.Add(new(
+                key,
+                RequiredInt32(node, "depth"),
+                RequiredInt32(node, "childCount"),
+                OutlineGrain(description),
+                EmptyToNull(CellText(node, 8)),
+                EmptyToNull(CellText(node, 9)),
+                EmptyToNull(CellText(node, 10))));
+        }
+
+        var total = RequiredInt32(export, "totalCount");
+        var returned = RequiredInt32(export, "returnedCount");
+        if (returned != items.Count)
+        {
+            throw new BridgeSchemaException(
+                $"Outline returnedCount {returned} does not match {items.Count} projected nodes.");
+        }
+        var hasMore = RequiredBoolean(export, "hasMore");
+        int? next = hasMore ? checked(offset + returned) : null;
+        return new(
+            RequiredInt32(export, "visitedCount"),
+            new(items, offset, rawLimit, total, returned, hasMore, next));
+    }
+
     public static EventParametersValue ProjectEventParameters(
         JsonElement root,
         int? requestedOrdinal,
@@ -1336,6 +1412,27 @@ internal static class BridgeProjection
             $"eventRange={eventRange}; description={scope.Description}; " +
             "a single command scope has no reliable PC-sampling denominator (SCP-002)");
     }
+
+    /// <summary>
+    /// Classifies a range row by whether the Viewer names it after a D3D12 API
+    /// object/call or after the caller's own marker. This is a naming fact, not
+    /// a judgement about which rows matter; both grains are returned.
+    /// </summary>
+    private static string OutlineGrain(string description) =>
+        description.StartsWith("ID3D12", StringComparison.Ordinal) ||
+        description.StartsWith("ExecuteCommandLists", StringComparison.Ordinal) ||
+        description.EndsWith("CommandQueue", StringComparison.Ordinal) ||
+        description.Contains("CommandQueue (", StringComparison.Ordinal) ||
+        D3D12CallPrefixes.Any(prefix =>
+            description.StartsWith(prefix, StringComparison.Ordinal))
+            ? "container"
+            : "marker";
+
+    private static readonly string[] D3D12CallPrefixes =
+    [
+        "Draw", "Dispatch", "Clear", "Copy", "Resolve", "Set", "Begin", "End",
+        "ResourceBarrier", "Present", "IASet", "OMSet", "RSSet", "ExecuteIndirect",
+    ];
 
     private static void ValidateCompleteModel(JsonElement export, string name)    {
         if (!RequiredBoolean(export, "totalCountExact"))

@@ -13,7 +13,7 @@ Nsight Graphics 2026.2 build 37991608 must open the report because no discovered
 SDK exposes the same existing-report data surface. The adapter is therefore unsupported and
 version-pinned; it is not presented as an official report SDK.
 
-The frozen Probe 0.44 oracle and the current `probe-0.45` product bridge have recovered and
+The frozen Probe 0.44 oracle and the current `probe-0.46` product bridge have recovered and
 validated:
 
 - complete event/pass/marker/action navigation;

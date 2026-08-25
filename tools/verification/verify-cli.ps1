@@ -56,15 +56,15 @@ Assert-True (Test-Path -LiteralPath $cliPath -PathType Leaf) `
 
 $capabilities = Invoke-JsonCli -Arguments @('capabilities', '--compact') -ExpectedExitCode 0
 Assert-True $capabilities.Document.result.isSuccess 'capabilities failed.'
-Assert-True ($capabilities.Document.result.value.operations.totalCount -eq 15) `
+Assert-True ($capabilities.Document.result.value.operations.totalCount -eq 16) `
     'Unexpected operation count.'
 Assert-True (@($capabilities.Document.result.value.operations.items |
-        Where-Object layer -eq 'atom').Count -eq 11) `
+        Where-Object layer -eq 'atom').Count -eq 12) `
     'Unexpected atom count.'
 Assert-True (@($capabilities.Document.result.value.operations.items |
         Where-Object layer -eq 'wrapper').Count -eq 4) `
     'Unexpected wrapper count.'
-Assert-True ($capabilities.Document.result.value.decoder.bridgeVersion -eq 'probe-0.45') `
+Assert-True ($capabilities.Document.result.value.decoder.bridgeVersion -eq 'probe-0.46') `
     'Unexpected bridge version.'
 Assert-True (@($capabilities.Document.result.value.operations.items |
         Where-Object { -not $_.parameters -or $_.parameters.Count -eq 0 }).Count -eq 0) `
@@ -165,6 +165,24 @@ if ($SingleFrameTrace) {
     $events = Invoke-JsonCli -Arguments $eventArgs -ExpectedExitCode 0
     Assert-True ($events.Document.result.value.events.totalCount -eq 4951) `
         'Single-frame event total changed.'
+
+    $outlineArgs = [Collections.ArrayList]@(
+        'trace.outline', $single, '--limit', '500', '--compact')
+    Add-ViewerArgument $outlineArgs
+    $outline = Invoke-JsonCli -Arguments $outlineArgs -ExpectedExitCode 0
+    Assert-True ($outline.Document.result.value.totalEventCount -eq 4951) `
+        'Outline visited an unexpected number of events.'
+    Assert-True ($outline.Document.result.value.ranges.totalCount -eq 493) `
+        'Single-frame range-grain count changed.'
+    Assert-True (@($outline.Document.result.value.ranges.items |
+            Where-Object { $_.key.eventRange -notlike '*-*' }).Count -eq 0) `
+        'Outline returned a row that is not a range.'
+    # An outline ordinal must address the same event as trace.events, or every
+    # follow-up call would need a second lookup.
+    $outlineGBuffer = $outline.Document.result.value.ranges.items |
+        Where-Object { $_.key.description -eq 'GBufferPass' } | Select-Object -First 1
+    Assert-True ($outlineGBuffer.key.preorderOrdinal -eq 1773) `
+        'Outline did not preserve the true preorder ordinal.'
 
     $parameterArgs = [Collections.ArrayList]@(
         'trace.event-parameters', $single,
@@ -450,7 +468,7 @@ if ($MultiFrameTrace) {
 [pscustomobject]@{
     status = 'passed'
     configuration = $Configuration
-    bridgeVersion = 'probe-0.45'
+    bridgeVersion = 'probe-0.46'
     singleFrameChecked = $singleChecked
     multiFrameChecked = $multiChecked
     slowViewerChecked = $slowChecked

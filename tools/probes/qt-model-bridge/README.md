@@ -36,7 +36,7 @@ the most recent backup.
 - Viewer application version:
   `2026.2.0.0 (build 37991608) (public-release)`
 - Qt 6.8.1, MSVC 2022 x64
-- Probe schema implementation: `probe-0.45`; committed Probe 0.44 outputs remain the frozen
+- Probe schema implementation: `probe-0.46`; committed Probe 0.44 outputs remain the frozen
   semantic oracle
 
 The downloaded Qt Core, Gui, and Widgets release DLLs were byte-identical to

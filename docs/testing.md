@@ -49,6 +49,8 @@ and confirm the oracle counts above still hold.
 
 ### Real 30-frame trace
 
+- `trace.outline` visits 4,951 events and returns 493 range-grain rows in one call, keeping true
+  preorder ordinals (`GBufferPass` stays 1773) and labelling each row container or marker;
 - event total 306,576;
 - offset 306570, limit 10 returns six nodes, hasMore false, ending in Present event 276761;
 - frame 0 and frame 29 GBuffer each return 88 tables and 409 rows;

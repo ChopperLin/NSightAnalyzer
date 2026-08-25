@@ -19,6 +19,7 @@ families below and do not add new facts or bottleneck judgments.
 |---|---|---|---|---|
 | ENV-001 | capabilities/decoder preflight | exact 2026.2 build and plugin checks | verified | refuse mismatched Viewer/bridge |
 | TRC-001 | trace identity | local snapshots for both real reports | verified | non-empty extension, stable identity, optional SHA-256 |
+| NAV-000 | range-grain outline | 493 of 4,951 single-frame events are ranges | verified | bridge-filtered skeleton, true preorder ordinals, grain label |
 | NAV-001 | event page | 306,576-node report and final six-node page | verified | exact page closure, stable EventKey |
 | NAV-002 | event parameters | DrawIndexedInstanced typed values; out-of-domain Dispatch fixture | verified | exact scope and typed leaf projection; invalid Viewer-decoded D3D12 values return unavailable |
 | MET-001 | range metric catalog | 88 tables, 409 rows | verified | exact tables/headers/descriptions/occurrences |

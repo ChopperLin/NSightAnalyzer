@@ -132,7 +132,7 @@ The adapter verifies:
 
 The first adapter is concrete and pinned:
 
-    NsightViewer2026_2 / build 37991608 / bridge probe-0.45
+    NsightViewer2026_2 / build 37991608 / bridge probe-0.46
 
 A mismatched build returns adapterMismatch. A new Viewer build is re-probed and either gets a new
 adapter mapping or an explicitly verified compatibility entry. No nominal 2026.x fallback exists.

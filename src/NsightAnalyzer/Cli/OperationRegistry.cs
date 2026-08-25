@@ -58,6 +58,22 @@ internal static class OperationRegistry
                 command.Limit)),
         new(
             new(
+                "trace.outline",
+                SchemaVersion.V1,
+                "readOnly",
+                true,
+                "implemented",
+                "Returns the range-grain skeleton: every pass/marker and command-list range with its timing, without per-draw noise.",
+                "trace.outline <trace> [--cursor N] [--limit N] [--viewer <path>]",
+                Parameters: [OperationParameters.Trace, OperationParameters.Cursor, OperationParameters.Limit, OperationParameters.Viewer, OperationParameters.TimeoutMs, OperationParameters.Compact]),
+            command => TraceOutlineOperation.ExecuteAsync(
+                command.TracePath!,
+                command.ViewerPath,
+                command.TimeoutMs,
+                command.Cursor,
+                command.Limit)),
+        new(
+            new(
                 "trace.event-parameters",
                 SchemaVersion.V1,
                 "readOnly",

@@ -34,7 +34,7 @@
 
 namespace {
 
-constexpr auto kPluginVersion = "probe-0.45";
+constexpr auto kPluginVersion = "probe-0.46";
 constexpr auto kVerifiedNsightVersion = "2026.2.0";
 constexpr auto kVerifiedNsightBuild = "37991608";
 constexpr auto kSessionSchema = "NsightSolidProbeSessionV1";
@@ -66,6 +66,8 @@ struct ExportOptions
     bool flat = false;
     QList<int> columns;
     QString valueMode = "normal";
+    int filterColumn = -1;
+    QString filterContains;
 };
 
 ExportOptions ReadExportOptions(const QString& scope, bool defaultItemData = false)
@@ -104,6 +106,16 @@ ExportOptions ReadExportOptions(const QString& scope, bool defaultItemData = fal
         }
     }
     std::sort(options.columns.begin(), options.columns.end());
+    bool filterColumnOk = false;
+    const int filterColumn = qEnvironmentVariable(
+        (prefix + "_FILTER_COLUMN").toUtf8().constData())
+        .trimmed().toInt(&filterColumnOk);
+    if (filterColumnOk && filterColumn >= 0) {
+        options.filterColumn = filterColumn;
+    }
+    options.filterContains = qEnvironmentVariable(
+        (prefix + "_FILTER_CONTAINS").toUtf8().constData()).trimmed();
+
     const QString valueMode = qEnvironmentVariable(
         (prefix + "_VALUE_MODE").toUtf8().constData()).trimmed().toLower();
     if (valueMode == "type" || valueMode == "string") {
@@ -164,6 +176,7 @@ struct ExportState
     ExportOptions options;
     QJsonArray nodes;
     int totalCount = 0;
+    int matchedCount = 0;
     int returnedCount = 0;
     bool totalCountExact = true;
 };
@@ -237,7 +250,24 @@ void AppendRows(
         path.append(row);
 
         const int ordinal = state.totalCount++;
-        const bool includeNode = ordinal >= state.options.offset
+
+        // A row filter selects which rows are returned without renumbering
+        // them: "ordinal" stays the true preorder ordinal so a caller can
+        // address the row directly, while offset/limit page over the matched
+        // subsequence only.
+        bool matchesFilter = true;
+        if (state.options.filterColumn >= 0
+            && !state.options.filterContains.isEmpty()) {
+            const QVariant filterValue = model->data(
+                model->index(row, state.options.filterColumn, parent),
+                Qt::DisplayRole);
+            matchesFilter = filterValue.toString().contains(
+                state.options.filterContains, Qt::CaseInsensitive);
+        }
+
+        const int matchedOrdinal = matchesFilter ? state.matchedCount++ : -1;
+        const bool includeNode = matchesFilter
+            && matchedOrdinal >= state.options.offset
             && state.returnedCount < state.options.limit;
 
         const int childCount = state.options.flat ? 0 : model->rowCount(treeIndex);
@@ -343,8 +373,11 @@ QJsonObject ExportModel(QAbstractItemModel* model, const ExportOptions& options)
     }
 
     AppendRows(model, QModelIndex(), 0, QJsonArray(), state);
+    // With a row filter active, paging closes against the matched subsequence;
+    // without one every visited row matches and this is the visited count.
+    const int pageableCount = state.matchedCount;
     const bool hasMore = !state.totalCountExact
-        || state.totalCount > state.options.offset + state.returnedCount;
+        || pageableCount > state.options.offset + state.returnedCount;
     return QJsonObject{
         {"modelClass", model->metaObject()->className()},
         {"modelObjectName", model->objectName()},
@@ -354,7 +387,8 @@ QJsonObject ExportModel(QAbstractItemModel* model, const ExportOptions& options)
         {"headers", headers},
         {"roleNames", roles},
         {"nodes", state.nodes},
-        {"totalCount", state.totalCount},
+        {"totalCount", pageableCount},
+        {"visitedCount", state.totalCount},
         {"totalCountExact", state.totalCountExact},
         {"offset", state.options.offset},
         {"limit", state.options.limit},
@@ -367,6 +401,8 @@ QJsonObject ExportModel(QAbstractItemModel* model, const ExportOptions& options)
         {"includeHeaders", state.options.includeHeaders},
         {"flat", state.options.flat},
         {"valueMode", state.options.valueMode},
+        {"filterColumn", state.options.filterColumn},
+        {"filterContains", state.options.filterContains},
         {"truncated", hasMore},
     };
 }
@@ -2026,6 +2062,8 @@ const QSet<QString>& ProductSessionSettingNames()
         "COMBO_SELECT_SETTLE_MIN_POLLS",
         "COMBO_SELECT_TRIGGER",
         "DIALOG_AUTO_PATH",
+        "EVENT_FILTER_COLUMN",
+        "EVENT_FILTER_CONTAINS",
         "EVENT_INCLUDE_ITEM_DATA",
         "EVENT_LIMIT",
         "EVENT_OFFSET",

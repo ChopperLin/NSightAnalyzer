@@ -44,6 +44,24 @@ public sealed record EventFact(
 public sealed record TraceEventsValue(
     Page<EventFact> Events);
 
+/// <summary>
+/// One range-grain row of the trace skeleton. Grain distinguishes the D3D12
+/// containers that structure the capture from the caller's own instrumentation;
+/// both are returned so the caller, not the wrapper, decides what to look at.
+/// </summary>
+public sealed record OutlineFact(
+    EventKey Key,
+    int Depth,
+    int ChildCount,
+    string Grain,
+    string? Start,
+    string? End,
+    string? Duration);
+
+public sealed record TraceOutlineValue(
+    int TotalEventCount,
+    Page<OutlineFact> Ranges);
+
 public sealed record EventParameterFact(
     IReadOnlyList<string> Path,
     string Name,

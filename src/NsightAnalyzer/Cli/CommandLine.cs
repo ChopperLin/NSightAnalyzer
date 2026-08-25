@@ -334,7 +334,7 @@ internal static class CommandLine
             return Fail($"{operation} does not accept --identity-mode.");
         }
         if ((cursorSpecified || limitSpecified) &&
-            operation is not ("trace.events" or "trace.range-metrics" or
+            operation is not ("trace.events" or "trace.outline" or "trace.range-metrics" or
                 "trace.range-shaders" or "trace.shader-source" or
                 "trace.analysis" or "trace.counter-catalog" or
                 "trace.range-counters" or "trace.range-instruction-mix" or
