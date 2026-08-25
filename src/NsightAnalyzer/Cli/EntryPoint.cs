@@ -4,9 +4,28 @@ namespace NsightAnalyzer.Cli;
 
 internal static class EntryPoint
 {
+    // An agent that does not yet know this CLI will try these before anything
+    // else. Answering with the catalog costs nothing and removes a guaranteed
+    // first failure.
+    private static readonly string[] HelpTokens =
+        ["--help", "-h", "-?", "/?", "help"];
+
     public static async Task<int> RunAsync(string[] args)
     {
         var compact = args.Contains("--compact", StringComparer.Ordinal);
+        var positional = args
+            .Where(argument => !argument.StartsWith("--", StringComparison.Ordinal))
+            .ToArray();
+        if (positional.Length == 0 ||
+            HelpTokens.Contains(args[0], StringComparer.OrdinalIgnoreCase))
+        {
+            var catalog = OperationRegistry.Describe();
+            return JsonRenderer.Write(
+                new("capabilities", SchemaVersion.V1, catalog), compact)
+                ? ExitCodes.Success
+                : ExitCodes.Internal;
+        }
+
         var parseResult = CommandLine.Parse(args);
         if (!parseResult.IsSuccess)
         {

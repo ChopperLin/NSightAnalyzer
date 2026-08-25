@@ -153,11 +153,21 @@ internal static class ResolveEventWrapper
         }
         if (selected is null)
         {
+            // matches>0 with no selection means the name exists but the
+            // occurrence index is out of range. Say so explicitly: occurrence
+            // is zero-based, and "matches=1" otherwise reads as if a found
+            // event was rejected.
+            var detail = matchCount == 0
+                ? $"exactName={exactName}; occurrence={occurrence}; matches=0; " +
+                  "no event carries this exact name"
+                : $"exactName={exactName}; occurrence={occurrence}; " +
+                  $"matches={matchCount}; occurrence is zero-based, so the valid " +
+                  $"range is 0..{matchCount - 1}";
             return OperationResult.Failure(
                 ErrorCategory.NotFound,
                 "wrapper.event_occurrence_not_found",
                 "The requested exact event-name occurrence was not found.",
-                $"exactName={exactName}; occurrence={occurrence}; matches={matchCount}");
+                detail);
         }
 
         var result = new ResolveEventValue(

@@ -80,6 +80,23 @@ public sealed record Page<T>(
     bool Truncated,
     int? NextCursor);
 
+/// <summary>
+/// Machine-readable definition of one operation option. Callers should be able
+/// to construct a valid invocation from this without parsing the usage string
+/// or discovering a convention by trial and error.
+/// </summary>
+public sealed record OperationParameter(
+    string Name,
+    string ValueKind,
+    bool Required,
+    string Description,
+    string? Default = null,
+    IReadOnlyList<string>? AllowedValues = null,
+    long? Minimum = null,
+    long? Maximum = null,
+    bool Repeatable = false,
+    string? ExclusiveGroup = null);
+
 public sealed record OperationDescriptor(
     string Id,
     SchemaVersion SchemaVersion,
@@ -88,7 +105,8 @@ public sealed record OperationDescriptor(
     string Maturity,
     string Description,
     string Invocation,
-    string Layer = "atom");
+    string Layer = "atom",
+    IReadOnlyList<OperationParameter>? Parameters = null);
 
 public static class ContractLimits
 {

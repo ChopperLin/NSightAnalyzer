@@ -48,7 +48,8 @@ internal static class CommandLine
         var operation = args[0];
         if (!OperationRegistry.IsKnown(operation))
         {
-            return Fail($"Unknown operation '{operation}'.");
+            return Fail(
+                $"Unknown operation '{operation}'. Run '--help' for the callable catalog.");
         }
 
         var compact = false;

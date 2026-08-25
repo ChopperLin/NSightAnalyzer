@@ -21,7 +21,8 @@ internal static class OperationRegistry
                 false,
                 "verified",
                 "Returns the currently callable GPU Trace atom and wrapper catalog.",
-                "capabilities [--compact]"),
+                "capabilities [--compact]",
+                Parameters: [OperationParameters.Compact]),
             _ => Task.FromResult(
                 CapabilitiesOperation.Execute(GetPublicDescriptors()))),
         new(
@@ -32,7 +33,8 @@ internal static class OperationRegistry
                 true,
                 "implemented",
                 "Returns trace identity and verifies the pinned Viewer decoder/bridge.",
-                "trace.info <trace> [--identity-mode localWeak|sha256] [--viewer <path>]"),
+                "trace.info <trace> [--identity-mode localWeak|sha256] [--viewer <path>]",
+                Parameters: [OperationParameters.Trace, new("--identity-mode", "string", false, "How the trace snapshot is identified.", Default: "localWeak", AllowedValues: ["localWeak", "sha256"]), OperationParameters.Viewer, OperationParameters.TimeoutMs, OperationParameters.Compact]),
             command => TraceInfoOperation.ExecuteAsync(
                 command.TracePath!,
                 command.ViewerPath,
@@ -46,7 +48,8 @@ internal static class OperationRegistry
                 true,
                 "implemented",
                 "Returns a bounded page of semantic Event List facts and exact EventKeys.",
-                "trace.events <trace> [--cursor N] [--limit N] [--viewer <path>]"),
+                "trace.events <trace> [--cursor N] [--limit N] [--viewer <path>]",
+                Parameters: [OperationParameters.Trace, OperationParameters.Cursor, OperationParameters.Limit, OperationParameters.Viewer, OperationParameters.TimeoutMs, OperationParameters.Compact]),
             command => TraceEventsOperation.ExecuteAsync(
                 command.TracePath!,
                 command.ViewerPath,
@@ -61,7 +64,8 @@ internal static class OperationRegistry
                 true,
                 "implemented",
                 "Returns structured parameters for one exact EventKey.",
-                "trace.event-parameters <trace> (--event-ordinal N|--event-path P)"),
+                "trace.event-parameters <trace> (--event-ordinal N|--event-path P)",
+                Parameters: [OperationParameters.Trace, OperationParameters.EventOrdinal, OperationParameters.EventPath, OperationParameters.Viewer, OperationParameters.TimeoutMs, OperationParameters.Compact]),
             command => TraceEventParametersOperation.ExecuteAsync(
                 command.TracePath!,
                 command.ViewerPath,
@@ -77,7 +81,8 @@ internal static class OperationRegistry
                 "implemented",
                 "Returns long-form Warp Metrics for one exact pass/marker EventKey.",
                 "trace.range-metrics <trace> (--event-ordinal N|--event-path P) " +
-                "[--table <exact>] [--cursor N] [--limit N]"),
+                "[--table <exact>] [--cursor N] [--limit N]",
+                Parameters: [OperationParameters.Trace, OperationParameters.EventOrdinal, OperationParameters.EventPath, OperationParameters.MetricTable, OperationParameters.Cursor, OperationParameters.Limit, OperationParameters.Viewer, OperationParameters.TimeoutMs, OperationParameters.Compact]),
             command => TraceRangeMetricsOperation.ExecuteAsync(
                 command.TracePath!,
                 command.ViewerPath,
@@ -96,7 +101,8 @@ internal static class OperationRegistry
                 "implemented",
                 "Returns paged static/dynamic shader facts for one exact range.",
                 "trace.range-shaders <trace> (--event-ordinal N|--event-path P) " +
-                "[--shader-hash H] [--shader-occurrence N] [--cursor N] [--limit N]"),
+                "[--shader-hash H] [--shader-occurrence N] [--cursor N] [--limit N]",
+                Parameters: [OperationParameters.Trace, OperationParameters.EventOrdinal, OperationParameters.EventPath, OperationParameters.ShaderHash, OperationParameters.ShaderOccurrence, OperationParameters.Cursor, OperationParameters.Limit, OperationParameters.Viewer, OperationParameters.TimeoutMs, OperationParameters.Compact]),
             command => TraceRangeShadersOperation.ExecuteAsync(
                 command.TracePath!,
                 command.ViewerPath,
@@ -116,7 +122,8 @@ internal static class OperationRegistry
                 "implemented",
                 "Returns dynamic range-level instruction categories, samples, and stalls.",
                 "trace.range-instruction-mix <trace> " +
-                "(--event-ordinal N|--event-path P) [--cursor N] [--limit N]"),
+                "(--event-ordinal N|--event-path P) [--cursor N] [--limit N]",
+                Parameters: [OperationParameters.Trace, OperationParameters.EventOrdinal, OperationParameters.EventPath, OperationParameters.Cursor, OperationParameters.Limit, OperationParameters.Viewer, OperationParameters.TimeoutMs, OperationParameters.Compact]),
             command => TraceRangeInstructionMixOperation.ExecuteAsync(
                 command.TracePath!,
                 command.ViewerPath,
@@ -134,7 +141,8 @@ internal static class OperationRegistry
                 "implemented",
                 "Returns paged DXIL/SASS-correlated hotspot rows for one exact shader.",
                 "trace.shader-source <trace> (--event-ordinal N|--event-path P) " +
-                "--shader-hash H [--shader-occurrence N] [--cursor N] [--limit N]"),
+                "--shader-hash H [--shader-occurrence N] [--cursor N] [--limit N]",
+                Parameters: [OperationParameters.Trace, OperationParameters.EventOrdinal, OperationParameters.EventPath, new("--shader-hash", "string", true, "Shader hash as 0x followed by 16 hexadecimal digits."), OperationParameters.ShaderOccurrence, OperationParameters.Cursor, OperationParameters.Limit, OperationParameters.Viewer, OperationParameters.TimeoutMs, OperationParameters.Compact]),
             command => TraceShaderSourceOperation.ExecuteAsync(
                 command.TracePath!,
                 command.ViewerPath,
@@ -154,7 +162,8 @@ internal static class OperationRegistry
                 "implemented",
                 "Returns Viewer Trace Analysis ranges, top issues, and annotations.",
                 "trace.analysis <trace> (--event-ordinal N|--event-path P) " +
-                "[--cursor N] [--limit N] [--viewer <path>]"),
+                "[--cursor N] [--limit N] [--viewer <path>]",
+                Parameters: [OperationParameters.Trace, OperationParameters.EventOrdinal, OperationParameters.EventPath, OperationParameters.Cursor, OperationParameters.Limit, OperationParameters.Viewer, OperationParameters.TimeoutMs, OperationParameters.Compact]),
             command => TraceAnalysisOperation.ExecuteAsync(
                 command.TracePath!,
                 command.ViewerPath,
@@ -172,7 +181,8 @@ internal static class OperationRegistry
                 "implemented",
                 "Exports and returns the raw GPU counter column catalog.",
                 "trace.counter-catalog <trace> (--event-ordinal N|--event-path P) " +
-                "[--cursor N] [--limit N] [--viewer <path>]"),
+                "[--cursor N] [--limit N] [--viewer <path>]",
+                Parameters: [OperationParameters.Trace, OperationParameters.EventOrdinal, OperationParameters.EventPath, OperationParameters.Cursor, OperationParameters.Limit, OperationParameters.Viewer, OperationParameters.TimeoutMs, OperationParameters.Compact]),
             command => TraceCounterCatalogOperation.ExecuteAsync(
                 command.TracePath!,
                 command.ViewerPath,
@@ -191,7 +201,8 @@ internal static class OperationRegistry
                 "Exports exact raw counter values by exported range name.",
                 "trace.range-counters <trace> (--event-ordinal N|--event-path P) " +
                 "--counter <exact> [--counter <exact>...] [--range <exact>...] " +
-                "[--cursor N] [--limit N]"),
+                "[--cursor N] [--limit N]",
+                Parameters: [OperationParameters.Trace, OperationParameters.EventOrdinal, OperationParameters.EventPath, new("--counter", "string", true, "Exact counter column name. Repeatable.", Repeatable: true), new("--range", "string", false, "Exact exported range name. Repeatable; omit for every range.", Repeatable: true), OperationParameters.Cursor, OperationParameters.Limit, OperationParameters.Viewer, OperationParameters.TimeoutMs, OperationParameters.Compact]),
             command => TraceRangeCountersOperation.ExecuteAsync(
                 command.TracePath!,
                 command.ViewerPath,
@@ -212,7 +223,8 @@ internal static class OperationRegistry
                 "Resolves one explicit exact-name occurrence to an EventKey by stable preorder scan.",
                 "resolve-event <trace> --event-name <exact> --event-occurrence N " +
                 "[--within-event-ordinal N] [--viewer <path>]",
-                "wrapper"),
+                "wrapper",
+                Parameters: [OperationParameters.Trace, new("--event-name", "string", true, "Exact, case-sensitive event description to match."), new("--event-occurrence", "integer", true, "Zero-based index among events sharing the exact name. The first occurrence is 0; a name matched N times accepts 0..N-1.", Minimum: 0), new("--within-event-ordinal", "integer", false, "Restrict the scan to the subtree of this exact ancestor ordinal.", Minimum: 0), OperationParameters.Viewer, OperationParameters.TimeoutMs, OperationParameters.Compact]),
             command => ResolveEventWrapper.ExecuteAsync(
                 command.TracePath!,
                 command.ViewerPath,
@@ -230,7 +242,8 @@ internal static class OperationRegistry
                 "Closes metrics, shader, and instruction pages for one exact pass/marker.",
                 "inspect-pass <trace> --event-ordinal N [--table <exact>...] " +
                 "[--top-shaders N] [--viewer <path>]",
-                "wrapper"),
+                "wrapper",
+                Parameters: [OperationParameters.Trace, OperationParameters.RequiredEventOrdinal, OperationParameters.MetricTable, OperationParameters.TopShaders, OperationParameters.Viewer, OperationParameters.TimeoutMs, OperationParameters.Compact]),
             command => InspectPassWrapper.ExecuteAsync(
                 command.TracePath!,
                 command.ViewerPath,
@@ -250,7 +263,8 @@ internal static class OperationRegistry
                 "[--baseline-trace <trace>] --baseline-event-ordinal N " +
                 "[--table <exact>...] [--top-shaders N] " +
                 "[--cursor N] [--limit N] [--viewer <path>]",
-                "wrapper"),
+                "wrapper",
+                Parameters: [OperationParameters.Trace, OperationParameters.RequiredEventOrdinal, new("--baseline-trace", "path", false, "Baseline report for a cross-trace comparison.", Default: "the target trace"), new("--baseline-event-ordinal", "integer", true, "Zero-based preorder ordinal of the baseline range.", Minimum: 0), OperationParameters.MetricTable, OperationParameters.TopShaders, OperationParameters.Cursor, OperationParameters.Limit, OperationParameters.Viewer, OperationParameters.TimeoutMs, OperationParameters.Compact]),
             command => CompareRangesWrapper.ExecuteAsync(
                 command.TracePath!,
                 command.BaselineTracePath ?? command.TracePath!,
@@ -274,7 +288,8 @@ internal static class OperationRegistry
                 "--baseline-event-ordinal N --baseline-frame-index N " +
                 "--analysis-seed-event-ordinal N --present-queue-event-ordinal N " +
                 "[--viewer <path>]",
-                "wrapper"),
+                "wrapper",
+                Parameters: [OperationParameters.Trace, OperationParameters.RequiredEventOrdinal, new("--target-frame-index", "integer", true, "Zero-based Trace Analysis frame index of the target event.", Minimum: 0), new("--baseline-event-ordinal", "integer", true, "Zero-based preorder ordinal of the baseline frame event.", Minimum: 0), new("--baseline-frame-index", "integer", true, "Zero-based Trace Analysis frame index of the baseline event.", Minimum: 0), new("--analysis-seed-event-ordinal", "integer", true, "Ordinal of a real pass/marker used to seed Trace Analysis.", Minimum: 0), new("--present-queue-event-ordinal", "integer", true, "Ordinal of the queue event containing Present commands.", Minimum: 0), OperationParameters.Viewer, OperationParameters.TimeoutMs, OperationParameters.Compact]),
             command => CompareFrameTimingWrapper.ExecuteAsync(
                 command.TracePath!,
                 command.ViewerPath,
@@ -294,7 +309,8 @@ internal static class OperationRegistry
                 "implemented",
                 "Closes the reusable Viewer transport for one exact trace snapshot.",
                 "viewer-session.close <trace> [--viewer <path>]",
-                "transport"),
+                "transport",
+                Parameters: [OperationParameters.Trace, OperationParameters.Viewer, OperationParameters.TimeoutMs, OperationParameters.Compact]),
             command => ViewerSessionCloseOperation.ExecuteAsync(
                 command.TracePath!,
                 command.ViewerPath,
@@ -305,6 +321,9 @@ internal static class OperationRegistry
     public static bool IsKnown(string operation) =>
         Definitions.Any(definition =>
             definition.Descriptor.Id.Equals(operation, StringComparison.Ordinal));
+
+    public static OperationResult Describe() =>
+        CapabilitiesOperation.Execute(GetPublicDescriptors());
 
     public static Task<OperationResult> ExecuteAsync(ParsedCommand command) =>
         Definitions.Single(definition =>

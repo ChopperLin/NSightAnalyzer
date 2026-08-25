@@ -1,0 +1,82 @@
+using NsightAnalyzer.Cli;
+using NsightAnalyzer.Contracts;
+using Xunit;
+
+namespace NsightAnalyzer.Tests;
+
+/// <summary>
+/// The operation catalog is the only discovery surface an agent has. It must be
+/// constructible into a valid invocation without parsing prose or learning a
+/// convention by trial and error.
+/// </summary>
+public sealed class OperationCatalogTests
+{
+    private static IReadOnlyList<OperationDescriptor> Descriptors()
+    {
+        var value = OperationRegistry.Describe().Value;
+        var operations = value!.GetType().GetProperty("operations")!.GetValue(value);
+        return (IReadOnlyList<OperationDescriptor>)
+            operations!.GetType().GetProperty("Items")!.GetValue(operations)!;
+    }
+
+    [Fact]
+    public void EveryPublicOperationDeclaresParameters()
+    {
+        Assert.All(Descriptors(), descriptor =>
+        {
+            Assert.NotNull(descriptor.Parameters);
+            Assert.NotEmpty(descriptor.Parameters!);
+        });
+    }
+
+    [Fact]
+    public void EveryParameterIsSelfDescribing()
+    {
+        foreach (var parameter in Descriptors().SelectMany(d => d.Parameters!))
+        {
+            Assert.False(string.IsNullOrWhiteSpace(parameter.Name));
+            Assert.False(string.IsNullOrWhiteSpace(parameter.ValueKind));
+            Assert.False(string.IsNullOrWhiteSpace(parameter.Description));
+        }
+    }
+
+    [Theory]
+    [InlineData("resolve-event", "--event-occurrence")]
+    [InlineData("trace.range-shaders", "--shader-occurrence")]
+    public void OccurrenceParametersStateTheirBase(string operation, string name)
+    {
+        var parameter = Descriptors()
+            .Single(descriptor => descriptor.Id == operation)
+            .Parameters!
+            .Single(candidate => candidate.Name == name);
+
+        // Zero- versus one-based is the single most likely first-call mistake,
+        // so the catalog has to answer it without a failed round trip.
+        Assert.Contains("zero-based", parameter.Description, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ScopedOperationsMarkTheirMutuallyExclusiveSelectors()
+    {
+        var descriptor = Descriptors().Single(item => item.Id == "trace.range-metrics");
+
+        var scoped = descriptor.Parameters!
+            .Where(parameter => parameter.ExclusiveGroup is not null)
+            .Select(parameter => parameter.Name)
+            .ToArray();
+
+        Assert.Equal(["--event-ordinal", "--event-path"], scoped);
+    }
+
+    [Fact]
+    public void PagingParametersDeclareTheirBounds()
+    {
+        var limit = Descriptors()
+            .Single(descriptor => descriptor.Id == "trace.events")
+            .Parameters!
+            .Single(parameter => parameter.Name == "--limit");
+
+        Assert.Equal(1, limit.Minimum);
+        Assert.Equal(ContractLimits.MaximumPageLimit, limit.Maximum);
+    }
+}

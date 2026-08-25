@@ -66,6 +66,29 @@ Assert-True (@($capabilities.Document.result.value.operations.items |
     'Unexpected wrapper count.'
 Assert-True ($capabilities.Document.result.value.decoder.bridgeVersion -eq 'probe-0.45') `
     'Unexpected bridge version.'
+Assert-True (@($capabilities.Document.result.value.operations.items |
+        Where-Object { -not $_.parameters -or $_.parameters.Count -eq 0 }).Count -eq 0) `
+    'An operation was published without machine-readable parameters.'
+
+# An agent that does not know this CLI reaches for these first; each must
+# answer with the catalog instead of an argument error.
+foreach ($helpToken in @('--help', '-h', 'help')) {
+    $help = Invoke-JsonCli -Arguments @($helpToken, '--compact') -ExpectedExitCode 0
+    Assert-True $help.Document.result.isSuccess "'$helpToken' did not return the catalog."
+    Assert-True `
+        ($help.Document.result.value.operations.totalCount -eq
+            $capabilities.Document.result.value.operations.totalCount) `
+        "'$helpToken' returned a different catalog than 'capabilities'."
+}
+
+$occurrenceParameter = $capabilities.Document.result.value.operations.items |
+    Where-Object id -eq 'resolve-event' |
+    ForEach-Object { $_.parameters } |
+    Where-Object name -eq '--event-occurrence'
+Assert-True ($occurrenceParameter.required -eq $true) `
+    'resolve-event no longer requires an explicit occurrence.'
+Assert-True ($occurrenceParameter.description -match 'zero-based') `
+    'The occurrence parameter does not state its base.'
 
 $invalidArguments = Invoke-JsonCli `
     -Arguments @('capabilities', '--cursor', '0', '--compact') `
