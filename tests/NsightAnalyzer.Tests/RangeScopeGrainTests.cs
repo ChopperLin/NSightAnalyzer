@@ -71,3 +71,41 @@ public sealed class RangeScopeGrainTests
         Assert.Equal(GBufferPassTreePath, value.Scope.TreePath);
     }
 }
+
+/// <summary>
+/// The Viewer's own instruction-mix row order is not stable for categories tied
+/// on sample count: the same range has been observed emitting them in either
+/// order across runs. The projection therefore imposes its own order.
+/// </summary>
+public sealed class InstructionMixOrderingTests
+{
+    [Fact]
+    public void CategoriesAreOrderedByTheirOwnIdentity()
+    {
+        using var bridge = FixtureBridge.Load("range-instruction-mix-gbufferpass.json");
+
+        var items = BridgeProjection
+            .ProjectRangeInstructionMix(bridge.RootElement, 1773, null, 0, 500)
+            .Instructions.Items;
+
+        var expected = items
+            .OrderBy(fact => fact.Pipe, StringComparer.Ordinal)
+            .ThenBy(fact => fact.Family, StringComparer.Ordinal)
+            .ThenBy(fact => fact.Operation, StringComparer.Ordinal)
+            .ToArray();
+        Assert.Equal(expected.Select(fact => fact.Pipe), items.Select(fact => fact.Pipe));
+        Assert.Equal(expected.Select(fact => fact.Family), items.Select(fact => fact.Family));
+    }
+
+    [Fact]
+    public void SourceOrdinalIsAStableCursorIntoThatOrder()
+    {
+        using var bridge = FixtureBridge.Load("range-instruction-mix-gbufferpass.json");
+
+        var items = BridgeProjection
+            .ProjectRangeInstructionMix(bridge.RootElement, 1773, null, 0, 500)
+            .Instructions.Items;
+
+        Assert.Equal(Enumerable.Range(0, items.Count), items.Select(fact => fact.SourceOrdinal));
+    }
+}

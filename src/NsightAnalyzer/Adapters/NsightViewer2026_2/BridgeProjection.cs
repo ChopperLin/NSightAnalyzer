@@ -440,14 +440,12 @@ internal static class BridgeProjection
     {
         var scope = ProjectVerifiedScope(root, requestedOrdinal, requestedPath);
         RequireRangeGrainScope(scope, "Range shader inventory");
-        var models = RequiredArray(root, "models");
-        if (models.GetArrayLength() != 1)
-        {
-            throw new BridgeSchemaException(
-                $"Expected one shader inventory model, observed {models.GetArrayLength()}.");
-        }
+        var shaderModel = RequireModelOfClass(
+            root,
+            "NV::ShaderProfiler::UI::SampleItemTreeModel",
+            "shader inventory");
 
-        var export = RequiredObject(models[0], "export");
+        var export = RequiredObject(shaderModel, "export");
         ValidateCompleteModel(export, "Shader inventory");
         var nodes = RequiredArray(export, "nodes");
         var nodesByPath = new Dictionary<string, JsonElement>(StringComparer.Ordinal);
@@ -582,15 +580,11 @@ internal static class BridgeProjection
     {
         var scope = ProjectVerifiedScope(root, requestedOrdinal, requestedPath);
         RequireRangeGrainScope(scope, "Range instruction mix");
-        var models = RequiredArray(root, "models");
-        if (models.GetArrayLength() != 1 ||
-            RequiredString(models[0], "class") !=
-                "NV::ShaderProfiler::UI::InstructionMixModel")
-        {
-            throw new BridgeSchemaException(
-                $"Expected one range InstructionMixModel, observed {models.GetArrayLength()}.");
-        }
-        var export = RequiredObject(models[0], "export");
+        var mixModel = RequireModelOfClass(
+            root,
+            "NV::ShaderProfiler::UI::InstructionMixModel",
+            "range instruction mix");
+        var export = RequiredObject(mixModel, "export");
         ValidateCompleteModel(export, "Range instruction mix");
         var headers = HeadersByColumn(export);
         var expectedHeaders = new[]
@@ -631,10 +625,23 @@ internal static class BridgeProjection
                 stalls));
         }
 
-        var total = facts.Count;
+        // The Viewer's own row order is not stable for rows tied on sample
+        // count: the same range has been observed emitting equal-sample
+        // categories in either order across runs. Ordering by the row's own
+        // identity makes the projection reproducible, and sourceOrdinal is
+        // renumbered to that order so it stays a stable cursor rather than a
+        // record of an arbitrary model position.
+        var ordered = facts
+            .OrderBy(fact => fact.Pipe, StringComparer.Ordinal)
+            .ThenBy(fact => fact.Family, StringComparer.Ordinal)
+            .ThenBy(fact => fact.Operation, StringComparer.Ordinal)
+            .Select((fact, index) => fact with { SourceOrdinal = index })
+            .ToArray();
+
+        var total = ordered.Length;
         RangeInstructionMixFact[] page = cursor >= total
             ? []
-            : facts.Skip(cursor).Take(limit).ToArray();
+            : ordered.Skip(cursor).Take(limit).ToArray();
         int? nextCursor = cursor + page.Length < total
             ? cursor + page.Length
             : null;
@@ -1418,6 +1425,37 @@ internal static class BridgeProjection
     /// object/call or after the caller's own marker. This is a naming fact, not
     /// a judgement about which rows matter; both grains are returned.
     /// </summary>
+    /// <summary>
+    /// Selects one model by class from a bridge response. A single request may
+    /// carry several models when the caller amortizes one event selection
+    /// across fact families, so the projection addresses its own model by name
+    /// rather than assuming it is alone.
+    /// </summary>
+    private static JsonElement RequireModelOfClass(
+        JsonElement root,
+        string className,
+        string factFamily)
+    {
+        var models = RequiredArray(root, "models");
+        JsonElement? found = null;
+        foreach (var model in models.EnumerateArray())
+        {
+            if (RequiredString(model, "class") != className)
+            {
+                continue;
+            }
+            if (found is not null)
+            {
+                throw new BridgeSchemaException(
+                    $"Observed more than one {factFamily} model.");
+            }
+            found = model;
+        }
+        return found ?? throw new BridgeSchemaException(
+            $"Expected one {factFamily} model, observed {models.GetArrayLength()} models " +
+            "with no matching class.");
+    }
+
     private static string OutlineGrain(string description) =>
         description.StartsWith("ID3D12", StringComparison.Ordinal) ||
         description.StartsWith("ExecuteCommandLists", StringComparison.Ordinal) ||

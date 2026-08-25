@@ -62,91 +62,60 @@ internal static class InspectPassWrapper
         }
         var eventFact = eventResult.Value!;
 
-        int? tableCount = null;
-        int? rowCount = null;
-        var metrics = await WrapperSupport.CollectPagesAsync<RangeMetricsValue, RangeMetricFact>(
-            context,
-            (cursor, limit, remainingMs) => TraceRangeMetricsOperation.ExecuteAsync(
-                tracePath,
-                viewerPath,
-                remainingMs,
-                eventOrdinal,
-                null,
-                metricTables,
-                cursor,
-                limit),
-            value => value.Metrics,
-            value =>
+        // Metrics, shader inventory and instruction mix all hang off the same
+        // event selection, so they are read in one Viewer request instead of
+        // three. Each family is still projected and scope-verified separately.
+        var bundleResult = await context.InvokeAtomAsync(
+            remainingMs => RangeBundleReader.ReadAsync(
+                tracePath, viewerPath, remainingMs, eventOrdinal, metricTables));
+        if (!bundleResult.IsSuccess)
+        {
+            return WrapperValueResult<PassInspectionData>.Failure(bundleResult.Error!);
+        }
+        if (bundleResult.Value is not RangeBundle bundle)
+        {
+            return WrapperValueResult<PassInspectionData>.Failure(
+                WrapperSupport.InternalError(
+                    "The range bundle returned an unexpected value contract."));
+        }
+
+        foreach (var (scope, family) in new[]
+                 {
+                     (bundle.Metrics.Scope, "trace.range-metrics"),
+                     (bundle.Shaders.Scope, "trace.range-shaders"),
+                     (bundle.InstructionMix.Scope, "trace.range-instruction-mix"),
+                 })
+        {
+            if (!WrapperSupport.SameEventKey(eventFact.Key, scope))
             {
-                if (!WrapperSupport.SameEventKey(eventFact.Key, value.Scope))
-                {
-                    return WrapperSupport.InternalError(
-                        "trace.range-metrics returned a different exact scope.");
-                }
-                tableCount ??= value.TableCount;
-                rowCount ??= value.RowCount;
-                return tableCount == value.TableCount && rowCount == value.RowCount
-                    ? null
-                    : WrapperSupport.InternalError(
-                        "trace.range-metrics metadata changed between pages.");
-            });
-        if (!metrics.IsSuccess)
-        {
-            return WrapperValueResult<PassInspectionData>.Failure(metrics.Error!);
+                return WrapperValueResult<PassInspectionData>.Failure(
+                    WrapperSupport.InternalError(
+                        $"{family} returned a different exact scope."));
+            }
         }
 
-        var shaders = await WrapperSupport.CollectPagesAsync<RangeShadersValue, RangeShaderFact>(
-            context,
-            (cursor, limit, remainingMs) => TraceRangeShadersOperation.ExecuteAsync(
-                tracePath,
-                viewerPath,
-                remainingMs,
-                eventOrdinal,
-                null,
-                null,
-                null,
-                cursor,
-                limit),
-            value => value.Shaders,
-            value => WrapperSupport.SameEventKey(eventFact.Key, value.Scope)
-                ? null
-                : WrapperSupport.InternalError(
-                    "trace.range-shaders returned a different exact scope."));
-        if (!shaders.IsSuccess)
+        var metricsPage = bundle.Metrics.Metrics;
+        var shadersPage = bundle.Shaders.Shaders;
+        var instructionPage = bundle.InstructionMix.Instructions;
+        if (metricsPage.Truncated || shadersPage.Truncated || instructionPage.Truncated)
         {
-            return WrapperValueResult<PassInspectionData>.Failure(shaders.Error!);
+            return WrapperValueResult<PassInspectionData>.Failure(
+                WrapperSupport.InternalError(
+                    "The range bundle did not return complete fact pages."));
         }
-
-        var instructions = await WrapperSupport
-            .CollectPagesAsync<RangeInstructionMixValue, RangeInstructionMixFact>(
-                context,
-                (cursor, limit, remainingMs) =>
-                    TraceRangeInstructionMixOperation.ExecuteAsync(
-                        tracePath,
-                        viewerPath,
-                        remainingMs,
-                        eventOrdinal,
-                        null,
-                        cursor,
-                        limit),
-                value => value.Instructions,
-                value => WrapperSupport.SameEventKey(eventFact.Key, value.Scope)
-                    ? null
-                    : WrapperSupport.InternalError(
-                        "trace.range-instruction-mix returned a different exact scope."));
-        if (!instructions.IsSuccess)
-        {
-            return WrapperValueResult<PassInspectionData>.Failure(instructions.Error!);
-        }
+        context.AddRetrievedFacts(
+            metricsPage.ReturnedCount +
+            shadersPage.ReturnedCount +
+            instructionPage.ReturnedCount);
 
         return WrapperValueResult<PassInspectionData>.Success(
             new(
                 eventFact,
-                tableCount ?? 0,
-                rowCount ?? 0,
-                metrics.Value!.Items,
-                shaders.Value!.Items,
-                instructions.Value!.Items,
+                bundle.Metrics.TableCount,
+                bundle.Metrics.RowCount,
+                metricsPage.Items,
+                shadersPage.Items,
+                instructionPage.Items,
                 context));
     }
 
@@ -161,7 +130,6 @@ internal static class InspectPassWrapper
             .ThenBy(shader => shader.Key.HashOccurrence)
             .ThenBy(shader => shader.Key.Name, StringComparer.Ordinal)
             .ThenBy(shader => shader.Key.Pipeline, StringComparer.Ordinal)
-            .ThenBy(shader => shader.Key.PreorderOrdinal)
             .ToArray();
         var returnedShaders = orderedShaders.Take(topShaderCount).ToArray();
         var totalSamples = orderedShaders.Sum(shader => shader.SampleCount);
