@@ -74,6 +74,23 @@ Still deferred until real dogfood proves their shape:
 
 Wrappers resolve, page, join, filter, and compare. They do not diagnose.
 
+## R5.5 — Agent-facing surface and cost (complete)
+
+Dogfood of the CLI as an agent tool exposed four blockers, all now closed:
+
+- range PC-sampling atoms accepted a single-command scope and returned a plausible result;
+  they now refuse it (SCP-002);
+- discovery required knowing the word `capabilities`, and the catalog carried only prose;
+  `--help` and a bare invocation now return it with machine-readable parameters;
+- `resolve-event` matched exactly, so the natural first query missed; `--event-name-mode contains`
+  matches substrings and refuses an ambiguous query with the candidates' ordinals;
+- orientation meant paging the whole event tree; `trace.outline` returns the range skeleton
+  in one call.
+
+Cost on the single-frame report: event page 3.5 s -> 2.15 s, `trace.outline` 2 s for the whole
+skeleton, `inspect-pass` 6 calls / 77 s -> 2 calls / 24-34 s, `compare-ranges` 12 calls -> 4.
+Two pre-existing ordering instabilities were found and fixed while diffing before against after.
+
 ## R6 — Skill and dogfood
 
 Add the Agent Skill only after the atom/wrapper surface can complete real investigations without
