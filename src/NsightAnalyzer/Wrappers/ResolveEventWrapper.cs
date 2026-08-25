@@ -5,13 +5,39 @@ namespace NsightAnalyzer.Wrappers;
 
 internal static class ResolveEventWrapper
 {
+    /// <summary>
+    /// Distinct candidate names listed back when a substring query is ambiguous.
+    /// Bounded so a broad query cannot produce an unbounded error payload.
+    /// </summary>
+    private const int MaximumReportedCandidates = 20;
+
+    private static bool IsMatch(string description, string query, bool contains) =>
+        contains
+            ? description.Contains(query, StringComparison.OrdinalIgnoreCase)
+            : description.Equals(query, StringComparison.Ordinal);
+
+    /// <summary>
+    /// Shortens one candidate name for the ambiguity message. D3D12 call text
+    /// runs to hundreds of characters, which would bury the ordinals that make
+    /// the message actionable.
+    /// </summary>
+    private static string Summarize(string description)
+    {
+        const int maximumLength = 72;
+        var single = description.ReplaceLineEndings(" ");
+        return single.Length <= maximumLength
+            ? single
+            : single[..maximumLength] + "...";
+    }
+
     public static async Task<OperationResult> ExecuteAsync(
         string tracePath,
         string? viewerPath,
         int timeoutMs,
         string exactName,
         int occurrence,
-        int? withinPreorderOrdinal)
+        int? withinPreorderOrdinal,
+        bool contains = false)
     {
         var deadline = new WrapperDeadline(timeoutMs);
         var context = new WrapperContext(deadline);
@@ -19,6 +45,8 @@ internal static class ResolveEventWrapper
         int? expectedTotal = null;
         var scannedEventCount = 0;
         var matchCount = 0;
+        var distinctNames = new SortedDictionary<string, EventFact>(StringComparer.Ordinal);
+        var overflowNameCount = 0;
         EventFact? withinScope = null;
         EventFact? selected = null;
         IReadOnlyList<EventFact>? selectedAncestors = null;
@@ -123,8 +151,23 @@ internal static class ResolveEventWrapper
                 }
 
                 scannedEventCount++;
-                if (fact.Key.Description.Equals(exactName, StringComparison.Ordinal))
+                if (IsMatch(fact.Key.Description, exactName, contains))
                 {
+                    // Under substring matching the same query can span several
+                    // distinct names. Occurrence indexes within one name, so the
+                    // distinct set is tracked and an ambiguous query is refused
+                    // rather than silently resolved to whichever came first.
+                    // The first ordinal per name is kept so the refusal can name
+                    // an exact next call instead of only reporting a conflict.
+                    if (distinctNames.Count < MaximumReportedCandidates &&
+                        !distinctNames.ContainsKey(fact.Key.Description))
+                    {
+                        distinctNames.Add(fact.Key.Description, fact);
+                    }
+                    else if (!distinctNames.ContainsKey(fact.Key.Description))
+                    {
+                        overflowNameCount++;
+                    }
                     if (matchCount == occurrence)
                     {
                         selected = fact;
@@ -151,6 +194,27 @@ internal static class ResolveEventWrapper
                 "The exact ancestor preorder ordinal was not found.",
                 $"withinPreorderOrdinal={withinPreorderOrdinal.Value}");
         }
+        if (contains && distinctNames.Count + overflowNameCount > 1)
+        {
+            // Never pick for the caller. Which of several distinct names is the
+            // intended one is a judgement, not a fact. Each candidate is
+            // reported with the ordinal of its first occurrence, so the caller
+            // can proceed directly by ordinal without repeating the scan.
+            var candidates = distinctNames.Values.Select(candidate =>
+                $"{candidate.Key.PreorderOrdinal}={Summarize(candidate.Key.Description)}");
+            var suffix = overflowNameCount > 0
+                ? $" (+{overflowNameCount} more)"
+                : string.Empty;
+            return OperationResult.Failure(
+                ErrorCategory.InvalidInput,
+                "wrapper.event_name_ambiguous",
+                "The substring query matched more than one distinct event name.",
+                $"query={exactName}; " +
+                $"distinctNames={distinctNames.Count + overflowNameCount}; " +
+                $"firstOrdinalPerName={string.Join(" | ", candidates)}{suffix}; " +
+                "re-run with an exact --event-name, or pass one of these ordinals " +
+                "to --event-ordinal");
+        }
         if (selected is null)
         {
             // matches>0 with no selection means the name exists but the
@@ -171,12 +235,13 @@ internal static class ResolveEventWrapper
         }
 
         var result = new ResolveEventValue(
-            new(exactName, occurrence, withinPreorderOrdinal),
+            new(exactName, occurrence, withinPreorderOrdinal, contains ? "contains" : "exact"),
             withinScope,
             selected,
             selectedAncestors ?? [],
             matchCount,
-            context.Stats(scannedEventCount));
+            context.Stats(scannedEventCount),
+            contains ? selected.Key.Description : null);
         return OperationResult.Success(
             result,
             context.Provenance,

@@ -19,6 +19,7 @@ internal sealed record ParsedCommand(
     IReadOnlyList<string> CounterNames,
     IReadOnlyList<string> RangeNames,
     string? EventName,
+    bool EventNameContains,
     int? EventOccurrence,
     int? WithinEventOrdinal,
     string? BaselineTracePath,
@@ -71,6 +72,7 @@ internal static class CommandLine
         var counterNames = new List<string>();
         var rangeNames = new List<string>();
         string? eventName = null;
+        var eventNameContains = false;
         int? eventOccurrence = null;
         int? withinEventOrdinal = null;
         string? baselineTracePath = null;
@@ -181,6 +183,14 @@ internal static class CommandLine
                     {
                         return Fail("--event-name requires an exact non-empty name of at most 512 characters.");
                     }
+                    break;
+                case "--event-name-mode":
+                    if (!TryTakeValue(args, ref index, out var eventNameModeText) ||
+                        eventNameModeText is not ("exact" or "contains"))
+                    {
+                        return Fail("--event-name-mode must be 'exact' or 'contains'.");
+                    }
+                    eventNameContains = eventNameModeText == "contains";
                     break;
                 case "--event-occurrence":
                     if (!TryTakeValue(args, ref index, out var eventOccurrenceText) ||
@@ -411,6 +421,10 @@ internal static class CommandLine
         {
             return Fail("resolve-event requires --event-name and --event-occurrence.");
         }
+        if (operation != "resolve-event" && eventNameContains)
+        {
+            return Fail($"{operation} does not accept --event-name-mode.");
+        }
         if (operation != "resolve-event" &&
             (eventName is not null || eventOccurrence is not null ||
                 withinEventOrdinal is not null))
@@ -455,6 +469,7 @@ internal static class CommandLine
             counterNames,
             rangeNames,
             eventName,
+            eventNameContains,
             eventOccurrence,
             withinEventOrdinal,
             baselineTracePath,

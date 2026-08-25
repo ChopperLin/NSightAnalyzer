@@ -222,16 +222,18 @@ internal static class OperationRegistry
                 "implemented",
                 "Resolves one explicit exact-name occurrence to an EventKey by stable preorder scan.",
                 "resolve-event <trace> --event-name <exact> --event-occurrence N " +
-                "[--within-event-ordinal N] [--viewer <path>]",
+                "[--event-name-mode exact|contains] [--within-event-ordinal N] " +
+                "[--viewer <path>]",
                 "wrapper",
-                Parameters: [OperationParameters.Trace, new("--event-name", "string", true, "Exact, case-sensitive event description to match."), new("--event-occurrence", "integer", true, "Zero-based index among events sharing the exact name. The first occurrence is 0; a name matched N times accepts 0..N-1.", Minimum: 0), new("--within-event-ordinal", "integer", false, "Restrict the scan to the subtree of this exact ancestor ordinal.", Minimum: 0), OperationParameters.Viewer, OperationParameters.TimeoutMs, OperationParameters.Compact]),
+                Parameters: [OperationParameters.Trace, new("--event-name", "string", true, "Event description to match. Exact and case-sensitive unless --event-name-mode is contains."), new("--event-name-mode", "string", false, "How --event-name is matched. contains is case-insensitive substring matching and is refused when it spans more than one distinct name.", Default: "exact", AllowedValues: ["exact", "contains"]), new("--event-occurrence", "integer", true, "Zero-based index among events sharing the exact name. The first occurrence is 0; a name matched N times accepts 0..N-1.", Minimum: 0), new("--within-event-ordinal", "integer", false, "Restrict the scan to the subtree of this exact ancestor ordinal.", Minimum: 0), OperationParameters.Viewer, OperationParameters.TimeoutMs, OperationParameters.Compact]),
             command => ResolveEventWrapper.ExecuteAsync(
                 command.TracePath!,
                 command.ViewerPath,
                 command.TimeoutMs,
                 command.EventName!,
                 command.EventOccurrence!.Value,
-                command.WithinEventOrdinal)),
+                command.WithinEventOrdinal,
+                command.EventNameContains)),
         new(
             new(
                 "inspect-pass",

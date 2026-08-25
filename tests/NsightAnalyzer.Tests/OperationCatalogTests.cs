@@ -80,3 +80,42 @@ public sealed class OperationCatalogTests
         Assert.Equal(ContractLimits.MaximumPageLimit, limit.Maximum);
     }
 }
+
+/// <summary>
+/// Substring matching exists to spare an agent from guessing a marker's exact
+/// spelling. It must never turn that convenience into a silent choice between
+/// distinct events.
+/// </summary>
+public sealed class EventNameModeTests
+{
+    private static IReadOnlyList<OperationParameter> ResolveEventParameters()
+    {
+        var value = OperationRegistry.Describe().Value;
+        var operations = value!.GetType().GetProperty("operations")!.GetValue(value);
+        var items = (IReadOnlyList<OperationDescriptor>)
+            operations!.GetType().GetProperty("Items")!.GetValue(operations)!;
+        return items.Single(descriptor => descriptor.Id == "resolve-event").Parameters!;
+    }
+
+    [Fact]
+    public void MatchModeDefaultsToExact()
+    {
+        var mode = ResolveEventParameters()
+            .Single(parameter => parameter.Name == "--event-name-mode");
+
+        Assert.Equal("exact", mode.Default);
+        Assert.Equal(["exact", "contains"], mode.AllowedValues);
+        Assert.False(mode.Required);
+    }
+
+    [Fact]
+    public void MatchModeDocumentsItsAmbiguityRefusal()
+    {
+        var mode = ResolveEventParameters()
+            .Single(parameter => parameter.Name == "--event-name-mode");
+
+        // The refusal is the whole safety property; it has to be discoverable
+        // before the caller relies on contains.
+        Assert.Contains("refused", mode.Description, StringComparison.OrdinalIgnoreCase);
+    }
+}

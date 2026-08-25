@@ -9,7 +9,8 @@ public sealed record WrapperExecutionStats(
 public sealed record ResolveEventQuery(
     string ExactName,
     int Occurrence,
-    int? WithinPreorderOrdinal);
+    int? WithinPreorderOrdinal,
+    string MatchMode = "exact");
 
 public sealed record ResolveEventValue(
     ResolveEventQuery Query,
@@ -17,7 +18,8 @@ public sealed record ResolveEventValue(
     EventFact Event,
     IReadOnlyList<EventFact> Ancestors,
     int MatchCount,
-    WrapperExecutionStats Execution);
+    WrapperExecutionStats Execution,
+    string? ResolvedName = null);
 
 public sealed record CompleteRangeMetrics(
     int TableCount,
