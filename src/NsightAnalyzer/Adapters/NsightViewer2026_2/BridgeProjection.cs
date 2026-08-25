@@ -36,6 +36,27 @@ internal sealed class BridgeFactUnavailableException : Exception
     public string? Detail { get; }
 }
 
+/// <summary>
+/// The selected event is a single command, not a pass/marker range. Range-grain PC sampling
+/// facts have no reliable denominator at that scope (capability matrix SCP-002), so the
+/// projection refuses instead of returning a plausible value.
+/// </summary>
+internal sealed class BridgeScopeUnsupportedException : Exception
+{
+    public BridgeScopeUnsupportedException(
+        string code,
+        string message,
+        string? detail = null) : base(message)
+    {
+        Code = code;
+        Detail = detail;
+    }
+
+    public string Code { get; }
+
+    public string? Detail { get; }
+}
+
 internal static class BridgeProjection
 {
     public static TraceEventsValue ProjectEvents(
@@ -218,6 +239,7 @@ internal static class BridgeProjection
         int limit)
     {
         var scope = ProjectVerifiedScope(root, requestedOrdinal, requestedPath);
+        RequireRangeGrainScope(scope, "Range metrics");
         var views = RequiredArray(root, "metricViews");
         var rawTables = new List<RawMetricTable>(views.GetArrayLength());
         var tableOccurrences = new Dictionary<string, int>(StringComparer.Ordinal);
@@ -341,6 +363,7 @@ internal static class BridgeProjection
         int limit)
     {
         var scope = ProjectVerifiedScope(root, requestedOrdinal, requestedPath);
+        RequireRangeGrainScope(scope, "Range shader inventory");
         var models = RequiredArray(root, "models");
         if (models.GetArrayLength() != 1)
         {
@@ -482,6 +505,7 @@ internal static class BridgeProjection
         int limit)
     {
         var scope = ProjectVerifiedScope(root, requestedOrdinal, requestedPath);
+        RequireRangeGrainScope(scope, "Range instruction mix");
         var models = RequiredArray(root, "models");
         if (models.GetArrayLength() != 1 ||
             RequiredString(models[0], "class") !=
@@ -1286,8 +1310,34 @@ internal static class BridgeProjection
             ArrayText(cells, 0) ?? string.Empty);
     }
 
-    private static void ValidateCompleteModel(JsonElement export, string name)
+    /// <summary>
+    /// The Viewer Event List reports an event range as either a single command index ("1606")
+    /// or an inclusive span ("1606 - 2474"). Only a span is a pass/marker range whose
+    /// PC-sampling denominator is trustworthy. A single command index is a draw/dispatch/barrier
+    /// scope, which capability matrix SCP-002 records as unsupported: the observed sample
+    /// denominator expands beyond the selected command, so a returned value would look ordinary
+    /// while meaning something else.
+    /// </summary>
+    private static void RequireRangeGrainScope(EventKey scope, string factFamily)
     {
+        var eventRange = scope.EventRange?.Trim();
+        if (string.IsNullOrEmpty(eventRange))
+        {
+            throw new BridgeSchemaException(
+                "The selected event has no event range, so its scope grain is unknown.");
+        }
+        if (eventRange.Contains('-', StringComparison.Ordinal))
+        {
+            return;
+        }
+        throw new BridgeScopeUnsupportedException(
+            "trace.unsupported_draw_scope",
+            $"{factFamily} requires a pass/marker range scope.",
+            $"eventRange={eventRange}; description={scope.Description}; " +
+            "a single command scope has no reliable PC-sampling denominator (SCP-002)");
+    }
+
+    private static void ValidateCompleteModel(JsonElement export, string name)    {
         if (!RequiredBoolean(export, "totalCountExact"))
         {
             throw new BridgeSchemaException($"{name} totalCount is not exact.");

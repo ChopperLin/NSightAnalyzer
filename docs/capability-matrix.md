@@ -35,7 +35,7 @@ families below and do not add new facts or bottleneck judgments.
 | ANA-002 | Trace Analysis | 30 per-frame models with top issues | verified | explicit pass seed, target-model barrier, paging |
 | CNT-001 | counter catalog/values | 226 ranges by 646 counters | verified | duplicate occurrences and safe trace-copy cleanup |
 | SCP-001 | pass/marker PC sampling | stable on tested ranges | verified | only proven range grains |
-| SCP-002 | single-draw PC sampling | sample denominator expanded unexpectedly | unavailable | explicit unsupported-scope |
+| SCP-002 | single-draw PC sampling | sample denominator expanded unexpectedly | unavailable | range/shader/instruction atoms refuse a single-command scope with `trace.unsupported_draw_scope` |
 | RES-001 | resource contents/pixel history | absent from GPU Trace domain | out of scope | requires Graphics Capture |
 | PRF-001 | Nsight Perf SDK live metrics | different producer and workflow | out of scope | user-approved future scope only |
 

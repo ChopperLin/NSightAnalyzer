@@ -50,6 +50,14 @@ closure. Duplicate names remain distinct. Unknown properties and invalid bounds 
 Every scoped atom verifies the final observed EventKey equals the requested key. A stable metric
 snapshot under the wrong selection is a failure.
 
+Range metrics, range shaders, and range instruction mix additionally verify scope grain. The Viewer
+reports an event range as a single command index or an inclusive span; only a span is a pass/marker
+range. A single-command scope returns `unsupported` / `trace.unsupported_draw_scope` (SCP-002)
+rather than a plausible value, because its PC-sampling denominator expands beyond the selected
+command. Real-trace closure: single-frame ordinal 1774 (`ClearRenderTargetView`) is refused by all
+three atoms with exit code 4, while ordinal 1773 (`GBufferPass`) still returns 88 tables, 409 rows,
+801 metric values, 56 instruction categories, and 676 shader identities.
+
 Every real run verifies:
 
 - exact Viewer product version/build and bridge presence;

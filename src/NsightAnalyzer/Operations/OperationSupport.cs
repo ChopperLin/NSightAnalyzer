@@ -1,3 +1,4 @@
+using NsightAnalyzer.Adapters.NsightViewer2026_2;
 using NsightAnalyzer.Contracts;
 
 namespace NsightAnalyzer.Operations;
@@ -10,6 +11,14 @@ internal static class OperationSupport
             "viewer.unsupported_version_pinned",
             "Facts were decoded through an unsupported, version-pinned Nsight Viewer model adapter."),
     ];
+
+    public static OperationResult ScopeUnsupportedFailure(
+        BridgeScopeUnsupportedException exception) =>
+        OperationResult.Failure(
+            ErrorCategory.Unsupported,
+            exception.Code,
+            exception.Message,
+            exception.Detail);
 
     public static OperationResult ProjectionFailure(Exception exception) =>
         OperationResult.Failure(

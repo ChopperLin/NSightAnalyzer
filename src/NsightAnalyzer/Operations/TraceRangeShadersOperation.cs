@@ -81,6 +81,10 @@ internal static class TraceRangeShadersOperation
                 exception.Code,
                 exception.Message);
         }
+        catch (BridgeScopeUnsupportedException exception)
+        {
+            return OperationSupport.ScopeUnsupportedFailure(exception);
+        }
         catch (BridgeSchemaException exception)
         {
             return OperationSupport.ProjectionFailure(exception);
