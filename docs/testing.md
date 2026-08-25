@@ -37,6 +37,8 @@ and confirm the oracle counts above still hold.
 
 ### Real single-frame trace
 
+- `trace.outline` visits 4,951 events and returns 493 range-grain rows in one call, keeping true
+  preorder ordinals (`GBufferPass` stays 1773) and labelling each row container or marker;
 - GBuffer and Deferred ranges return different register/L2/VRAM values;
 - draw event 1661 returns InstanceCount 94206 and StartInstanceLocation 262176;
 - shader c709 returns 3,592 samples, 24 warps, 30 registers, 14 live registers, 544 static
@@ -49,8 +51,6 @@ and confirm the oracle counts above still hold.
 
 ### Real 30-frame trace
 
-- `trace.outline` visits 4,951 events and returns 493 range-grain rows in one call, keeping true
-  preorder ordinals (`GBufferPass` stays 1773) and labelling each row container or marker;
 - event total 306,576;
 - offset 306570, limit 10 returns six nodes, hasMore false, ending in Present event 276761;
 - frame 0 and frame 29 GBuffer each return 88 tables and 409 rows;
