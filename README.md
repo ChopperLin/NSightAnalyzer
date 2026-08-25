@@ -13,7 +13,8 @@ Nsight Graphics 2026.2 build 37991608 must open the report because no discovered
 SDK exposes the same existing-report data surface. The adapter is therefore unsupported and
 version-pinned; it is not presented as an official report SDK.
 
-Probe 0.44 and the current product atoms have recovered and validated:
+The frozen Probe 0.44 oracle and the current `probe-0.45` product bridge have recovered and
+validated:
 
 - complete event/pass/marker/action navigation;
 - range-scoped register, L2, VRAM, occupancy, stall, latency, queue, draw, and pipeline metrics;
@@ -24,9 +25,14 @@ Probe 0.44 and the current product atoms have recovered and validated:
 - Trace Analysis models and the Viewer's raw counter export.
 
 The committed probing implementation under tools/probes/qt-model-bridge is the legacy oracle.
-The atom layer currently exposes 11 operations: capability/identity, events, event parameters,
-range metrics, range instruction mix, range shaders, shader source, Trace Analysis, and raw-counter
-catalog/value retrieval. Deterministic wrappers and Agent diagnosis remain intentionally deferred.
+The atom layer exposes 11 operations: capability/identity, events, event parameters, range metrics,
+range instruction mix, range shaders, shader source, Trace Analysis, and raw-counter catalog/value
+retrieval. The first deterministic wrapper slice adds `resolve-event`, `inspect-pass`, and
+`compare-ranges`. Agent diagnosis remains intentionally above those wrappers.
+
+Product atoms reuse one normally launched Viewer process per exact trace snapshot. The normal
+CrashReporter pipe guardian is recorded as session baseline rather than treated as a crash; Viewer
+exit or any additional/replacement guardian invalidates the session, and the next call rebuilds it.
 
 ```powershell
 dotnet build .\NSightAnalyzer.slnx -c Release
@@ -42,5 +48,6 @@ Start with:
 - [capability matrix](docs/capability-matrix.md)
 - [roadmap](docs/roadmap.md)
 - [verification](docs/testing.md)
+- [comparative hotspot workflow](docs/comparative-hotspot-workflow.md)
 
 Generated reports and outputs stay under .local/ and never enter Git.

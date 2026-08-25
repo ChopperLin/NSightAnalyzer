@@ -1,11 +1,13 @@
 using NsightAnalyzer.Contracts;
 using NsightAnalyzer.Operations;
+using NsightAnalyzer.Wrappers;
 
 namespace NsightAnalyzer.Cli;
 
 internal sealed record OperationDefinition(
     OperationDescriptor Descriptor,
-    Func<ParsedCommand, Task<OperationResult>> Handler);
+    Func<ParsedCommand, Task<OperationResult>> Handler,
+    bool Discoverable = true);
 
 internal static class OperationRegistry
 {
@@ -18,7 +20,7 @@ internal static class OperationRegistry
                 "readOnly",
                 false,
                 "verified",
-                "Returns the currently callable GPU Trace atom catalog.",
+                "Returns the currently callable GPU Trace atom and wrapper catalog.",
                 "capabilities [--compact]"),
             _ => Task.FromResult(
                 CapabilitiesOperation.Execute(GetPublicDescriptors()))),
@@ -200,6 +202,81 @@ internal static class OperationRegistry
                 command.RangeNames,
                 command.Cursor,
                 command.Limit)),
+        new(
+            new(
+                "resolve-event",
+                SchemaVersion.V1,
+                "readOnly",
+                true,
+                "implemented",
+                "Resolves one explicit exact-name occurrence to an EventKey by stable preorder scan.",
+                "resolve-event <trace> --event-name <exact> --event-occurrence N " +
+                "[--within-event-ordinal N] [--viewer <path>]",
+                "wrapper"),
+            command => ResolveEventWrapper.ExecuteAsync(
+                command.TracePath!,
+                command.ViewerPath,
+                command.TimeoutMs,
+                command.EventName!,
+                command.EventOccurrence!.Value,
+                command.WithinEventOrdinal)),
+        new(
+            new(
+                "inspect-pass",
+                SchemaVersion.V1,
+                "readOnly",
+                true,
+                "implemented",
+                "Closes metrics, shader, and instruction pages for one exact pass/marker.",
+                "inspect-pass <trace> --event-ordinal N [--table <exact>...] " +
+                "[--top-shaders N] [--viewer <path>]",
+                "wrapper"),
+            command => InspectPassWrapper.ExecuteAsync(
+                command.TracePath!,
+                command.ViewerPath,
+                command.TimeoutMs,
+                command.EventOrdinal!.Value,
+                command.MetricTables,
+                command.TopShaderCount)),
+        new(
+            new(
+                "compare-ranges",
+                SchemaVersion.V1,
+                "readOnly",
+                true,
+                "implemented",
+                "Computes exact target-minus-baseline deltas across two inspected ranges.",
+                "compare-ranges <target-trace> --event-ordinal N " +
+                "[--baseline-trace <trace>] --baseline-event-ordinal N " +
+                "[--table <exact>...] [--top-shaders N] " +
+                "[--cursor N] [--limit N] [--viewer <path>]",
+                "wrapper"),
+            command => CompareRangesWrapper.ExecuteAsync(
+                command.TracePath!,
+                command.BaselineTracePath ?? command.TracePath!,
+                command.ViewerPath,
+                command.TimeoutMs,
+                command.EventOrdinal!.Value,
+                command.BaselineEventOrdinal!.Value,
+                command.MetricTables,
+                command.TopShaderCount,
+                command.Cursor,
+                command.Limit)),
+        new(
+            new(
+                "viewer-session.close",
+                SchemaVersion.V1,
+                "transport",
+                false,
+                "implemented",
+                "Closes the reusable Viewer transport for one exact trace snapshot.",
+                "viewer-session.close <trace> [--viewer <path>]",
+                "transport"),
+            command => ViewerSessionCloseOperation.ExecuteAsync(
+                command.TracePath!,
+                command.ViewerPath,
+                command.TimeoutMs),
+            Discoverable: false),
     ];
 
     public static bool IsKnown(string operation) =>
@@ -212,5 +289,8 @@ internal static class OperationRegistry
                 command.Operation, StringComparison.Ordinal)).Handler(command);
 
     private static IReadOnlyList<OperationDescriptor> GetPublicDescriptors() =>
-        Definitions.Select(definition => definition.Descriptor).ToArray();
+        Definitions
+            .Where(definition => definition.Discoverable)
+            .Select(definition => definition.Descriptor)
+            .ToArray();
 }

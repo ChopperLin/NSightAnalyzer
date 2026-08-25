@@ -87,7 +87,8 @@ public sealed record OperationDescriptor(
     bool OpensViewer,
     string Maturity,
     string Description,
-    string Invocation);
+    string Invocation,
+    string Layer = "atom");
 
 public static class ContractLimits
 {

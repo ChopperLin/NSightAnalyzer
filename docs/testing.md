@@ -5,7 +5,7 @@
 1. Contract tests run without Nsight or a GPU against sanitized bridge JSON.
 2. Projection tests close semantic pages against fixed raw probe output.
 3. Optional Viewer integration opens a caller-supplied real trace and validates exact build,
-   selection, model stability, output freshness, and CrashReporter absence.
+   selection, model stability, output freshness, and CrashReporter lifecycle.
 4. Oracle closure compares product atom output to probe 0.44 on the same trace and selector.
 
 Generic model discovery is never part of product verification.
@@ -54,7 +54,27 @@ Every real run verifies:
 - expected schema and complete status;
 - bounded elapsed time and output;
 - Viewer exit or controlled session state;
-- zero newly spawned CrashReporter processes.
+- no additional/replacement CrashReporter beyond the live session's startup-recorded child, and no
+  surviving child after session close.
+
+## Wrapper gates
+
+- `resolve-event` scans stable preorder pages, requires an explicit occurrence, and never chooses
+  an ambiguous same-name range implicitly;
+- `inspect-pass` closes every source page, verifies every returned scope against the exact event,
+  and reports shader truncation plus sample coverage;
+- `compare-ranges` joins metrics by table/row/column name plus occurrence, retains source ordinals
+  on both sides, preserves target-only/baseline-only, and computes deltas only for comparable values;
+- metric deltas have stable cursor/limit paging and per-table completeness summaries;
+- the real single-frame Dispatch fixture whose Viewer model reports a dimension above the D3D12
+  semantic maximum returns unavailable instead of a successful workload fact;
+- duration deltas identify Viewer display precision as their basis;
+- different event names or depths produce objective warnings, not a diagnosis.
+
+The single-frame wrapper closure resolves GBuffer to preorder ordinal 1773 and DeferredLighting to
+3901. Their mechanical comparison closes 801 matched metrics, 676 matched shader identities, and a
+56-versus-52 instruction surface (57 joined identities). This sibling comparison validates the
+wrapper contract only; it is not accepted as causal evidence.
 
 ## Safety
 

@@ -43,22 +43,31 @@ The counter catalog/value path is closed on the single-frame report. Trace Analy
 the product CLI on the 30-frame report with an explicit GBuffer seed and all 30 frame rows.
 The P0 denominator is now frozen; wrapper work may begin only after the verification/commit gate.
 
-## R4 — Session transport
+## R4 — Session transport (complete)
 
 Replace repeated one-shot report loading with one serialized Viewer session per trace. Session reuse
 must not change atom contracts, output ordering, availability, or provenance. A fresh-session replay
 of the same atom must return the same semantic result.
 
-## R5 — Deterministic wrappers
+The product now launches one normal foreground Viewer per exact trace snapshot, serializes requests,
+and closes it on idle timeout or `viewer-session.close`. The Viewer-owned CrashReporter pipe guardian
+is recorded as the session baseline; only Viewer loss or an additional/replacement guardian
+invalidates the session. Real-trace dogfood verified PID reuse, explicit close, and rebuild after a
+forced Viewer exit.
 
-In dependency order:
+## R5 — Deterministic wrappers (in progress)
 
-1. resolve-event;
-2. inspect-pass;
-3. inspect-shader;
-4. compare-ranges;
-5. compare-frames;
-6. export-agent-dataset.
+The first comparative-hotspot slice is implemented:
+
+1. `resolve-event`: exact name + explicit occurrence, optionally bounded by an exact ancestor;
+2. `inspect-pass`: complete metric/instruction closure plus coverage-labelled shader Top-N;
+3. `compare-ranges`: same-trace or cross-trace target-minus-baseline deltas with paged metrics.
+
+Still deferred until real dogfood proves their shape:
+
+4. `compare-frames` matching policy;
+5. `inspect-shader` wrapper (the source atom remains callable directly);
+6. `export-agent-dataset`.
 
 Wrappers resolve, page, join, filter, and compare. They do not diagnose.
 

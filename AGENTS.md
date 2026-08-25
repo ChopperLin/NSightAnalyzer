@@ -49,7 +49,10 @@ report SDK.
 12. Stdout is exactly one versioned JSON result. Viewer diagnostics and run artifacts stay under
     .local/ or a caller-provided local directory. Exit code zero, an output file, or a stable model
     alone is not proof of success; validate request identity, trace identity, decoder build, schema,
-    scope, completeness, freshness, and CrashReporter absence.
+    scope, completeness, freshness, and CrashReporter lifecycle. A one-shot run must leave no
+    CrashReporter. A persistent session may retain only the exact CrashReporter child recorded at
+    Viewer startup; an additional or replacement child is a failure, and the recorded child must
+    exit with the session.
 13. Viewer session reuse is transport only. It may amortize report loading, serialize GUI-thread
     requests, recover from crashes, and clean up processes, but it creates no semantic facts and
     cannot change an atom contract.

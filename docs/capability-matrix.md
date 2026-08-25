@@ -11,12 +11,16 @@
 The current 95 percent estimate describes the proven ordinary-analysis data surface, not product
 implementation completeness.
 
+The public catalog additionally labels three deterministic wrapper operations: `resolve-event`,
+`inspect-pass`, and `compare-ranges`. They compose the verified fact families below and do not add
+new facts or bottleneck judgments.
+
 | ID | Semantic fact family | Probe evidence | Product status | Acceptance |
 |---|---|---|---|---|
 | ENV-001 | capabilities/decoder preflight | exact 2026.2 build and plugin checks | verified | refuse mismatched Viewer/bridge |
 | TRC-001 | trace identity | local snapshots for both real reports | verified | non-empty extension, stable identity, optional SHA-256 |
 | NAV-001 | event page | 306,576-node report and final six-node page | verified | exact page closure, stable EventKey |
-| NAV-002 | event parameters | DrawIndexedInstanced typed values | verified | exact scope and typed leaf projection |
+| NAV-002 | event parameters | DrawIndexedInstanced typed values; out-of-domain Dispatch fixture | verified | exact scope and typed leaf projection; invalid Viewer-decoded D3D12 values return unavailable |
 | MET-001 | range metric catalog | 88 tables, 409 rows | verified | exact tables/headers/descriptions/occurrences |
 | MET-002 | range metric values | generated export equality and two real reports | verified | long-form values, precise Tooltip, paging |
 | MET-003 | cross-frame refresh | frame 0/29 GBuffer values differ | verified | distinct EventKeys, no stale selection |
@@ -45,4 +49,4 @@ A probed row becomes a verified atom only after:
 4. paging closes against the raw oracle;
 5. unavailable states are classified;
 6. product JSON contains no Qt implementation identifiers;
-7. real Viewer integration spawns no CrashReporter.
+7. real Viewer integration creates no CrashReporter beyond the session's startup-recorded guardian.

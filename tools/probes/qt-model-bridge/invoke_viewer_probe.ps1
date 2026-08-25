@@ -133,6 +133,7 @@ try {
     if ($null -eq $process) {
         throw 'Nsight Viewer did not start.'
     }
+    $viewerProcessId = $process.Id
 
     $finished = $process.WaitForExit($TimeoutSeconds * 1000)
     if (-not $finished) {
@@ -146,14 +147,13 @@ try {
     Start-Sleep -Milliseconds 500
     $expectedCrashReporter = Join-Path $viewer.DirectoryName 'CrashReporter.exe'
     $newCrashReporters = @(
-        [System.Diagnostics.Process]::GetProcessesByName('CrashReporter') |
+        Get-CimInstance Win32_Process -Filter "Name = 'CrashReporter.exe'" |
             Where-Object {
-                try {
-                    $_.StartTime -ge $runStarted -and
-                        $_.MainModule.FileName -eq $expectedCrashReporter
-                } catch {
-                    $false
-                }
+                $_.ParentProcessId -eq $viewerProcessId -and
+                    $_.ExecutablePath -eq $expectedCrashReporter
+            } |
+            ForEach-Object {
+                Get-Process -Id $_.ProcessId -ErrorAction SilentlyContinue
             })
     $crashReporterCount = $newCrashReporters.Count
     foreach ($crashReporter in $newCrashReporters) {

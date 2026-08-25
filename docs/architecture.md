@@ -61,6 +61,11 @@ Wrappers are added only after the P0 atom denominator closes. They may:
 - compare two exact ranges or frames;
 - emit bounded deterministic summaries.
 
+The first wrapper slice is exposed by the same JSON CLI with descriptor `layer: wrapper`.
+`inspect-pass` closes all source pages before emitting complete metrics/instructions and a
+coverage-labelled shader Top-N. `compare-ranges` joins semantic identities, retains each side's
+source ordinal, and pages metric deltas; target-only and baseline-only are never coerced to zero.
+
 Wrappers may not invent a metric meaning, choose an optimization priority, infer causality, or turn
 a candidate into a confirmed fact.
 
@@ -120,26 +125,29 @@ The adapter verifies:
 - expected bridge schema and complete status;
 - exact selected EventKey/ShaderKey;
 - model readiness/stability and explicit paging;
-- Viewer exit/shutdown and absence of a newly spawned CrashReporter.
+- controlled Viewer lifecycle and CrashReporter state: no survivor for one-shot runs, or exactly the
+  startup-recorded guardian for a live reusable session.
 
 ## Versioning
 
 The first adapter is concrete and pinned:
 
-    NsightViewer2026_2 / build 37991608 / bridge probe-0.44
+    NsightViewer2026_2 / build 37991608 / bridge probe-0.45
 
 A mismatched build returns adapterMismatch. A new Viewer build is re-probed and either gets a new
 adapter mapping or an explicitly verified compatibility entry. No nominal 2026.x fallback exists.
 
 ## Session model
 
-Initial atoms may use the proven one-shot Viewer runner to establish contract correctness. Before
-wrapper dogfood, transport evolves to one serialized Viewer session per trace so arbitrary atom
-calls do not reload a large report each time.
+Product atoms use one serialized Viewer session per exact trace snapshot so arbitrary atom calls do
+not reload a large report each time. The Viewer is launched normally; completely hidden operation is
+not a requirement. A filesystem mailbox serializes GUI-thread requests, while an idle timeout and the
+internal `viewer-session.close` command bound process lifetime.
 
 Every request remains self-contained: it sets its own selection, waits, verifies the final selection,
-and returns its own envelope. Session loss is a classified transport failure; callers may retry a
-read-only atom in a fresh session.
+and returns its own envelope. The normal Viewer-owned CrashReporter pipe guardian is recorded once at
+startup and is not a crash signal. Viewer loss or an additional/replacement guardian invalidates the
+session; a later atom creates a fresh session.
 
 ## Repository layout
 

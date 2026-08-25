@@ -10,7 +10,7 @@ The first supported decoder is exactly:
 - Nsight Graphics Viewer 2026.2.0.0
 - build 37991608, public-release
 - Qt 6.8.1, MSVC 2022 x64
-- SolidProbe bridge schema `probe-0.44`
+- SolidProbe bridge schema `probe-0.45` (`probe-0.44` remains the frozen semantic oracle)
 
 Other Viewer builds are unavailable until separately re-probed and accepted.
 
@@ -45,22 +45,23 @@ they never guess a hidden initialization row.
 - the 30-frame fixture closes 306,576 events and its final six-node page;
 - frame 0 and frame 29 GBuffer selections retain different EventKeys and the known 258/376 changed
   logical metrics;
-- repeated supported runs spawn no new Nsight CrashReporter; an asynchronous target model is
-  required before graceful Viewer shutdown;
+- repeated calls retain only the session's startup-recorded CrashReporter guardian; no atom may
+  create an additional/replacement guardian, and an asynchronous target model is required before
+  graceful Viewer shutdown;
 - no product JSON contains Qt class names, object names, pointers, widget coordinates, or generic
   probing settings.
 
 ## Information budget
 
-After wrappers are added, a normal pass investigation should require one opened Viewer session and
-at most:
+For the first comparative workflow, a normal pass investigation should reuse Viewer sessions and
+require:
 
-- one event-resolution call;
-- one range-metrics call;
-- one shader-inventory call;
-- one focused shader/source call.
+- explicit resolution of target and baseline EventKeys;
+- one `inspect-pass` fact package per side;
+- one bounded `compare-ranges` result, with metric pages or exact table filters as needed;
+- a focused shader/source call only after comparison identifies a ShaderKey worth drilling into.
 
-Atoms are completed before this wrapper budget is optimized.
+Call count and elapsed time are measured during dogfood rather than hidden by the wrapper contract.
 
 ## Out of scope
 

@@ -16,7 +16,8 @@ synthesize mouse/keyboard input.
 - Viewer application version:
   `2026.2.0.0 (build 37991608) (public-release)`
 - Qt 6.8.1, MSVC 2022 x64
-- Probe schema implementation: `probe-0.44`
+- Probe schema implementation: `probe-0.45`; committed Probe 0.44 outputs remain the frozen
+  semantic oracle
 
 The downloaded Qt Core, Gui, and Widgets release DLLs were byte-identical to
 the DLLs shipped by this Nsight installation. The Qt plugin entry point and
@@ -154,6 +155,12 @@ tools/probes/qt-model-bridge/invoke_viewer_probe.ps1 `
 The Viewer must be launched normally. `Start-Process -WindowStyle Hidden`
 reproducibly caused an early Viewer crash on the 50 MB report, before the Event
 List loaded. The harness intentionally does not hide the target UI process.
+
+The product transport uses the same bridge in a restricted session mode: one normally launched
+Viewer per exact trace snapshot, serialized self-contained requests, idle/explicit close, and crash
+rebuild. Nsight also keeps one Viewer-owned CrashReporter pipe guardian alive during that session;
+the product records that exact child as baseline and rejects only an additional or replacement
+CrashReporter.
 
 ## Probe modes
 

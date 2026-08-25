@@ -1,3 +1,4 @@
+using NsightAnalyzer.Adapters.NsightViewer2026_2;
 using NsightAnalyzer.Contracts;
 
 namespace NsightAnalyzer.Operations;
@@ -18,7 +19,7 @@ internal static class CapabilitiesOperation
                 productBuild = "37991608",
                 productSku = "public-release",
                 qtVersion = "6.8.1",
-                bridgeVersion = "probe-0.44",
+                bridgeVersion = ViewerProbeRunner.ExpectedBridgeVersion,
             },
             operations = new Page<OperationDescriptor>(
                 ordered,

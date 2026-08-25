@@ -8,9 +8,12 @@
 - [Roadmap](roadmap.md): atom-first implementation order, then wrappers and dogfood.
 - [Probe corpus](probe-corpus.md): local real reports and fixed oracle facts.
 - [Verification](testing.md): offline contract tests and optional real-Viewer closure.
+- [Comparative hotspot workflow](comparative-hotspot-workflow.md): resolve, inspect, compare, and
+  evidence-weighing boundaries for the first dogfood path.
 
 The committed probe README remains the detailed low-level experiment log. Product documentation
 does not promote generic Qt model access into a public operation.
 
-The current atom catalog has 11 operations. `capabilities` is the machine-readable source of truth;
-the matrix records evidence and boundaries, not a second hand-maintained API schema.
+The current catalog has 11 atoms and three deterministic wrappers. `capabilities` is the
+machine-readable source of truth and labels every entry as `atom` or `wrapper`; the matrix records
+evidence and boundaries, not a second hand-maintained API schema.

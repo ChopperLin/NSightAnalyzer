@@ -20,6 +20,22 @@ internal sealed class BridgeFactNotFoundException : Exception
     public string Code { get; }
 }
 
+internal sealed class BridgeFactUnavailableException : Exception
+{
+    public BridgeFactUnavailableException(
+        string code,
+        string message,
+        string? detail = null) : base(message)
+    {
+        Code = code;
+        Detail = detail;
+    }
+
+    public string Code { get; }
+
+    public string? Detail { get; }
+}
+
 internal static class BridgeProjection
 {
     public static TraceEventsValue ProjectEvents(
@@ -159,7 +175,38 @@ internal static class BridgeProjection
         {
             throw new BridgeSchemaException("The Event Parameters command name is missing.");
         }
+        ValidateEventParameterDomains(command, parameters);
         return new(scope, command, parameters);
+    }
+
+    private static void ValidateEventParameterDomains(
+        string command,
+        IReadOnlyList<EventParameterFact> parameters)
+    {
+        const long d3d12DispatchMaximumThreadGroupsPerDimension = 65_535;
+        if (!command.Equals("Dispatch", StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        foreach (var parameter in parameters)
+        {
+            if (parameter.Name is not (
+                    "ThreadGroupCountX" or
+                    "ThreadGroupCountY" or
+                    "ThreadGroupCountZ") ||
+                parameter.Value is not long observed ||
+                observed <= d3d12DispatchMaximumThreadGroupsPerDimension)
+            {
+                continue;
+            }
+
+            throw new BridgeFactUnavailableException(
+                "trace.event_parameter_out_of_domain",
+                "The Viewer-decoded Dispatch parameter is outside the D3D12 semantic domain.",
+                $"parameter={parameter.Name}; observed={observed}; " +
+                $"maximum={d3d12DispatchMaximumThreadGroupsPerDimension}");
+        }
     }
 
     public static RangeMetricsValue ProjectRangeMetrics(

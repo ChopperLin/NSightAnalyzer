@@ -48,11 +48,70 @@ internal static class ViewerProbeRunner
     public const string ExpectedProductBuild = "37991608";
     public const string ExpectedProductSku = "public-release";
     public const string ExpectedQtVersion = "6.8.1";
-    public const string ExpectedBridgeVersion = "probe-0.44";
+    public const string ExpectedBridgeVersion = "probe-0.45";
     public const string DefaultViewerPath =
         @"C:\Program Files\NVIDIA Corporation\Nsight Graphics 2026.2.0\host\windows-desktop-nomad-x64\ngfx-ui.exe";
 
     private const long MaximumRawOutputBytes = 128L * 1024 * 1024;
+    private static readonly HashSet<string> ProductSettingNames =
+    [
+        "ACTION_MATCH_MODE",
+        "ACTION_SETTLE_MIN_POLLS",
+        "ACTION_TRIGGER_ASYNC",
+        "ACTION_TRIGGER_OCCURRENCE",
+        "ACTION_TRIGGER_TEXT_MATCH",
+        "ACTIVATE_PANEL",
+        "ACTIVATE_PANEL_VIA_BUTTON",
+        "CLOSE_MODAL_BEFORE_QUIT",
+        "COMBO_ANCESTRY_CLASS_MATCH",
+        "COMBO_MATCH_MODE",
+        "COMBO_OBJECT_MATCH",
+        "COMBO_SELECT_FROM_MODEL_SELECTION",
+        "COMBO_SELECT_MATCH",
+        "COMBO_SELECT_MATCH_MODE",
+        "COMBO_SELECT_OCCURRENCE",
+        "COMBO_SELECT_SETTLE_MIN_POLLS",
+        "COMBO_SELECT_TRIGGER",
+        "DIALOG_AUTO_PATH",
+        "EVENT_INCLUDE_ITEM_DATA",
+        "EVENT_LIMIT",
+        "EVENT_OFFSET",
+        "EVENT_ORDINAL",
+        "EVENT_PATH",
+        "EXTERNAL_KILL_ON_TIMEOUT",
+        "INVOKE_CLASS_MATCH",
+        "INVOKE_MATCH_MODE",
+        "INVOKE_METHOD",
+        "INVOKE_OBJECT_MATCH",
+        "INVOKE_OCCURRENCE",
+        "INVOKE_SETTLE_MIN_POLLS",
+        "MAX_DEPTH",
+        "METRIC_LIMIT",
+        "METRIC_SETTLE_MAX_POLLS",
+        "METRIC_SETTLE_MIN_POLLS",
+        "MODEL_ATTACHED_VIEW_OBJECT_MATCH",
+        "MODEL_CLASS_MATCH",
+        "MODEL_COLUMNS",
+        "MODEL_FLAT",
+        "MODEL_LIMIT",
+        "MODEL_MATCH_MODE",
+        "MODEL_OBJECT_MATCH",
+        "MODEL_REQUIRED_MIN_COUNT",
+        "MODEL_SELECT_COLUMN",
+        "MODEL_SELECT_DEFER_PROVIDER_VERIFY_UNTIL_COMBO",
+        "MODEL_SELECT_MATCH",
+        "MODEL_SELECT_MATCH_MODE",
+        "MODEL_SELECT_OCCURRENCE",
+        "MODEL_SELECT_PREPARE_PANEL",
+        "MODEL_SELECT_PREPARE_PANEL_SETTLE_MIN_POLLS",
+        "MODEL_SELECT_PROVIDER_STABLE_MIN_POLLS",
+        "MODEL_SELECT_SETTLE_MIN_POLLS",
+        "MODEL_SELECT_VIEW_OBJECT",
+        "MODEL_SETTLE_MIN_POLLS",
+        "PANEL_SETTLE_MIN_POLLS",
+        "SELECTION_BASELINE_METRIC_MIN_COUNT",
+        "SELECTION_BASELINE_METRIC_STABLE_MIN_POLLS",
+    ];
 
     public static async Task<ViewerProbeRunResult> RunAsync(
         TraceArtifact artifact,
@@ -105,14 +164,14 @@ internal static class ViewerProbeRunner
                 "The pinned SolidProbe Viewer plugin hook is not installed.");
         }
 
+        string runRoot;
+        string sessionRoot;
         string runDirectory;
         string outputPath;
         try
         {
-            var configuredRoot = Environment.GetEnvironmentVariable("NSIGHT_ANALYZER_RUN_ROOT");
-            var runRoot = Path.GetFullPath(string.IsNullOrWhiteSpace(configuredRoot)
-                ? Path.Combine(Environment.CurrentDirectory, ".local", "runs")
-                : configuredRoot);
+            runRoot = ViewerSessionTransport.ResolveRunRoot();
+            sessionRoot = ViewerSessionTransport.ResolveSessionRoot();
             var shortId = Guid.NewGuid().ToString("N")[..12];
             runDirectory = Path.Combine(
                 runRoot,
@@ -133,28 +192,7 @@ internal static class ViewerProbeRunner
         var requestId = Guid.NewGuid().ToString("N");
         var runStartedUtc = DateTime.UtcNow;
         var stopwatch = Stopwatch.StartNew();
-        var startInfo = new ProcessStartInfo
-        {
-            FileName = viewerPath,
-            WorkingDirectory = viewerDirectory,
-            UseShellExecute = false,
-        };
-        startInfo.ArgumentList.Add(artifact.FullPath);
-        startInfo.ArgumentList.Add("-plugin");
-        startInfo.ArgumentList.Add("SolidProbe");
-        RemoveHighConfidenceSecrets(startInfo);
-        startInfo.Environment["NSIGHT_SOLID_PROBE_OUTPUT"] = outputPath;
-        startInfo.Environment["NSIGHT_SOLID_PROBE_MODE"] = ModeName(mode);
-        startInfo.Environment["NSIGHT_SOLID_PROBE_REQUEST_ID"] = requestId;
-        startInfo.Environment["NSIGHT_SOLID_PROBE_REPORT_ID"] = artifact.ReportId;
-        if (mode == ViewerProbeMode.Heartbeat)
-        {
-            startInfo.Environment["NSIGHT_SOLID_PROBE_QUIT_AFTER_HEARTBEAT"] = "1";
-        }
-        else
-        {
-            startInfo.Environment["NSIGHT_SOLID_PROBE_QUIT_WHEN_READY"] = "1";
-        }
+        var normalizedSettings = new Dictionary<string, string>(StringComparer.Ordinal);
         foreach (var setting in settings)
         {
             if (!IsSafeSettingName(setting.Key))
@@ -166,67 +204,26 @@ internal static class ViewerProbeRunner
             }
             var settingValue = setting.Value.Replace(
                 "{RUN_DIRECTORY}", runDirectory, StringComparison.Ordinal);
-            startInfo.Environment[$"NSIGHT_SOLID_PROBE_{setting.Key}"] = settingValue;
+            normalizedSettings.Add(setting.Key, settingValue);
         }
 
-        int? exitCode = null;
-        try
-        {
-            using var process = new Process { StartInfo = startInfo };
-            if (!process.Start())
-            {
-                return Fail(
-                    ErrorCategory.Viewer,
-                    "viewer.start_failed",
-                    "Nsight Viewer did not start.");
-            }
-
-            var exitTask = process.WaitForExitAsync();
-            if (await Task.WhenAny(exitTask, Task.Delay(timeoutMs)) != exitTask)
-            {
-                TryKillTree(process);
-                await Task.WhenAny(exitTask, Task.Delay(5_000));
-                stopwatch.Stop();
-                await CloseNewCrashReportersAsync(viewerDirectory, runStartedUtc);
-                return Fail(
-                    ErrorCategory.Timeout,
-                    "viewer.timeout",
-                    "Nsight Viewer exceeded the operation timeout.",
-                    $"timeoutMs={timeoutMs}; run={runDirectory}");
-            }
-            await exitTask;
-            exitCode = process.ExitCode;
-        }
-        catch (Exception exception) when (
-            exception is InvalidOperationException or System.ComponentModel.Win32Exception)
-        {
-            stopwatch.Stop();
-            return Fail(
-                ErrorCategory.Viewer,
-                "viewer.start_failed",
-                "Nsight Viewer could not be started.",
-                exception.GetType().Name);
-        }
-
-        await Task.Delay(500);
-        var crashReporterCount = await CloseNewCrashReportersAsync(
-            viewerDirectory, runStartedUtc);
+        var invoked = await ViewerSessionTransport.ExecuteAsync(
+            artifact,
+            viewerPath,
+            viewerDirectory,
+            ModeName(mode),
+            expectedSchema,
+            normalizedSettings,
+            runRoot,
+            sessionRoot,
+            runDirectory,
+            outputPath,
+            requestId,
+            timeoutMs);
         stopwatch.Stop();
-        if (exitCode != 0)
+        if (!invoked.IsSuccess)
         {
-            return Fail(
-                ErrorCategory.Viewer,
-                "viewer.exit_nonzero",
-                "Nsight Viewer exited with a nonzero code.",
-                $"exitCode={exitCode}; run={runDirectory}");
-        }
-        if (crashReporterCount > 0)
-        {
-            return Fail(
-                ErrorCategory.Viewer,
-                "viewer.crash_reporter_spawned",
-                "Nsight Viewer spawned CrashReporter during this operation.",
-                $"count={crashReporterCount}; run={runDirectory}");
+            return new(null, invoked.Error);
         }
         if (!File.Exists(outputPath))
         {
@@ -440,77 +437,9 @@ internal static class ViewerProbeRunner
     };
 
     private static bool IsSafeSettingName(string name) =>
-        !string.IsNullOrWhiteSpace(name) &&
-        name.All(character =>
-            character is >= 'A' and <= 'Z' ||
-            character is >= '0' and <= '9' ||
-            character == '_') &&
-        name is not ("OUTPUT" or "MODE" or "REQUEST_ID" or "REPORT_ID" or
-            "QUIT_WHEN_READY" or "QUIT_AFTER_HEARTBEAT");
+        ProductSettingNames.Contains(name);
 
-    private static void TryKillTree(Process process)
-    {
-        try
-        {
-            if (!process.HasExited)
-            {
-                process.Kill(entireProcessTree: true);
-            }
-        }
-        catch (InvalidOperationException) { }
-        catch (System.ComponentModel.Win32Exception) { }
-    }
-
-    private static async Task<int> CloseNewCrashReportersAsync(
-        string viewerDirectory,
-        DateTime runStartedUtc)
-    {
-        var expectedPath = Path.Combine(viewerDirectory, "CrashReporter.exe");
-        var matches = new List<Process>();
-        foreach (var process in Process.GetProcessesByName("CrashReporter"))
-        {
-            try
-            {
-                if (process.StartTime.ToUniversalTime() >= runStartedUtc.AddSeconds(-1) &&
-                    string.Equals(
-                        process.MainModule?.FileName,
-                        expectedPath,
-                        StringComparison.OrdinalIgnoreCase))
-                {
-                    matches.Add(process);
-                }
-                else
-                {
-                    process.Dispose();
-                }
-            }
-            catch
-            {
-                process.Dispose();
-            }
-        }
-
-        foreach (var process in matches)
-        {
-            using (process)
-            {
-                try
-                {
-                    process.CloseMainWindow();
-                    if (!process.WaitForExit(500))
-                    {
-                        process.Kill();
-                        await process.WaitForExitAsync();
-                    }
-                }
-                catch (InvalidOperationException) { }
-                catch (System.ComponentModel.Win32Exception) { }
-            }
-        }
-        return matches.Count;
-    }
-
-    private static void RemoveHighConfidenceSecrets(ProcessStartInfo startInfo)
+    internal static void RemoveHighConfidenceSecrets(ProcessStartInfo startInfo)
     {
         string[] fragments =
         [

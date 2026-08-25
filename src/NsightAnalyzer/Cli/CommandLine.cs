@@ -17,7 +17,13 @@ internal sealed record ParsedCommand(
     string? ShaderHash,
     int? ShaderOccurrence,
     IReadOnlyList<string> CounterNames,
-    IReadOnlyList<string> RangeNames);
+    IReadOnlyList<string> RangeNames,
+    string? EventName,
+    int? EventOccurrence,
+    int? WithinEventOrdinal,
+    string? BaselineTracePath,
+    int? BaselineEventOrdinal,
+    int TopShaderCount);
 
 internal sealed record CommandLineParseResult(ParsedCommand? Command, string? Error)
 {
@@ -32,7 +38,7 @@ internal static class CommandLine
     {
         if (args.Length == 0)
         {
-            return Fail("An operation is required. Use 'capabilities' to discover the callable atoms.");
+            return Fail("An operation is required. Use 'capabilities' to discover callable operations.");
         }
 
         var operation = args[0];
@@ -59,6 +65,13 @@ internal static class CommandLine
         int? shaderOccurrence = null;
         var counterNames = new List<string>();
         var rangeNames = new List<string>();
+        string? eventName = null;
+        int? eventOccurrence = null;
+        int? withinEventOrdinal = null;
+        string? baselineTracePath = null;
+        int? baselineEventOrdinal = null;
+        var topShaderCount = 32;
+        var topShaderCountSpecified = false;
 
         for (var index = 1; index < args.Length; index++)
         {
@@ -153,6 +166,56 @@ internal static class CommandLine
                     }
                     shaderOccurrence = occurrence;
                     break;
+                case "--event-name":
+                    if (!TryTakeValue(args, ref index, out eventName) ||
+                        string.IsNullOrWhiteSpace(eventName) || eventName.Length > 512)
+                    {
+                        return Fail("--event-name requires an exact non-empty name of at most 512 characters.");
+                    }
+                    break;
+                case "--event-occurrence":
+                    if (!TryTakeValue(args, ref index, out var eventOccurrenceText) ||
+                        !int.TryParse(eventOccurrenceText, out var parsedEventOccurrence) ||
+                        parsedEventOccurrence < 0)
+                    {
+                        return Fail("--event-occurrence must be a non-negative integer.");
+                    }
+                    eventOccurrence = parsedEventOccurrence;
+                    break;
+                case "--within-event-ordinal":
+                    if (!TryTakeValue(args, ref index, out var withinOrdinalText) ||
+                        !int.TryParse(withinOrdinalText, out var parsedWithinOrdinal) ||
+                        parsedWithinOrdinal < 0)
+                    {
+                        return Fail("--within-event-ordinal must be a non-negative integer.");
+                    }
+                    withinEventOrdinal = parsedWithinOrdinal;
+                    break;
+                case "--baseline-trace":
+                    if (baselineTracePath is not null ||
+                        !TryTakeValue(args, ref index, out baselineTracePath))
+                    {
+                        return Fail("--baseline-trace requires exactly one .ngfx-gputrace path.");
+                    }
+                    break;
+                case "--baseline-event-ordinal":
+                    if (!TryTakeValue(args, ref index, out var baselineOrdinalText) ||
+                        !int.TryParse(baselineOrdinalText, out var parsedBaselineOrdinal) ||
+                        parsedBaselineOrdinal < 0)
+                    {
+                        return Fail("--baseline-event-ordinal must be a non-negative integer.");
+                    }
+                    baselineEventOrdinal = parsedBaselineOrdinal;
+                    break;
+                case "--top-shaders":
+                    if (!TryTakeValue(args, ref index, out var topShaderText) ||
+                        !int.TryParse(topShaderText, out topShaderCount) ||
+                        topShaderCount is < 1 or > 100)
+                    {
+                        return Fail("--top-shaders must be an integer from 1 to 100.");
+                    }
+                    topShaderCountSpecified = true;
+                    break;
                 case "--counter":
                     if (!TryTakeValue(args, ref index, out var counterName) ||
                         string.IsNullOrWhiteSpace(counterName) ||
@@ -198,11 +261,15 @@ internal static class CommandLine
         }
 
         var isTraceOperation = operation.StartsWith("trace.", StringComparison.Ordinal);
-        if (isTraceOperation && string.IsNullOrWhiteSpace(tracePath))
+        var isWrapperOperation = operation is
+            "resolve-event" or "inspect-pass" or "compare-ranges";
+        var requiresTrace = isTraceOperation || isWrapperOperation ||
+            operation == "viewer-session.close";
+        if (requiresTrace && string.IsNullOrWhiteSpace(tracePath))
         {
             return Fail($"{operation} requires a .ngfx-gputrace path.");
         }
-        if (!isTraceOperation && (viewerPath is not null || timeoutSpecified))
+        if (!requiresTrace && (viewerPath is not null || timeoutSpecified))
         {
             return Fail($"{operation} does not accept Viewer options.");
         }
@@ -214,25 +281,40 @@ internal static class CommandLine
             operation is not ("trace.events" or "trace.range-metrics" or
                 "trace.range-shaders" or "trace.shader-source" or
                 "trace.analysis" or "trace.counter-catalog" or
-                "trace.range-counters" or "trace.range-instruction-mix"))
+                "trace.range-counters" or "trace.range-instruction-mix" or
+                "compare-ranges"))
         {
             return Fail($"{operation} does not accept paging options.");
         }
 
-        var isScoped = operation is
+        var isAtomicScoped = operation is
             "trace.event-parameters" or "trace.range-metrics" or
             "trace.range-shaders" or "trace.shader-source" or
             "trace.analysis" or "trace.counter-catalog" or
             "trace.range-counters" or "trace.range-instruction-mix";
-        if (isScoped && (eventOrdinal is null) == (eventPath is null))
+        if (isAtomicScoped && (eventOrdinal is null) == (eventPath is null))
         {
             return Fail($"{operation} requires exactly one of --event-ordinal or --event-path.");
         }
-        if (!isScoped && (eventOrdinal is not null || eventPath is not null))
+        if (operation == "inspect-pass" &&
+            (eventOrdinal is null || eventPath is not null))
+        {
+            return Fail("inspect-pass requires --event-ordinal and does not accept --event-path.");
+        }
+        if (operation == "compare-ranges" &&
+            (eventOrdinal is null || eventPath is not null || baselineEventOrdinal is null))
+        {
+            return Fail(
+                "compare-ranges requires --event-ordinal and --baseline-event-ordinal, and does not accept --event-path.");
+        }
+        var acceptsEventSelector = isAtomicScoped ||
+            operation is "inspect-pass" or "compare-ranges";
+        if (!acceptsEventSelector && (eventOrdinal is not null || eventPath is not null))
         {
             return Fail($"{operation} does not accept an event selector.");
         }
-        if (metricTables.Count > 0 && operation != "trace.range-metrics")
+        if (metricTables.Count > 0 &&
+            operation is not ("trace.range-metrics" or "inspect-pass" or "compare-ranges"))
         {
             return Fail($"{operation} does not accept --table.");
         }
@@ -266,6 +348,27 @@ internal static class CommandLine
         {
             return Fail("trace.range-counters requires at least one --counter filter.");
         }
+        if (operation == "resolve-event" &&
+            (eventName is null || eventOccurrence is null))
+        {
+            return Fail("resolve-event requires --event-name and --event-occurrence.");
+        }
+        if (operation != "resolve-event" &&
+            (eventName is not null || eventOccurrence is not null ||
+                withinEventOrdinal is not null))
+        {
+            return Fail($"{operation} does not accept event-resolution options.");
+        }
+        if (operation != "compare-ranges" &&
+            (baselineTracePath is not null || baselineEventOrdinal is not null))
+        {
+            return Fail($"{operation} does not accept baseline options.");
+        }
+        if (topShaderCountSpecified &&
+            operation is not ("inspect-pass" or "compare-ranges"))
+        {
+            return Fail($"{operation} does not accept --top-shaders.");
+        }
 
         return new(new(
             operation,
@@ -282,7 +385,13 @@ internal static class CommandLine
             shaderHash,
             shaderOccurrence,
             counterNames,
-            rangeNames), null);
+            rangeNames,
+            eventName,
+            eventOccurrence,
+            withinEventOrdinal,
+            baselineTracePath,
+            baselineEventOrdinal,
+            topShaderCount), null);
     }
 
     private static bool TryTakeValue(string[] args, ref int index, out string? value)

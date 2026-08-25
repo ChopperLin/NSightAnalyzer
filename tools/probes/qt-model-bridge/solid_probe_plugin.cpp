@@ -5,6 +5,10 @@
 #include <QApplication>
 #include <QComboBox>
 #include <QCoreApplication>
+#include <QDateTime>
+#include <QDir>
+#include <QEvent>
+#include <QFile>
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QGenericPlugin>
@@ -30,9 +34,11 @@
 
 namespace {
 
-constexpr auto kPluginVersion = "probe-0.44";
+constexpr auto kPluginVersion = "probe-0.45";
 constexpr auto kVerifiedNsightVersion = "2026.2.0";
 constexpr auto kVerifiedNsightBuild = "37991608";
+constexpr auto kSessionSchema = "NsightSolidProbeSessionV1";
+constexpr auto kSessionRequestSchema = "NsightSolidProbeSessionRequestV1";
 
 QJsonValue VariantToJson(const QVariant& value)
 {
@@ -1999,6 +2005,121 @@ int CountChangedModels(const QJsonArray& before, const QJsonArray& after)
     return changed;
 }
 
+const QSet<QString>& ProductSessionSettingNames()
+{
+    static const QSet<QString> names{
+        "ACTION_MATCH_MODE",
+        "ACTION_SETTLE_MIN_POLLS",
+        "ACTION_TRIGGER_ASYNC",
+        "ACTION_TRIGGER_OCCURRENCE",
+        "ACTION_TRIGGER_TEXT_MATCH",
+        "ACTIVATE_PANEL",
+        "ACTIVATE_PANEL_VIA_BUTTON",
+        "CLOSE_MODAL_BEFORE_QUIT",
+        "COMBO_ANCESTRY_CLASS_MATCH",
+        "COMBO_MATCH_MODE",
+        "COMBO_OBJECT_MATCH",
+        "COMBO_SELECT_FROM_MODEL_SELECTION",
+        "COMBO_SELECT_MATCH",
+        "COMBO_SELECT_MATCH_MODE",
+        "COMBO_SELECT_OCCURRENCE",
+        "COMBO_SELECT_SETTLE_MIN_POLLS",
+        "COMBO_SELECT_TRIGGER",
+        "DIALOG_AUTO_PATH",
+        "EVENT_INCLUDE_ITEM_DATA",
+        "EVENT_LIMIT",
+        "EVENT_OFFSET",
+        "EVENT_ORDINAL",
+        "EVENT_PATH",
+        "EXTERNAL_KILL_ON_TIMEOUT",
+        "INVOKE_CLASS_MATCH",
+        "INVOKE_MATCH_MODE",
+        "INVOKE_METHOD",
+        "INVOKE_OBJECT_MATCH",
+        "INVOKE_OCCURRENCE",
+        "INVOKE_SETTLE_MIN_POLLS",
+        "MAX_DEPTH",
+        "METRIC_LIMIT",
+        "METRIC_SETTLE_MAX_POLLS",
+        "METRIC_SETTLE_MIN_POLLS",
+        "MODEL_ATTACHED_VIEW_OBJECT_MATCH",
+        "MODEL_CLASS_MATCH",
+        "MODEL_COLUMNS",
+        "MODEL_FLAT",
+        "MODEL_LIMIT",
+        "MODEL_MATCH_MODE",
+        "MODEL_OBJECT_MATCH",
+        "MODEL_REQUIRED_MIN_COUNT",
+        "MODEL_SELECT_COLUMN",
+        "MODEL_SELECT_DEFER_PROVIDER_VERIFY_UNTIL_COMBO",
+        "MODEL_SELECT_MATCH",
+        "MODEL_SELECT_MATCH_MODE",
+        "MODEL_SELECT_OCCURRENCE",
+        "MODEL_SELECT_PREPARE_PANEL",
+        "MODEL_SELECT_PREPARE_PANEL_SETTLE_MIN_POLLS",
+        "MODEL_SELECT_PROVIDER_STABLE_MIN_POLLS",
+        "MODEL_SELECT_SETTLE_MIN_POLLS",
+        "MODEL_SELECT_VIEW_OBJECT",
+        "MODEL_SETTLE_MIN_POLLS",
+        "PANEL_SETTLE_MIN_POLLS",
+        "SELECTION_BASELINE_METRIC_MIN_COUNT",
+        "SELECTION_BASELINE_METRIC_STABLE_MIN_POLLS",
+    };
+    return names;
+}
+
+bool IsProductSessionMode(const QString& mode)
+{
+    return mode == "heartbeat"
+        || mode == "event-export"
+        || mode == "selection-metrics-export";
+}
+
+QString ExpectedProductSchema(const QString& mode)
+{
+    if (mode == "heartbeat") {
+        return "NsightSolidProbeHeartbeatV1";
+    }
+    if (mode == "event-export") {
+        return "NsightSolidProbeEventListV1";
+    }
+    if (mode == "selection-metrics-export") {
+        return "NsightSolidProbeSelectionMetricsV1";
+    }
+    return {};
+}
+
+void ClearProductRequestEnvironment()
+{
+    for (const QString& name : ProductSessionSettingNames()) {
+        qunsetenv(("NSIGHT_SOLID_PROBE_" + name).toUtf8().constData());
+    }
+    for (const char* name : {
+             "NSIGHT_SOLID_PROBE_OUTPUT",
+             "NSIGHT_SOLID_PROBE_MODE",
+             "NSIGHT_SOLID_PROBE_REQUEST_ID",
+             "NSIGHT_SOLID_PROBE_QUIT_AFTER_HEARTBEAT",
+             "NSIGHT_SOLID_PROBE_QUIT_WHEN_READY"}) {
+        qunsetenv(name);
+    }
+}
+
+bool IsPathInside(const QString& path, const QString& directory)
+{
+    const QString normalizedPath = QDir::fromNativeSeparators(
+        QDir::cleanPath(QFileInfo(path).absoluteFilePath()));
+    QString normalizedDirectory = QDir::fromNativeSeparators(QDir::cleanPath(
+        QFileInfo(directory).absoluteFilePath()));
+    if (!normalizedDirectory.endsWith('/')) {
+        normalizedDirectory.append('/');
+    }
+#ifdef Q_OS_WIN
+    return normalizedPath.startsWith(normalizedDirectory, Qt::CaseInsensitive);
+#else
+    return normalizedPath.startsWith(normalizedDirectory, Qt::CaseSensitive);
+#endif
+}
+
 class SolidProbeAgent final : public QObject
 {
     Q_OBJECT
@@ -2017,9 +2138,14 @@ public:
         connect(&m_timer, &QTimer::timeout, this, &SolidProbeAgent::Poll);
         QTimer::singleShot(0, this, [this] {
             Poll();
-            m_timer.start();
+            if (!m_finished) {
+                m_timer.start();
+            }
         });
     }
+
+signals:
+    void Finished(bool reusable);
 
 private slots:
     void Poll()
@@ -2029,7 +2155,9 @@ private slots:
         auto* application = qobject_cast<QApplication*>(QCoreApplication::instance());
         QJsonObject root{
             {"schema", "NsightSolidProbeHeartbeatV1"},
-            {"status", "loaded"},
+            {"status", m_mode == "heartbeat" && m_pollCount < 10
+                ? "loading"
+                : "loaded"},
             {"pluginVersion", kPluginVersion},
             {"mode", m_mode},
             {"pid", static_cast<qint64>(QCoreApplication::applicationPid())},
@@ -2072,7 +2200,7 @@ private slots:
             root.insert("stage", "unsupported-mode");
             root.insert("error", "unsupported probe mode");
             Write(root);
-            m_timer.stop();
+            Finish(false);
             if (qEnvironmentVariableIntValue("NSIGHT_SOLID_PROBE_QUIT_WHEN_READY") == 1) {
                 QTimer::singleShot(0, QCoreApplication::instance(), &QCoreApplication::quit);
             }
@@ -2093,7 +2221,7 @@ private slots:
             }
             Write(root);
             if (complete || m_pollCount >= selectionMetricsPollLimit) {
-                m_timer.stop();
+                Finish(complete);
                 const bool leaveTimeoutForExternalKill = !complete
                     && m_pollCount >= selectionMetricsPollLimit
                     && qEnvironmentVariableIntValue(
@@ -2281,13 +2409,13 @@ private slots:
 
         Write(root);
 
-        if ((m_mode == "heartbeat" && m_pollCount >= 10)
+        const bool requestReady = (m_mode == "heartbeat" && m_pollCount >= 10)
             || (m_mode == "event-discovery" && eventListReady)
             || (m_mode == "event-export" && eventExportReady)
             || ((m_mode == "metrics-discovery" || m_mode == "metrics-export") && metricsReady)
-            || ((m_mode == "model-catalog" || m_mode == "model-export") && modelModeReady)
-            || m_pollCount >= 120) {
-            m_timer.stop();
+            || ((m_mode == "model-catalog" || m_mode == "model-export") && modelModeReady);
+        if (requestReady || m_pollCount >= 120) {
+            Finish(requestReady);
             const bool quitAfterHeartbeat = m_mode == "heartbeat"
                 && qEnvironmentVariableIntValue("NSIGHT_SOLID_PROBE_QUIT_AFTER_HEARTBEAT") == 1;
             const bool quitWhenReady = ((m_mode == "event-discovery" && eventListReady)
@@ -2306,6 +2434,16 @@ private slots:
     }
 
 private:
+    void Finish(bool reusable)
+    {
+        if (m_finished) {
+            return;
+        }
+        m_finished = true;
+        m_timer.stop();
+        emit Finished(reusable);
+    }
+
     void HandleDialogAutomation(QApplication* application, QJsonObject& root)
     {
         const QString configuredPath = qEnvironmentVariable(
@@ -3930,6 +4068,7 @@ private:
     bool m_invokeSucceeded = false;
     bool m_dialogSeen = false;
     bool m_dialogAcceptQueued = false;
+    bool m_finished = false;
     bool m_modelSelectionNudgeApplied = false;
     bool m_modelSelectionPreflightHasCurrent = false;
     bool m_modelSelectionNudgeProviderChanged = false;
@@ -3982,6 +4121,363 @@ private:
     QByteArray m_modelSelectionTargetLastProviderSnapshot;
 };
 
+class SolidProbeSessionAgent final : public QObject
+{
+    Q_OBJECT
+
+public:
+    explicit SolidProbeSessionAgent(QObject* parent = nullptr)
+        : QObject(parent)
+        , m_sessionDirectory(QDir::cleanPath(QFileInfo(qEnvironmentVariable(
+              "NSIGHT_SOLID_PROBE_SESSION_DIRECTORY")).absoluteFilePath()))
+        , m_runRoot(QDir::cleanPath(QFileInfo(qEnvironmentVariable(
+              "NSIGHT_SOLID_PROBE_SESSION_RUN_ROOT")).absoluteFilePath()))
+        , m_sessionId(qEnvironmentVariable(
+              "NSIGHT_SOLID_PROBE_SESSION_ID").trimmed())
+        , m_reportId(qEnvironmentVariable(
+              "NSIGHT_SOLID_PROBE_REPORT_ID").trimmed())
+        , m_createdUtc(QDateTime::currentDateTimeUtc())
+    {
+        const int configuredIdleTimeout = qEnvironmentVariableIntValue(
+            "NSIGHT_SOLID_PROBE_SESSION_IDLE_TIMEOUT_MS");
+        m_idleTimeoutMs = configuredIdleTimeout > 0
+            ? qBound(10000, configuredIdleTimeout, 3600000)
+            : 300000;
+        m_lastActivityMs = QDateTime::currentMSecsSinceEpoch();
+        m_valid = !m_sessionId.isEmpty()
+            && !m_reportId.isEmpty()
+            && !m_sessionDirectory.isEmpty()
+            && !m_runRoot.isEmpty()
+            && QDir().mkpath(m_sessionDirectory)
+            && QDir(m_runRoot).exists();
+        m_state = m_valid ? "ready" : "poisoned";
+        if (!m_valid) {
+            m_protocolError = "invalid-session-configuration";
+        }
+
+        ClearProductRequestEnvironment();
+        m_timer.setInterval(100);
+        connect(&m_timer, &QTimer::timeout, this, &SolidProbeSessionAgent::Poll);
+        QTimer::singleShot(0, this, [this] {
+            WriteManifest();
+            m_timer.start();
+        });
+    }
+
+private slots:
+    void Poll()
+    {
+        WriteManifest();
+
+        if (!m_valid || m_agent != nullptr || m_state != "ready") {
+            return;
+        }
+
+        const QString closePath = QDir(m_sessionDirectory).filePath("close.json");
+        if (QFileInfo::exists(closePath)) {
+            QJsonObject closeRequest;
+            QString error;
+            const bool validClose = ReadBoundedObject(
+                closePath, 16 * 1024, &closeRequest, &error)
+                && closeRequest.value("schema").toString()
+                    == "NsightSolidProbeSessionCloseV1"
+                && closeRequest.value("sessionId").toString() == m_sessionId;
+            QFile::remove(closePath);
+            if (!validClose) {
+                Poison(error.isEmpty() ? "invalid-close-request" : error);
+                return;
+            }
+            BeginShutdown("explicit");
+            return;
+        }
+
+        const QString requestPath = QDir(m_sessionDirectory).filePath("request.json");
+        if (QFileInfo::exists(requestPath)) {
+            StartRequest(requestPath);
+            return;
+        }
+
+        if (QDateTime::currentMSecsSinceEpoch() - m_lastActivityMs
+            >= m_idleTimeoutMs) {
+            BeginShutdown("idleTimeout");
+        }
+    }
+
+    void RequestFinished(bool reusable)
+    {
+        if (m_agent != nullptr) {
+            m_agent->deleteLater();
+            m_agent = nullptr;
+        }
+        ClearProductRequestEnvironment();
+        m_lastRequestId = m_currentRequestId;
+        m_currentRequestId.clear();
+        m_lastActivityMs = QDateTime::currentMSecsSinceEpoch();
+
+        if (!reusable) {
+            Poison("request-left-session-unsafe");
+            return;
+        }
+
+        m_state = "cleaning";
+        if (m_closeRequestWindows) {
+            CloseRequestWindows();
+        }
+        m_closeRequestWindows = false;
+        m_requestBaselineTopLevels.clear();
+        WriteManifest();
+        QTimer::singleShot(250, this, [this] {
+            if (m_state != "cleaning") {
+                return;
+            }
+            m_state = "ready";
+            m_lastActivityMs = QDateTime::currentMSecsSinceEpoch();
+            WriteManifest();
+        });
+    }
+
+private:
+    bool ReadBoundedObject(
+        const QString& path,
+        qint64 maximumBytes,
+        QJsonObject* result,
+        QString* error) const
+    {
+        QFile file(path);
+        if (!file.open(QIODevice::ReadOnly)) {
+            *error = "request-unreadable";
+            return false;
+        }
+        if (file.size() <= 0 || file.size() > maximumBytes) {
+            *error = "request-size-invalid";
+            return false;
+        }
+        QJsonParseError parseError;
+        const QJsonDocument document = QJsonDocument::fromJson(
+            file.readAll(), &parseError);
+        if (parseError.error != QJsonParseError::NoError || !document.isObject()) {
+            *error = "request-json-invalid";
+            return false;
+        }
+        *result = document.object();
+        return true;
+    }
+
+    void StartRequest(const QString& requestPath)
+    {
+        QJsonObject request;
+        QString error;
+        const bool read = ReadBoundedObject(
+            requestPath, 1024 * 1024, &request, &error);
+        QFile::remove(requestPath);
+        if (!read) {
+            Poison(error);
+            return;
+        }
+
+        const QString requestId = request.value("requestId").toString().trimmed();
+        const QString reportId = request.value("reportId").toString();
+        const QString sessionId = request.value("sessionId").toString();
+        const QString mode = request.value("mode").toString().trimmed();
+        const QString expectedSchema = request.value("expectedSchema").toString();
+        const QString outputPath = QDir::cleanPath(QFileInfo(
+            request.value("outputPath").toString()).absoluteFilePath());
+        const QJsonValue settingsValue = request.value("settings");
+        if (request.value("schema").toString() != kSessionRequestSchema) {
+            Poison("request-schema-invalid");
+            return;
+        }
+        if (sessionId != m_sessionId) {
+            Poison("request-session-identity-invalid");
+            return;
+        }
+        if (reportId != m_reportId) {
+            Poison("request-report-identity-invalid");
+            return;
+        }
+        if (requestId.size() != 32
+            || !std::all_of(
+                requestId.cbegin(), requestId.cend(), [](QChar character) {
+                    return character.isDigit()
+                        || (character >= 'a' && character <= 'f')
+                        || (character >= 'A' && character <= 'F');
+                })) {
+            Poison("request-id-invalid");
+            return;
+        }
+        if (!IsProductSessionMode(mode)
+            || expectedSchema != ExpectedProductSchema(mode)) {
+            Poison("request-operation-invalid");
+            return;
+        }
+        if (QFileInfo(outputPath).fileName() != "bridge-output.json") {
+            Poison("request-output-name-invalid");
+            return;
+        }
+        if (!IsPathInside(outputPath, m_runRoot)) {
+            Poison("request-output-root-invalid");
+            return;
+        }
+        if (!QFileInfo(outputPath).absoluteDir().exists()) {
+            Poison("request-output-directory-missing");
+            return;
+        }
+        if (QFileInfo::exists(outputPath)) {
+            Poison("request-output-not-fresh");
+            return;
+        }
+        if (!settingsValue.isObject()) {
+            Poison("request-settings-shape-invalid");
+            return;
+        }
+
+        const QJsonObject settings = settingsValue.toObject();
+        if (settings.size() > ProductSessionSettingNames().size()) {
+            Poison("request-settings-count-invalid");
+            return;
+        }
+        for (auto iterator = settings.constBegin(); iterator != settings.constEnd(); ++iterator) {
+            if (!ProductSessionSettingNames().contains(iterator.key())
+                || !iterator.value().isString()
+                || iterator.value().toString().size() > 32768) {
+                Poison("request-setting-invalid");
+                return;
+            }
+        }
+
+        ClearProductRequestEnvironment();
+        qputenv("NSIGHT_SOLID_PROBE_OUTPUT", outputPath.toUtf8());
+        qputenv("NSIGHT_SOLID_PROBE_MODE", mode.toUtf8());
+        qputenv("NSIGHT_SOLID_PROBE_REQUEST_ID", requestId.toUtf8());
+        // REPORT_ID is invariant for the session and was supplied through the
+        // launch-time wide-character environment. Preserve it: qputenv's narrow
+        // Windows path corrupts non-ASCII report names even when given UTF-8.
+        for (auto iterator = settings.constBegin(); iterator != settings.constEnd(); ++iterator) {
+            const QByteArray name = ("NSIGHT_SOLID_PROBE_" + iterator.key()).toUtf8();
+            qputenv(name.constData(), iterator.value().toString().toUtf8());
+        }
+
+        m_currentRequestId = requestId;
+        m_closeRequestWindows = settings.contains("ACTION_TRIGGER_TEXT_MATCH")
+            || settings.contains("DIALOG_AUTO_PATH");
+        if (auto* application = qobject_cast<QApplication*>(
+                QCoreApplication::instance())) {
+            for (QWidget* topLevel : application->topLevelWidgets()) {
+                if (topLevel != nullptr) {
+                    m_requestBaselineTopLevels.insert(topLevel);
+                }
+            }
+        }
+        m_state = "busy";
+        m_protocolError.clear();
+        m_lastActivityMs = QDateTime::currentMSecsSinceEpoch();
+        WriteManifest();
+        m_agent = new SolidProbeAgent(this);
+        connect(
+            m_agent,
+            &SolidProbeAgent::Finished,
+            this,
+            &SolidProbeSessionAgent::RequestFinished,
+            Qt::QueuedConnection);
+    }
+
+    void CloseRequestWindows()
+    {
+        auto* application = qobject_cast<QApplication*>(QCoreApplication::instance());
+        if (application == nullptr) {
+            return;
+        }
+        for (QWidget* topLevel : application->topLevelWidgets()) {
+            if (topLevel != nullptr
+                && !m_requestBaselineTopLevels.contains(topLevel)) {
+                topLevel->close();
+            }
+        }
+    }
+
+    void Poison(const QString& error)
+    {
+        m_state = "poisoned";
+        m_protocolError = error.left(256);
+        m_lastActivityMs = QDateTime::currentMSecsSinceEpoch();
+        WriteManifest();
+    }
+
+    void BeginShutdown(const QString& reason)
+    {
+        m_state = "closing";
+        m_shutdownReason = reason;
+        WriteManifest();
+        m_timer.stop();
+        QTimer::singleShot(0, QCoreApplication::instance(), &QCoreApplication::quit);
+    }
+
+    void WriteManifest() const
+    {
+        if (m_sessionDirectory.isEmpty()) {
+            return;
+        }
+        auto* application = qobject_cast<QApplication*>(QCoreApplication::instance());
+        QJsonObject manifest{
+            {"schema", kSessionSchema},
+            {"status", m_state},
+            {"pluginVersion", kPluginVersion},
+            {"sessionId", m_sessionId},
+            {"reportId", m_reportId},
+            {"pid", static_cast<qint64>(QCoreApplication::applicationPid())},
+            {"qtRuntimeVersion", qVersion()},
+            {"applicationVersion", QCoreApplication::applicationVersion()},
+            {"verifiedHostTarget", QJsonObject{
+                {"nsightVersion", kVerifiedNsightVersion},
+                {"nsightBuild", kVerifiedNsightBuild},
+            }},
+            {"transport", "filesystemMailboxV1"},
+            {"idleTimeoutMs", m_idleTimeoutMs},
+            {"createdUtc", m_createdUtc.toString(Qt::ISODateWithMs)},
+            {"lastActivityUtc", QDateTime::fromMSecsSinceEpoch(
+                m_lastActivityMs, Qt::UTC).toString(Qt::ISODateWithMs)},
+            {"applicationFound", application != nullptr},
+        };
+        if (!m_currentRequestId.isEmpty()) {
+            manifest.insert("currentRequestId", m_currentRequestId);
+        }
+        if (!m_lastRequestId.isEmpty()) {
+            manifest.insert("lastRequestId", m_lastRequestId);
+        }
+        if (!m_protocolError.isEmpty()) {
+            manifest.insert("protocolError", m_protocolError);
+        }
+        if (!m_shutdownReason.isEmpty()) {
+            manifest.insert("shutdownReason", m_shutdownReason);
+        }
+
+        QSaveFile file(QDir(m_sessionDirectory).filePath("session.json"));
+        if (!file.open(QIODevice::WriteOnly)) {
+            return;
+        }
+        file.write(QJsonDocument(manifest).toJson(QJsonDocument::Compact));
+        file.commit();
+    }
+
+    QString m_sessionDirectory;
+    QString m_runRoot;
+    QString m_sessionId;
+    QString m_reportId;
+    QString m_state;
+    QString m_currentRequestId;
+    QString m_lastRequestId;
+    QString m_protocolError;
+    QString m_shutdownReason;
+    QDateTime m_createdUtc;
+    QTimer m_timer;
+    QPointer<SolidProbeAgent> m_agent;
+    QSet<QWidget*> m_requestBaselineTopLevels;
+    qint64 m_lastActivityMs = 0;
+    int m_idleTimeoutMs = 300000;
+    bool m_valid = false;
+    bool m_closeRequestWindows = false;
+};
+
 class SolidProbePlugin final : public QGenericPlugin
 {
     Q_OBJECT
@@ -3992,6 +4488,10 @@ public:
     {
         if (key.compare("SolidProbe", Qt::CaseInsensitive) != 0) {
             return nullptr;
+        }
+        if (!qEnvironmentVariable(
+                "NSIGHT_SOLID_PROBE_SESSION_DIRECTORY").trimmed().isEmpty()) {
+            return new SolidProbeSessionAgent();
         }
         return new SolidProbeAgent();
     }
