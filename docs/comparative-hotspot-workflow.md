@@ -21,6 +21,8 @@ but it is not causal proof.
         |
     resolve-event -> exact target and baseline EventKeys
         |
+    compare-frame-timing -> exact frame/Present interval decomposition
+        |
     inspect-pass(target) + inspect-pass(baseline)
         |
     compare-ranges -> exact target-minus-baseline facts
@@ -37,6 +39,14 @@ attribution candidates, not precise shader GPU time.
 `compare-ranges` joins metric identity by exact table/row/column name and occurrence. Each side
 retains its own source ordinal. Missing on one side remains target-only or baseline-only; it never
 becomes numeric zero. Metric deltas are paged and every table has matched/changed/comparable counts.
+
+`compare-frame-timing` is deliberately narrower than a general frame matcher. The caller supplies
+both same-grain frame EventKeys and frame indexes, one real pass/marker EventKey as the Trace
+Analysis seed, and the exact queue EventKey containing Present commands. The wrapper verifies the
+zero-based Trace Analysis frame sequence against direct Present occurrences, then returns only the
+consecutive-Present interval, the intervals before/inside/after the selected event, display
+precision bounds, and target-minus-baseline arithmetic. It does not name a CPU, synchronization,
+or pacing cause.
 
 ## CLI shape
 
@@ -70,6 +80,19 @@ nsight-analyzer compare-ranges trace.ngfx-gputrace `
 
 For before/after traces, add `--baseline-trace before.ngfx-gputrace`. Use repeated exact `--table`
 filters after the table summaries identify the evidence families that need full inspection.
+
+Decompose two explicit frames from one trace:
+
+```powershell
+nsight-analyzer compare-frame-timing trace.ngfx-gputrace `
+  --event-ordinal 131987 --target-frame-index 13 `
+  --baseline-event-ordinal 295573 --baseline-frame-index 29 `
+  --analysis-seed-event-ordinal 136633 `
+  --present-queue-event-ordinal 306395 --compact
+```
+
+Frame index zero is intentionally unavailable in this first contract because there is no preceding
+Present event in the report with which to form the same interval basis.
 
 ## Skill boundary
 
@@ -116,8 +139,14 @@ before reaching that ancestor. The same regression also verifies the fixture's U
 through the session heartbeat and requires graceful Viewer-session cleanup with no retained Viewer
 or CrashReporter process.
 
-This is enough evidence to keep event search as wrapper policy rather than adding an event-search
-atom. Repeated full model closure is now the larger mechanical cost. Further product work should be
-driven by another real investigation: either a true same-pass duration regression or a repeated
-frame comparison that proves which exact facts a `compare-frames` wrapper would remove from the
-Agent's mechanical workload.
+The explicit frame-13/frame-29 timing comparison closes in four atom calls, retrieves 213 facts,
+scans 183 event facts, and takes 106.5 seconds from a cold Viewer. Trace Analysis reports a 5.43 ms
+target-minus-baseline delta; consecutive Present starts independently produce the same display
+delta. The three disjoint display intervals around the selected sibling `ExecuteCommandLists`
+events change by +5.19 ms, +0.26 ms, and -0.02 ms, which closes to +5.43 ms. These are timeline
+facts only; the CPU/synchronization/pacing interpretation remains a Skill hypothesis.
+
+This is enough evidence to keep event search and timeline alignment as wrapper policy rather than
+adding either as an atom. Repeated full model closure is now the larger mechanical cost. A general
+`compare-frames` pass matcher remains deferred until another real investigation proves which stable
+identity and nesting rules it actually needs.

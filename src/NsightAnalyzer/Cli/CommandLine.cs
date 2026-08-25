@@ -23,6 +23,10 @@ internal sealed record ParsedCommand(
     int? WithinEventOrdinal,
     string? BaselineTracePath,
     int? BaselineEventOrdinal,
+    int? TargetFrameIndex,
+    int? BaselineFrameIndex,
+    int? AnalysisSeedEventOrdinal,
+    int? PresentQueueEventOrdinal,
     int TopShaderCount);
 
 internal sealed record CommandLineParseResult(ParsedCommand? Command, string? Error)
@@ -70,6 +74,10 @@ internal static class CommandLine
         int? withinEventOrdinal = null;
         string? baselineTracePath = null;
         int? baselineEventOrdinal = null;
+        int? targetFrameIndex = null;
+        int? baselineFrameIndex = null;
+        int? analysisSeedEventOrdinal = null;
+        int? presentQueueEventOrdinal = null;
         var topShaderCount = 32;
         var topShaderCountSpecified = false;
 
@@ -207,6 +215,42 @@ internal static class CommandLine
                     }
                     baselineEventOrdinal = parsedBaselineOrdinal;
                     break;
+                case "--target-frame-index":
+                    if (!TryTakeValue(args, ref index, out var targetFrameIndexText) ||
+                        !int.TryParse(targetFrameIndexText, out var parsedTargetFrameIndex) ||
+                        parsedTargetFrameIndex < 1)
+                    {
+                        return Fail("--target-frame-index must be a positive integer.");
+                    }
+                    targetFrameIndex = parsedTargetFrameIndex;
+                    break;
+                case "--baseline-frame-index":
+                    if (!TryTakeValue(args, ref index, out var baselineFrameIndexText) ||
+                        !int.TryParse(baselineFrameIndexText, out var parsedBaselineFrameIndex) ||
+                        parsedBaselineFrameIndex < 1)
+                    {
+                        return Fail("--baseline-frame-index must be a positive integer.");
+                    }
+                    baselineFrameIndex = parsedBaselineFrameIndex;
+                    break;
+                case "--analysis-seed-event-ordinal":
+                    if (!TryTakeValue(args, ref index, out var analysisSeedOrdinalText) ||
+                        !int.TryParse(analysisSeedOrdinalText, out var parsedAnalysisSeedOrdinal) ||
+                        parsedAnalysisSeedOrdinal < 0)
+                    {
+                        return Fail("--analysis-seed-event-ordinal must be a non-negative integer.");
+                    }
+                    analysisSeedEventOrdinal = parsedAnalysisSeedOrdinal;
+                    break;
+                case "--present-queue-event-ordinal":
+                    if (!TryTakeValue(args, ref index, out var presentQueueOrdinalText) ||
+                        !int.TryParse(presentQueueOrdinalText, out var parsedPresentQueueOrdinal) ||
+                        parsedPresentQueueOrdinal < 0)
+                    {
+                        return Fail("--present-queue-event-ordinal must be a non-negative integer.");
+                    }
+                    presentQueueEventOrdinal = parsedPresentQueueOrdinal;
+                    break;
                 case "--top-shaders":
                     if (!TryTakeValue(args, ref index, out var topShaderText) ||
                         !int.TryParse(topShaderText, out topShaderCount) ||
@@ -262,7 +306,8 @@ internal static class CommandLine
 
         var isTraceOperation = operation.StartsWith("trace.", StringComparison.Ordinal);
         var isWrapperOperation = operation is
-            "resolve-event" or "inspect-pass" or "compare-ranges";
+            "resolve-event" or "inspect-pass" or "compare-ranges" or
+            "compare-frame-timing";
         var requiresTrace = isTraceOperation || isWrapperOperation ||
             operation == "viewer-session.close";
         if (requiresTrace && string.IsNullOrWhiteSpace(tracePath))
@@ -307,8 +352,20 @@ internal static class CommandLine
             return Fail(
                 "compare-ranges requires --event-ordinal and --baseline-event-ordinal, and does not accept --event-path.");
         }
+        if (operation == "compare-frame-timing" &&
+            (eventOrdinal is null || eventPath is not null ||
+                baselineEventOrdinal is null || targetFrameIndex is null ||
+                baselineFrameIndex is null || analysisSeedEventOrdinal is null ||
+                presentQueueEventOrdinal is null))
+        {
+            return Fail(
+                "compare-frame-timing requires --event-ordinal, --target-frame-index, " +
+                "--baseline-event-ordinal, --baseline-frame-index, " +
+                "--analysis-seed-event-ordinal, and --present-queue-event-ordinal; " +
+                "it does not accept --event-path.");
+        }
         var acceptsEventSelector = isAtomicScoped ||
-            operation is "inspect-pass" or "compare-ranges";
+            operation is "inspect-pass" or "compare-ranges" or "compare-frame-timing";
         if (!acceptsEventSelector && (eventOrdinal is not null || eventPath is not null))
         {
             return Fail($"{operation} does not accept an event selector.");
@@ -359,10 +416,20 @@ internal static class CommandLine
         {
             return Fail($"{operation} does not accept event-resolution options.");
         }
-        if (operation != "compare-ranges" &&
+        if (operation is not ("compare-ranges" or "compare-frame-timing") &&
             (baselineTracePath is not null || baselineEventOrdinal is not null))
         {
             return Fail($"{operation} does not accept baseline options.");
+        }
+        if (operation == "compare-frame-timing" && baselineTracePath is not null)
+        {
+            return Fail("compare-frame-timing currently compares two frames from the same trace and does not accept --baseline-trace.");
+        }
+        if (operation != "compare-frame-timing" &&
+            (targetFrameIndex is not null || baselineFrameIndex is not null ||
+                analysisSeedEventOrdinal is not null || presentQueueEventOrdinal is not null))
+        {
+            return Fail($"{operation} does not accept frame-timing options.");
         }
         if (topShaderCountSpecified &&
             operation is not ("inspect-pass" or "compare-ranges"))
@@ -391,6 +458,10 @@ internal static class CommandLine
             withinEventOrdinal,
             baselineTracePath,
             baselineEventOrdinal,
+            targetFrameIndex,
+            baselineFrameIndex,
+            analysisSeedEventOrdinal,
+            presentQueueEventOrdinal,
             topShaderCount), null);
     }
 

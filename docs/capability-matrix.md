@@ -11,9 +11,9 @@
 The current 95 percent estimate describes the proven ordinary-analysis data surface, not product
 implementation completeness.
 
-The public catalog additionally labels three deterministic wrapper operations: `resolve-event`,
-`inspect-pass`, and `compare-ranges`. They compose the verified fact families below and do not add
-new facts or bottleneck judgments.
+The public catalog additionally labels four deterministic wrapper operations: `resolve-event`,
+`inspect-pass`, `compare-ranges`, and `compare-frame-timing`. They compose the verified fact
+families below and do not add new facts or bottleneck judgments.
 
 | ID | Semantic fact family | Probe evidence | Product status | Acceptance |
 |---|---|---|---|---|

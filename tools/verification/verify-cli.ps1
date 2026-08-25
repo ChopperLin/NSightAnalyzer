@@ -56,13 +56,13 @@ Assert-True (Test-Path -LiteralPath $cliPath -PathType Leaf) `
 
 $capabilities = Invoke-JsonCli -Arguments @('capabilities', '--compact') -ExpectedExitCode 0
 Assert-True $capabilities.Document.result.isSuccess 'capabilities failed.'
-Assert-True ($capabilities.Document.result.value.operations.totalCount -eq 14) `
+Assert-True ($capabilities.Document.result.value.operations.totalCount -eq 15) `
     'Unexpected operation count.'
 Assert-True (@($capabilities.Document.result.value.operations.items |
         Where-Object layer -eq 'atom').Count -eq 11) `
     'Unexpected atom count.'
 Assert-True (@($capabilities.Document.result.value.operations.items |
-        Where-Object layer -eq 'wrapper').Count -eq 3) `
+        Where-Object layer -eq 'wrapper').Count -eq 4) `
     'Unexpected wrapper count.'
 Assert-True ($capabilities.Document.result.value.decoder.bridgeVersion -eq 'probe-0.45') `
     'Unexpected bridge version.'
@@ -104,6 +104,17 @@ $missingCompareBaseline = Invoke-JsonCli `
     -ExpectedExitCode 2
 Assert-True ($missingCompareBaseline.Document.result.error.category -eq 'invalidInput') `
     'compare-ranges accepted a missing baseline EventKey.'
+
+$missingFrameTimingContext = Invoke-JsonCli `
+    -Arguments @(
+        'compare-frame-timing', $missingPath,
+        '--event-ordinal', '1', '--target-frame-index', '13',
+        '--baseline-event-ordinal', '2', '--baseline-frame-index', '29',
+        '--compact') `
+    -ExpectedExitCode 2
+Assert-True `
+    ($missingFrameTimingContext.Document.result.error.category -eq 'invalidInput') `
+    'compare-frame-timing accepted implicit Trace Analysis or Present context.'
 
 $missingShaderKey = Invoke-JsonCli `
     -Arguments @(
@@ -349,6 +360,57 @@ if ($MultiFrameTrace) {
             'Scoped resolve-event did not start paging at the requested ancestor ordinal.'
         Assert-True ($resolved.Document.result.value.execution.scannedEventCount -eq 9910) `
             'Scoped resolve-event did not stop at the exact frame 13 subtree boundary.'
+
+        $frameTimingArgs = [Collections.ArrayList]@(
+            'compare-frame-timing', $multi,
+            '--event-ordinal', '131987', '--target-frame-index', '13',
+            '--baseline-event-ordinal', '295573', '--baseline-frame-index', '29',
+            '--analysis-seed-event-ordinal', '136633',
+            '--present-queue-event-ordinal', '306395',
+            '--timeout-ms', '240000', '--compact')
+        Add-ViewerArgument $frameTimingArgs
+        $frameTiming = Invoke-JsonCli -Arguments $frameTimingArgs -ExpectedExitCode 0
+        $timingValue = $frameTiming.Document.result.value
+        Assert-True ($timingValue.sequence.presentEventCount -eq 30) `
+            'Frame timing Present sequence count changed.'
+        Assert-True ($timingValue.sequence.traceAnalysisFrameCount -eq 30) `
+            'Frame timing Trace Analysis sequence count changed.'
+        Assert-True `
+            ($timingValue.target.previousPresentEvent.key.preorderOrdinal -eq 306473 -and
+                $timingValue.target.presentEvent.key.preorderOrdinal -eq 306479) `
+            'Frame 13 Present identities changed.'
+        Assert-True `
+            ($timingValue.baseline.previousPresentEvent.key.preorderOrdinal -eq 306569 -and
+                $timingValue.baseline.presentEvent.key.preorderOrdinal -eq 306575) `
+            'Frame 29 Present identities changed.'
+        Assert-True `
+            ($timingValue.target.traceAnalysisAlignment.state -eq
+                'withinViewerDisplayPrecision' -and
+                $timingValue.baseline.traceAnalysisAlignment.state -eq
+                'withinViewerDisplayPrecision') `
+            'Trace Analysis did not align with consecutive Present starts.'
+        $presentDelta = $timingValue.deltas |
+            Where-Object field -eq 'presentStartInterval' | Select-Object -First 1
+        $leadingDelta = $timingValue.deltas |
+            Where-Object field -eq 'previousPresentToSelectedFrameStart' |
+            Select-Object -First 1
+        $eventDelta = $timingValue.deltas |
+            Where-Object field -eq 'selectedFrameEventStartEndInterval' |
+            Select-Object -First 1
+        $trailingDelta = $timingValue.deltas |
+            Where-Object field -eq 'selectedFrameEndToPresent' | Select-Object -First 1
+        Assert-True ($presentDelta.deltaMilliseconds -eq 5.43) `
+            'Frame timing Present interval delta changed.'
+        Assert-True ($leadingDelta.deltaMilliseconds -eq 5.19) `
+            'Frame timing leading interval delta changed.'
+        Assert-True ($eventDelta.deltaMilliseconds -eq 0.26) `
+            'Frame timing selected-event interval delta changed.'
+        Assert-True ($trailingDelta.deltaMilliseconds -eq -0.02) `
+            'Frame timing trailing interval delta changed.'
+        Assert-True ($timingValue.execution.atomCallCount -eq 4) `
+            'Frame timing wrapper atom-call closure changed.'
+        Assert-True ($timingValue.execution.scannedEventCount -eq 183) `
+            'Frame timing wrapper event scan closure changed.'
         $slowChecked = $true
     }
 

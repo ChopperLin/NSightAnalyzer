@@ -27,8 +27,9 @@ validated:
 The committed probing implementation under tools/probes/qt-model-bridge is the legacy oracle.
 The atom layer exposes 11 operations: capability/identity, events, event parameters, range metrics,
 range instruction mix, range shaders, shader source, Trace Analysis, and raw-counter catalog/value
-retrieval. The first deterministic wrapper slice adds `resolve-event`, `inspect-pass`, and
-`compare-ranges`. Agent diagnosis remains intentionally above those wrappers.
+retrieval. The deterministic wrapper slice adds `resolve-event`, `inspect-pass`, `compare-ranges`,
+and the same-trace `compare-frame-timing` timeline decomposition. Agent diagnosis remains
+intentionally above those wrappers.
 
 Product atoms reuse one normally launched Viewer process per exact trace snapshot. The normal
 CrashReporter pipe guardian is recorded as session baseline rather than treated as a crash; Viewer

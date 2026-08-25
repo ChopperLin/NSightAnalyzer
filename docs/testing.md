@@ -38,6 +38,9 @@ Generic model discovery is never part of product verification.
 - frame-0 GBuffer returns 1,020 shader hashes, 133 sampled, and 27,432 shader samples.
 - Trace Analysis returns 30 frames; frame 0 is 25.49 ms with top issues GPU Engine Activity 70.1%,
   VRAM Limited 10.1%, and L1TEX Long Scoreboard 9.2%.
+- frame 13 and frame 29 align one-to-one with direct Present occurrences. Their Trace Analysis and
+  consecutive-Present deltas are both 5.43 ms at Viewer display precision; the disjoint selected
+  event decomposition is +5.19 ms before, +0.26 ms inside, and -0.02 ms after.
 
 ## Atom gates
 
@@ -65,6 +68,11 @@ Every real run verifies:
   and reports shader truncation plus sample coverage;
 - `compare-ranges` joins metrics by table/row/column name plus occurrence, retains source ordinals
   on both sides, preserves target-only/baseline-only, and computes deltas only for comparable values;
+- `compare-frame-timing` requires explicit target/baseline frame EventKeys, frame indexes, Trace
+  Analysis seed, and Present queue; it verifies a contiguous one-to-one frame/Present sequence and
+  rejects unaligned timing rather than guessing context;
+- frame timing exposes the preceding-Present-to-event-start, selected-event, event-end-to-Present,
+  and consecutive-Present intervals as Viewer-display arithmetic. Bottleneck labels remain absent;
 - metric deltas have stable cursor/limit paging and per-table completeness summaries;
 - the real single-frame Dispatch fixture whose Viewer model reports a dimension above the D3D12
   semantic maximum returns unavailable instead of a successful workload fact;

@@ -62,12 +62,15 @@ The first comparative-hotspot slice is implemented:
 1. `resolve-event`: exact name + explicit occurrence, optionally bounded by an exact ancestor;
 2. `inspect-pass`: complete metric/instruction closure plus coverage-labelled shader Top-N;
 3. `compare-ranges`: same-trace or cross-trace target-minus-baseline deltas with paged metrics.
+4. `compare-frame-timing`: same-trace alignment of two explicit same-grain events, an explicit
+   Trace Analysis seed, and an explicit Present queue; it returns only display-based interval
+   decomposition, validation, and target-minus-baseline deltas.
 
 Still deferred until real dogfood proves their shape:
 
-4. `compare-frames` matching policy;
-5. `inspect-shader` wrapper (the source atom remains callable directly);
-6. `export-agent-dataset`.
+5. general `compare-frames` pass-matching policy;
+6. `inspect-shader` wrapper (the source atom remains callable directly);
+7. `export-agent-dataset`.
 
 Wrappers resolve, page, join, filter, and compare. They do not diagnose.
 

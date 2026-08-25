@@ -222,3 +222,75 @@ public sealed record CompareRangesValue(
     RangeInstructionComparison InstructionMix,
     SummedStallComparison Stalls,
     WrapperExecutionStats Execution);
+
+public sealed record CompareFrameTimingQuery(
+    int TargetFrameIndex,
+    int TargetFrameEventOrdinal,
+    int BaselineFrameIndex,
+    int BaselineFrameEventOrdinal,
+    int AnalysisSeedEventOrdinal,
+    int PresentQueueEventOrdinal);
+
+public sealed record ViewerTimelineTimestamp(
+    string DisplayValue,
+    decimal Milliseconds,
+    decimal DisplayResolutionMilliseconds,
+    string NumericState);
+
+public sealed record FrameTimingDurationFact(
+    string Field,
+    string Basis,
+    decimal Milliseconds,
+    decimal DisplayResolutionMilliseconds,
+    string NumericState);
+
+public sealed record FrameTimingAlignmentFact(
+    string Basis,
+    decimal TraceAnalysisDurationMilliseconds,
+    decimal PresentIntervalMilliseconds,
+    decimal ResidualMilliseconds,
+    decimal DisplayPrecisionToleranceMilliseconds,
+    string State);
+
+public sealed record FrameTimingEndpoint(
+    int FrameIndex,
+    TraceAnalysisRangeFact TraceAnalysisRange,
+    EventFact SelectedFrameEvent,
+    EventFact PreviousPresentEvent,
+    EventFact PresentEvent,
+    ViewerTimelineTimestamp PreviousPresentStart,
+    ViewerTimelineTimestamp SelectedFrameStart,
+    ViewerTimelineTimestamp SelectedFrameEnd,
+    ViewerTimelineTimestamp PresentStart,
+    IReadOnlyList<FrameTimingDurationFact> Durations,
+    FrameTimingAlignmentFact TraceAnalysisAlignment);
+
+public sealed record FrameTimingSequenceFact(
+    EventFact PresentQueue,
+    EventKey AnalysisSeedScope,
+    string PresentScope,
+    string PresentIdentity,
+    string FrameJoin,
+    int PresentEventCount,
+    int TraceAnalysisFrameCount,
+    string SelectedFrameEventIdentity,
+    int SelectedFrameEventDepth,
+    IReadOnlyList<int> SelectedFrameEventParentPath);
+
+public sealed record FrameTimingDeltaFact(
+    string Field,
+    string DeltaDirection,
+    decimal TargetMilliseconds,
+    decimal BaselineMilliseconds,
+    decimal DeltaMilliseconds,
+    decimal? RelativeDeltaPercent,
+    decimal DisplayResolutionMilliseconds);
+
+public sealed record CompareFrameTimingValue(
+    CompareFrameTimingQuery Query,
+    FrameTimingSequenceFact Sequence,
+    FrameTimingEndpoint Target,
+    FrameTimingEndpoint Baseline,
+    string DeltaOrder,
+    IReadOnlyList<FrameTimingDeltaFact> Deltas,
+    WrapperExecutionStats Execution);

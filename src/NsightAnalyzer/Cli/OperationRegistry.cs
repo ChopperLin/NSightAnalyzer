@@ -264,6 +264,29 @@ internal static class OperationRegistry
                 command.Limit)),
         new(
             new(
+                "compare-frame-timing",
+                SchemaVersion.V1,
+                "readOnly",
+                true,
+                "implemented",
+                "Aligns two explicit same-trace frame events with Trace Analysis and Present timing, then computes exact display-based deltas.",
+                "compare-frame-timing <trace> --event-ordinal N --target-frame-index N " +
+                "--baseline-event-ordinal N --baseline-frame-index N " +
+                "--analysis-seed-event-ordinal N --present-queue-event-ordinal N " +
+                "[--viewer <path>]",
+                "wrapper"),
+            command => CompareFrameTimingWrapper.ExecuteAsync(
+                command.TracePath!,
+                command.ViewerPath,
+                command.TimeoutMs,
+                command.EventOrdinal!.Value,
+                command.TargetFrameIndex!.Value,
+                command.BaselineEventOrdinal!.Value,
+                command.BaselineFrameIndex!.Value,
+                command.AnalysisSeedEventOrdinal!.Value,
+                command.PresentQueueEventOrdinal!.Value)),
+        new(
+            new(
                 "viewer-session.close",
                 SchemaVersion.V1,
                 "transport",
