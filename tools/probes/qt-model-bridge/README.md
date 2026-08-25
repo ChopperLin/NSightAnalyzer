@@ -10,6 +10,26 @@ reads the decoded public Qt item-model surfaces on the Viewer GUI thread. The
 probe does not parse WRPV, call `ngfx-rpc`, inject a DLL, take screenshots, or
 synthesize mouse/keyboard input.
 
+## Build and install
+
+```powershell
+pwsh -File tools/probes/qt-model-bridge/build-and-install.ps1
+```
+
+The script resolves CMake (from `PATH` or a Visual Studio 2022 installation)
+and Qt 6.8.1, builds `solidprobe.dll`, backs up the currently installed plugin
+under `.local/bridge-backups/`, installs into the pinned Viewer's
+`plugins/generic/`, and verifies the installed file hash.
+
+It refuses to install when `kPluginVersion` in `solid_probe_plugin.cpp` differs
+from `ViewerProbeRunner.ExpectedBridgeVersion`, because that mismatch is
+otherwise only detectable at runtime. Bump both together.
+
+Installing writes under `Program Files` and needs an elevated session; the
+script checks first and says so rather than failing part way through. Use
+`-SkipInstall` to build only, `-WhatIf` to preview, and `-Rollback` to restore
+the most recent backup.
+
 ## Verified host
 
 - Nsight Graphics 2026.2.0, build 37991608
