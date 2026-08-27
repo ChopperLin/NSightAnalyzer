@@ -4,6 +4,8 @@
 - [Goal](goal.md): the atom-layer completion target and acceptance criteria.
 - [Architecture](architecture.md): semantic DAG, Viewer-hosted adapter, contracts, and ownership.
 - [Capability matrix](capability-matrix.md): one evidence-backed status per atomic fact family.
+- [Agent interface comparison](agent-interface-matrix.md): RenderDoc MCP interaction patterns,
+  current coverage, scoped gaps, and explicit Graphics Capture exclusions.
 - [Performance data](performance-metrics.md): metric, shader, instruction, and scope semantics.
 - [Roadmap](roadmap.md): atom-first implementation order, then wrappers and dogfood.
 - [Probe corpus](probe-corpus.md): local real reports and fixed oracle facts.
@@ -14,6 +16,6 @@
 The committed probe README remains the detailed low-level experiment log. Product documentation
 does not promote generic Qt model access into a public operation.
 
-The current catalog has 11 atoms and four deterministic wrappers. `capabilities` is the
+The current catalog has 14 atoms and five deterministic wrappers. `capabilities` is the
 machine-readable source of truth and labels every entry as `atom` or `wrapper`; the matrix records
 evidence and boundaries, not a second hand-maintained API schema.

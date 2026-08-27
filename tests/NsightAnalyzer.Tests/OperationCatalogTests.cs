@@ -43,6 +43,7 @@ public sealed class OperationCatalogTests
     [Theory]
     [InlineData("resolve-event", "--event-occurrence")]
     [InlineData("trace.range-shaders", "--shader-occurrence")]
+    [InlineData("trace.shader-profile", "--shader-occurrence")]
     public void OccurrenceParametersStateTheirBase(string operation, string name)
     {
         var parameter = Descriptors()
@@ -78,6 +79,47 @@ public sealed class OperationCatalogTests
 
         Assert.Equal(1, limit.Minimum);
         Assert.Equal(ContractLimits.MaximumPageLimit, limit.Maximum);
+    }
+}
+
+public sealed class AgentInterfaceCommandLineTests
+{
+    [Fact]
+    public void FindRangesAcceptsCompactDiscoveryFilters()
+    {
+        var parsed = CommandLine.Parse([
+            "find-ranges",
+            "trace.ngfx-gputrace",
+            "--name-contains", "shadow",
+            "--grain", "marker",
+            "--limit", "20",
+        ]);
+
+        Assert.True(parsed.IsSuccess, parsed.Error);
+        Assert.Equal("shadow", parsed.Command!.RangeNameContains);
+        Assert.Equal("marker", parsed.Command.Grain);
+        Assert.Equal(20, parsed.Command.Limit);
+    }
+
+    [Fact]
+    public void ShaderProfileRequiresStageAndHash()
+    {
+        var missingStage = CommandLine.Parse([
+            "trace.shader-profile",
+            "trace.ngfx-gputrace",
+            "--event-ordinal", "42",
+            "--shader-hash", "0x0123456789abcdef",
+        ]);
+        var complete = CommandLine.Parse([
+            "trace.shader-profile",
+            "trace.ngfx-gputrace",
+            "--event-ordinal", "42",
+            "--shader-stage", "Pixel",
+            "--shader-hash", "0x0123456789abcdef",
+        ]);
+
+        Assert.False(missingStage.IsSuccess);
+        Assert.True(complete.IsSuccess, complete.Error);
     }
 }
 

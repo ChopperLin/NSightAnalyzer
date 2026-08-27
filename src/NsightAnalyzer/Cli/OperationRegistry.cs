@@ -1,4 +1,4 @@
-using NsightAnalyzer.Contracts;
+﻿using NsightAnalyzer.Contracts;
 using NsightAnalyzer.Operations;
 using NsightAnalyzer.Wrappers;
 
@@ -64,14 +64,15 @@ internal static class OperationRegistry
                 true,
                 "implemented",
                 "Returns the range-grain skeleton: every pass/marker and command-list range with its timing, without per-draw noise.",
-                "trace.outline <trace> [--cursor N] [--limit N] [--viewer <path>]",
-                Parameters: [OperationParameters.Trace, OperationParameters.Cursor, OperationParameters.Limit, OperationParameters.Viewer, OperationParameters.TimeoutMs, OperationParameters.Compact]),
+                "trace.outline <trace> [--grain marker|container|all] [--cursor N] [--limit N] [--viewer <path>]",
+                Parameters: [OperationParameters.Trace, new("--grain", "string", false, "Which range kind to return. 'marker' is the caller's own instrumentation; 'container' is the D3D12 objects and calls that structure the capture. Filtered in the decoder, so a narrower grain costs fewer pages.", Default: "all", AllowedValues: ["marker", "container", "all"]), OperationParameters.Cursor, OperationParameters.Limit, OperationParameters.Viewer, OperationParameters.TimeoutMs, OperationParameters.Compact]),
             command => TraceOutlineOperation.ExecuteAsync(
                 command.TracePath!,
                 command.ViewerPath,
                 command.TimeoutMs,
                 command.Cursor,
-                command.Limit)),
+                command.Limit,
+                command.Grain)),
         new(
             new(
                 "trace.event-parameters",
@@ -88,6 +89,25 @@ internal static class OperationRegistry
                 command.TimeoutMs,
                 command.EventOrdinal,
                 command.EventPath)),
+        new(
+            new(
+                "trace.range-metric-catalog",
+                SchemaVersion.V1,
+                "readOnly",
+                true,
+                "implemented",
+                "Returns compact Warp Metrics table and column identities for one exact pass/marker range.",
+                "trace.range-metric-catalog <trace> (--event-ordinal N|--event-path P) " +
+                "[--cursor N] [--limit N]",
+                Parameters: [OperationParameters.Trace, OperationParameters.EventOrdinal, OperationParameters.EventPath, OperationParameters.Cursor, OperationParameters.Limit, OperationParameters.Viewer, OperationParameters.TimeoutMs, OperationParameters.Compact]),
+            command => TraceRangeMetricCatalogOperation.ExecuteAsync(
+                command.TracePath!,
+                command.ViewerPath,
+                command.TimeoutMs,
+                command.EventOrdinal,
+                command.EventPath,
+                command.Cursor,
+                command.Limit)),
         new(
             new(
                 "trace.range-metrics",
@@ -118,7 +138,7 @@ internal static class OperationRegistry
                 "Returns paged static/dynamic shader facts for one exact range.",
                 "trace.range-shaders <trace> (--event-ordinal N|--event-path P) " +
                 "[--shader-hash H] [--shader-occurrence N] [--cursor N] [--limit N]",
-                Parameters: [OperationParameters.Trace, OperationParameters.EventOrdinal, OperationParameters.EventPath, OperationParameters.ShaderHash, OperationParameters.ShaderOccurrence, OperationParameters.Cursor, OperationParameters.Limit, OperationParameters.Viewer, OperationParameters.TimeoutMs, OperationParameters.Compact]),
+                Parameters: [OperationParameters.Trace, OperationParameters.EventOrdinal, OperationParameters.EventPath, OperationParameters.ShaderHash, OperationParameters.ShaderOccurrence, OperationParameters.Cursor, OperationParameters.ShaderLimit, OperationParameters.Viewer, OperationParameters.TimeoutMs, OperationParameters.Compact]),
             command => TraceRangeShadersOperation.ExecuteAsync(
                 command.TracePath!,
                 command.ViewerPath,
@@ -129,6 +149,26 @@ internal static class OperationRegistry
                 command.ShaderOccurrence,
                 command.Cursor,
                 command.Limit)),
+        new(
+            new(
+                "trace.shader-profile",
+                SchemaVersion.V1,
+                "readOnly",
+                true,
+                "implemented",
+                "Returns one exact shader's static, sampled, instruction and stall profile.",
+                "trace.shader-profile <trace> (--event-ordinal N|--event-path P) " +
+                "--shader-stage S --shader-hash H [--shader-occurrence N]",
+                Parameters: [OperationParameters.Trace, OperationParameters.EventOrdinal, OperationParameters.EventPath, OperationParameters.ShaderStage, OperationParameters.RequiredShaderHash, OperationParameters.ShaderOccurrence, OperationParameters.Viewer, OperationParameters.TimeoutMs, OperationParameters.Compact]),
+            command => TraceShaderProfileOperation.ExecuteAsync(
+                command.TracePath!,
+                command.ViewerPath,
+                command.TimeoutMs,
+                command.EventOrdinal,
+                command.EventPath,
+                command.ShaderStage!,
+                command.ShaderHash!,
+                command.ShaderOccurrence ?? 0)),
         new(
             new(
                 "trace.range-instruction-mix",
@@ -231,6 +271,27 @@ internal static class OperationRegistry
                 command.Limit)),
         new(
             new(
+                "find-ranges",
+                SchemaVersion.V1,
+                "readOnly",
+                true,
+                "implemented",
+                "Returns bounded range candidates ordered by Viewer duration, with exact EventKeys and shared ancestor context.",
+                "find-ranges <trace> [--name-contains S] [--grain marker|container|all] " +
+                "[--within-event-ordinal N] [--cursor N] [--limit N] [--viewer <path>]",
+                "wrapper",
+                Parameters: [OperationParameters.Trace, OperationParameters.RangeNameContains, new("--grain", "string", false, "Which range kind to consider.", Default: "all", AllowedValues: ["marker", "container", "all"]), new("--within-event-ordinal", "integer", false, "Restrict candidates to strict descendants of this exact ancestor ordinal.", Minimum: 0), OperationParameters.Cursor, OperationParameters.Limit, OperationParameters.Viewer, OperationParameters.TimeoutMs, OperationParameters.Compact]),
+            command => FindRangesWrapper.ExecuteAsync(
+                command.TracePath!,
+                command.ViewerPath,
+                command.TimeoutMs,
+                command.RangeNameContains,
+                command.Grain,
+                command.WithinEventOrdinal,
+                command.Cursor,
+                command.Limit)),
+        new(
+            new(
                 "resolve-event",
                 SchemaVersion.V1,
                 "readOnly",
@@ -257,7 +318,7 @@ internal static class OperationRegistry
                 "readOnly",
                 true,
                 "implemented",
-                "Closes metrics, shader, and instruction pages for one exact pass/marker.",
+                "Closes metrics and shader pages for one exact pass/marker; v1 leaves Instruction Mix to its explicit atom.",
                 "inspect-pass <trace> --event-ordinal N [--table <exact>...] " +
                 "[--top-shaders N] [--viewer <path>]",
                 "wrapper",

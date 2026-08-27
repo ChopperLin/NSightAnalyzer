@@ -1,0 +1,517 @@
+{
+ "applicationClass": "QApplication",
+ "applicationFilePath": "fixture",
+ "applicationFound": true,
+ "applicationName": "NVIDIA Nsight Graphics",
+ "applicationVersion": "2026.2.0.0 (build 37991608) (public-release)",
+ "eventListReady": true,
+ "eventViews": [
+  {
+   "columns": 12,
+   "export": {
+    "ancestorCount": 4,
+    "ancestorNodes": [
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "Graphics CommandQueue (D3D12 Direct Q:0)",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": "0 - 4384",
+        "displayType": "QString"
+       },
+       {
+        "column": 2,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 9,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 10,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 3,
+      "depth": 0,
+      "ordinal": 0,
+      "path": [
+       0
+      ],
+      "row": 0
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ExecuteCommandLists(ID3D12CommandList** ppCommandLists = { '0x0000000000000000', '0x0000000000000000', '0x0000000000000000', '0x0000000000000000', '0x0000000000000000', '0x0000000000000000', '0x0000000000000000', '0x0000000000000000', '0x0000000000000000', '0x0000000000000000', '0x0000000000000000', '0x0000000000000000', '0x0000000000000000', '0x0000000000000000', '0x0000000000000000', '0x0000000000000000', ... })",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": "2 - 4384",
+        "displayType": "QString"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "7.57ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "16.44ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "8.88ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 38,
+      "depth": 1,
+      "ordinal": 3,
+      "path": [
+       0,
+       2
+      ],
+      "row": 2
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ID3D12CommandList (15)",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": "1526 - 1612",
+        "displayType": "QString"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "8.48ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "8.57ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "0.09ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 73,
+      "depth": 2,
+      "ordinal": 1680,
+      "path": [
+       0,
+       2,
+       12
+      ],
+      "row": 12
+     },
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "ClearRenderTargetView (96-101)",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": "1606 - 1611",
+        "displayType": "QString"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "8.56ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "8.57ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "0.01ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 7,
+      "depth": 3,
+      "ordinal": 1772,
+      "path": [
+       0,
+       2,
+       12,
+       71
+      ],
+      "row": 71
+     }
+    ],
+    "filterColumn": -1,
+    "filterContains": "",
+    "flat": false,
+    "hasMore": false,
+    "headers": [
+     {
+      "column": 0,
+      "display": "Description",
+      "displayType": "QString"
+     },
+     {
+      "column": 1,
+      "display": "Event",
+      "displayType": "QString"
+     },
+     {
+      "column": 2,
+      "display": null,
+      "displayType": ""
+     },
+     {
+      "column": 3,
+      "display": null,
+      "displayType": ""
+     },
+     {
+      "column": 4,
+      "display": "Object",
+      "displayType": "QString"
+     },
+     {
+      "column": 5,
+      "display": "Thread",
+      "displayType": "QString"
+     },
+     {
+      "column": 6,
+      "display": "Δt (CPU)",
+      "displayType": "QString"
+     },
+     {
+      "column": 7,
+      "display": "Δt (GPU)",
+      "displayType": "QString"
+     },
+     {
+      "column": 8,
+      "display": "Start",
+      "displayType": "QString"
+     },
+     {
+      "column": 9,
+      "display": "End",
+      "displayType": "QString"
+     },
+     {
+      "column": 10,
+      "display": "Δt",
+      "displayType": "QString"
+     },
+     {
+      "column": 11,
+      "display": null,
+      "displayType": ""
+     }
+    ],
+    "includeAncestors": true,
+    "includeHeaders": true,
+    "includeItemData": false,
+    "limit": 500,
+    "maxDepth": 64,
+    "maxNodes": 500,
+    "modelClass": "NV::EventList::EventTreeModel",
+    "modelObjectName": "EventList_EventTreeModel",
+    "nameColumn": 0,
+    "nameContains": null,
+    "nameExact": "Pass01",
+    "nameMode": "include",
+    "namePrefixes": [],
+    "nameSubstrings": [],
+    "nodeCount": 1,
+    "nodes": [
+     {
+      "cells": [
+       {
+        "column": 0,
+        "display": "Pass01",
+        "displayType": "QString"
+       },
+       {
+        "column": 1,
+        "display": "1606 - 2474",
+        "displayType": "QString"
+       },
+       {
+        "column": 2,
+        "display": "0",
+        "displayType": "QString"
+       },
+       {
+        "column": 3,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 4,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 5,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 6,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 7,
+        "display": null,
+        "displayType": ""
+       },
+       {
+        "column": 8,
+        "display": "8.56ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 9,
+        "display": "9.23ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 10,
+        "display": "0.67ms",
+        "displayType": "QString"
+       },
+       {
+        "column": 11,
+        "display": null,
+        "displayType": ""
+       }
+      ],
+      "childCount": 0,
+      "depth": 4,
+      "ordinal": 1773,
+      "path": [
+       0,
+       2,
+       12,
+       71,
+       0
+      ],
+      "row": 0
+     }
+    ],
+    "offset": 0,
+    "returnedCount": 1,
+    "roleNames": [],
+    "rootColumns": 12,
+    "rootRows": 2,
+    "selectedColumns": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7,
+     8,
+     9,
+     10,
+     11
+    ],
+    "totalCount": 1,
+    "totalCountExact": true,
+    "truncated": false,
+    "valueMode": "normal",
+    "visitedCount": 4951
+   },
+   "exportReady": true,
+   "extractionModel": "source",
+   "minimumEventPoll": 2,
+   "minimumExportPoll": 2,
+   "modelClass": "NV::EventList::EventProxyModel",
+   "modelObjectName": "EventList_EventProxyModel",
+   "modelPopulated": true,
+   "rows": 2,
+   "stableEventShapeSamples": 2,
+   "viewClass": "NV::EventList::EventTreeView",
+   "viewObjectName": "EventList_EventTreeView"
+  }
+ ],
+ "guiThread": true,
+ "mode": "event-export",
+ "pid": "fixture",
+ "pluginVersion": "probe-0.48",
+ "pollCount": 3,
+ "qtCompileVersion": "6.8.1",
+ "qtRuntimeVersion": "6.8.1",
+ "reportId": "fixture.ngfx-gputrace:50103728:639231352154469065",
+ "requestId": "fixture",
+ "schema": "NsightSolidProbeEventListV1",
+ "status": "complete",
+ "topLevelWindowCount": 296,
+ "verifiedHostTarget": {
+  "nsightBuild": "37991608",
+  "nsightVersion": "2026.2.0"
+ }
+}

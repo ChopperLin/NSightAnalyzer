@@ -3,7 +3,7 @@ using NsightAnalyzer.Contracts;
 
 namespace NsightAnalyzer.Operations;
 
-internal static class TraceRangeMetricsOperation
+internal static class TraceRangeMetricCatalogOperation
 {
     public static async Task<OperationResult> ExecuteAsync(
         string tracePath,
@@ -11,7 +11,6 @@ internal static class TraceRangeMetricsOperation
         int timeoutMs,
         int? eventOrdinal,
         string? eventPath,
-        IReadOnlyList<string> metricTables,
         int cursor,
         int limit)
     {
@@ -25,6 +24,7 @@ internal static class TraceRangeMetricsOperation
         var settings = TraceEventParametersOperation.ScopedSettings(
             eventOrdinal, eventPath);
         settings["POLL_INTERVAL_MS"] = "100";
+        settings["METRIC_CATALOG_ONLY"] = "1";
         var probe = await ViewerProbeRunner.RunAsync(
             artifact,
             ViewerProbeMode.SelectionMetricsExport,
@@ -40,27 +40,17 @@ internal static class TraceRangeMetricsOperation
         using var run = probe.Run!;
         try
         {
-            var value = BridgeProjection.ProjectRangeMetrics(
+            var value = BridgeProjection.ProjectRangeMetricCatalog(
                 run.Document.RootElement,
                 eventOrdinal,
                 eventPath,
-                metricTables,
                 cursor,
                 limit);
             return OperationResult.Success(
                 value,
-                [
-                    ViewerProbeRunner.CreateProvenance(
-                        run, artifact, "trace.range-metrics/v1"),
-                ],
+                [ViewerProbeRunner.CreateProvenance(
+                    run, artifact, "trace.range-metric-catalog/v1")],
                 OperationSupport.ViewerWarnings);
-        }
-        catch (BridgeFactNotFoundException exception)
-        {
-            return OperationResult.Failure(
-                ErrorCategory.NotFound,
-                exception.Code,
-                exception.Message);
         }
         catch (BridgeScopeUnsupportedException exception)
         {

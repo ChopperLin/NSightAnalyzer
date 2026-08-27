@@ -11,9 +11,9 @@
 The current 95 percent estimate describes the proven ordinary-analysis data surface, not product
 implementation completeness.
 
-The public catalog additionally labels four deterministic wrapper operations: `resolve-event`,
-`inspect-pass`, `compare-ranges`, and `compare-frame-timing`. They compose the verified fact
-families below and do not add new facts or bottleneck judgments.
+The public catalog additionally labels five deterministic wrapper operations: `find-ranges`,
+`resolve-event`, `inspect-pass`, `compare-ranges`, and `compare-frame-timing`. They compose the
+verified fact families below and do not add new facts or bottleneck judgments.
 
 | ID | Semantic fact family | Probe evidence | Product status | Acceptance |
 |---|---|---|---|---|
@@ -32,7 +32,7 @@ families below and do not add new facts or bottleneck judgments.
 | SRC-002 | SASS address correlation | 485 rows/242 addresses | verified | address-to-DXIL only in Standard |
 | SRC-003 | HLSL/function rows | empty with exact missing PDB diagnostic | unavailable | available only when matching PDB is loaded |
 | SRC-004 | full SASS opcodes | Standard product declares Pro requirement | unavailable | no license bypass |
-| ANA-001 | range instruction mix | 56-category GBuffer and 52-category Deferred | verified | exact range scope, samples/instructions/stalls |
+| ANA-001 | range instruction mix | frozen oracle has 56-category GBuffer and 52-category Deferred; cold Viewer model is present but empty | conditional / not-loaded | exact range scope when available; otherwise explicit `trace.range_instruction_mix_not_loaded`, never successful empty data |
 | ANA-002 | Trace Analysis | 30 per-frame models with top issues | verified | explicit pass seed, target-model barrier, paging |
 | CNT-001 | counter catalog/values | 226 ranges by 646 counters | verified | duplicate occurrences and safe trace-copy cleanup |
 | SCP-001 | pass/marker PC sampling | stable on tested ranges | verified | only proven range grains |

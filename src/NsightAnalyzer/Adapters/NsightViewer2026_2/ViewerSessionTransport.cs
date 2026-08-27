@@ -44,7 +44,8 @@ internal static class ViewerSessionTransport
         string runDirectory,
         string outputPath,
         string requestId,
-        int timeoutMs)
+        int timeoutMs,
+        string cachePolicy)
     {
         var stopwatch = Stopwatch.StartNew();
         string sessionDirectory;
@@ -112,6 +113,7 @@ internal static class ViewerSessionTransport
                     reportId = artifact.ReportId,
                     mode,
                     expectedSchema,
+                    cachePolicy,
                     outputPath,
                     settings,
                 });

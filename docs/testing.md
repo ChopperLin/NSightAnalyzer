@@ -44,8 +44,9 @@ and confirm the oracle counts above still hold.
 - shader c709 returns 3,592 samples, 24 warps, 30 registers, 14 live registers, 544 static
   instructions, and 1,501 Long Scoreboard samples;
 - its source projection contains 480 DXIL rows and 242 SASS address rows.
-- range Instruction Mix contains 56 categories; pipe `FMA`, family `FP32 Math` has 61,179
-  instructions and 10,343 samples for the tested GBuffer range;
+- the frozen range Instruction Mix oracle contains 56 categories; pipe `FMA`, family `FP32 Math`
+  has 61,179 instructions and 10,343 samples for the tested GBuffer range. A fresh live Viewer can
+  instead report `trace.range_instruction_mix_not_loaded`; that state must never become empty rows;
 - built-in export contains 226 ranges and 646 counters, removes its generated trace copy, and
   reports GBuffer PS register allocation 62.7392% versus Warp Metrics 62.739219%.
 
@@ -70,6 +71,25 @@ closure. Duplicate names remain distinct. Unknown properties and invalid bounds 
 Every scoped atom verifies the final observed EventKey equals the requested key. A stable metric
 snapshot under the wrong selection is a failure.
 
+The Viewer-process shader cache is tested as a semantic optimization, not call-order state. The
+first exact request must produce a complete/stable/non-truncated model before admission. Repeating
+that request must return the same projected value hash; alternating GBuffer (1773),
+DeferredLighting (3901), then GBuffer again must use distinct keys and restore the original GBuffer
+hash. Every hit also records equal target/current event paths. Metric, Instruction Mix, action,
+timeout, error, and artifact-writing requests remain misses.
+
+Probe 0.50 real timings on the single-frame fixture: a fresh-session GBuffer shader request took
+16.07 s, including report open; already-open uncached GBuffer/Deferred requests were 9.18-10.17 s;
+cache hits were 1.21-1.34 s. `inspect-pass` took 16.91 s from a fresh Viewer and 3.02 s on repeat.
+The GBuffer and Deferred projected page hashes remained stable across G/D/G switching.
+
+Probe 0.51 adds compact Agent entry points. Warm `find-ranges --grain marker --limit 20` took
+2.10 s, visited all 4,951 events once, and returned 10.4 KB including shared ancestor context. A
+name-filtered three-candidate result was 3.6 KB. `trace.range-metric-catalog` returned all 88 tables
+in 1.88 s and 22.4 KB; every raw metric export was header-only and carried no `nodes`. The first
+singular shader profile took 9.23 s to establish the shader snapshot in an already-open Viewer, then
+1.25 s / 3.9 KB from cache while re-verifying the exact EventKey.
+
 Range metrics, range shaders, and range instruction mix additionally verify scope grain. The Viewer
 reports an event range as a single command index or an inclusive span; only a span is a pass/marker
 range. A single-command scope returns `unsupported` / `trace.unsupported_draw_scope` (SCP-002)
@@ -90,10 +110,13 @@ Every real run verifies:
 
 ## Wrapper gates
 
+- `find-ranges` traverses the Event List once, returns a bounded duration-ordered page, preserves
+  true EventKeys, and verifies an optional exact ancestor before applying strict-descendant scope;
 - `resolve-event` scans stable preorder pages, requires an explicit occurrence, and never chooses
   an ambiguous same-name range implicitly;
-- `inspect-pass` closes every source page, verifies every returned scope against the exact event,
-  and reports shader truncation plus sample coverage;
+- `inspect-pass` closes every available source page, verifies every returned scope against the
+  exact event, reports shader truncation plus sample coverage, and marks range Instruction Mix as
+  explicitly not requested; the independent atom owns that stateful fact family;
 - `compare-ranges` joins metrics by table/row/column name plus occurrence, retains source ordinals
   on both sides, preserves target-only/baseline-only, and computes deltas only for comparable values;
 - `compare-frame-timing` requires explicit target/baseline frame EventKeys, frame indexes, Trace

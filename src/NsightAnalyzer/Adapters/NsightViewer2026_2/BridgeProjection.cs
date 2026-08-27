@@ -59,10 +59,11 @@ internal sealed class BridgeScopeUnsupportedException : Exception
 
 internal static class BridgeProjection
 {
-    public static TraceEventsValue ProjectEvents(
-        JsonElement root,
-        int requestedCursor,
-        int requestedLimit)
+    private static readonly Regex DurationPattern = new(
+        @"^\s*(?<bound><)?\s*(?<value>\d+(?:\.\d+)?)\s*(?<unit>ns|us|µs|μs|ms|s)\s*$",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
+
+    private static JsonElement RequireSingleEventExport(JsonElement root)
     {
         var views = RequiredArray(root, "eventViews");
         if (views.GetArrayLength() != 1)
@@ -70,12 +71,50 @@ internal static class BridgeProjection
             throw new BridgeSchemaException(
                 $"Expected one Event List view, observed {views.GetArrayLength()}.");
         }
-
         var export = RequiredObject(views[0], "export");
         if (!RequiredBoolean(export, "totalCountExact"))
         {
             throw new BridgeSchemaException("The Event List total count is not exact.");
         }
+        return export;
+    }
+
+    private static List<EventFact> ProjectEventNodes(JsonElement nodes)
+    {
+        var items = new List<EventFact>(nodes.GetArrayLength());
+        foreach (var node in nodes.EnumerateArray())
+        {
+            items.Add(ProjectEventNode(node));
+        }
+        return items;
+    }
+
+    private static EventFact ProjectEventNode(JsonElement node)
+    {
+        var key = new EventKey(
+            RequiredInt32(node, "ordinal"),
+            RequiredInt32Array(node, "path"),
+            CellText(node, 1),
+            CellText(node, 0) ?? string.Empty);
+        return new(
+            key,
+            RequiredInt32(node, "depth"),
+            RequiredInt32(node, "childCount"),
+            EmptyToNull(CellText(node, 4)),
+            EmptyToNull(CellText(node, 5)),
+            EmptyToNull(CellText(node, 6)),
+            EmptyToNull(CellText(node, 7)),
+            EmptyToNull(CellText(node, 8)),
+            EmptyToNull(CellText(node, 9)),
+            EmptyToNull(CellText(node, 10)));
+    }
+
+    public static TraceEventsValue ProjectEvents(
+        JsonElement root,
+        int requestedCursor,
+        int requestedLimit)
+    {
+        var export = RequireSingleEventExport(root);
         var offset = RequiredInt32(export, "offset");
         var rawLimit = RequiredInt32(export, "limit");
         if (offset != requestedCursor || rawLimit != requestedLimit)
@@ -85,28 +124,7 @@ internal static class BridgeProjection
                 $"observed {offset}/{rawLimit}.");
         }
 
-        var nodes = RequiredArray(export, "nodes");
-        var items = new List<EventFact>(nodes.GetArrayLength());
-        foreach (var node in nodes.EnumerateArray())
-        {
-            var description = CellText(node, 0) ?? string.Empty;
-            var key = new EventKey(
-                RequiredInt32(node, "ordinal"),
-                RequiredInt32Array(node, "path"),
-                CellText(node, 1),
-                description);
-            items.Add(new(
-                key,
-                RequiredInt32(node, "depth"),
-                RequiredInt32(node, "childCount"),
-                EmptyToNull(CellText(node, 4)),
-                EmptyToNull(CellText(node, 5)),
-                EmptyToNull(CellText(node, 6)),
-                EmptyToNull(CellText(node, 7)),
-                EmptyToNull(CellText(node, 8)),
-                EmptyToNull(CellText(node, 9)),
-                EmptyToNull(CellText(node, 10))));
-        }
+        var items = ProjectEventNodes(RequiredArray(export, "nodes"));
 
         var total = RequiredInt32(export, "totalCount");
         var returned = RequiredInt32(export, "returnedCount");
@@ -127,6 +145,73 @@ internal static class BridgeProjection
             next));
     }
 
+    public static EventNameMatchesValue ProjectEventNameMatches(
+        JsonElement root,
+        int requestedCursor,
+        int requestedLimit,
+        string requestedName,
+        bool contains)
+    {
+        var export = RequireSingleEventExport(root);
+        var offset = RequiredInt32(export, "offset");
+        var rawLimit = RequiredInt32(export, "limit");
+        if (offset != requestedCursor || rawLimit != requestedLimit)
+        {
+            throw new BridgeSchemaException(
+                $"Event name page mismatch: requested {requestedCursor}/{requestedLimit}, " +
+                $"observed {offset}/{rawLimit}.");
+        }
+        if (RequiredInt32(export, "nameColumn") != 0 ||
+            RequiredString(export, "nameMode") != "include" ||
+            !RequiredBoolean(export, "includeAncestors"))
+        {
+            throw new BridgeSchemaException(
+                "The event name projection requires the bridge name filter with ancestors.");
+        }
+        var appliedName = contains
+            ? OptionalString(export, "nameContains")
+            : OptionalString(export, "nameExact");
+        if (appliedName != requestedName)
+        {
+            throw new BridgeSchemaException(
+                "The bridge applied a different event name than requested.");
+        }
+
+        var matches = ProjectEventNodes(RequiredArray(export, "nodes"));
+        var ancestors = ProjectEventNodes(RequiredArray(export, "ancestorNodes"));
+        if (ancestors.Count != RequiredInt32(export, "ancestorCount"))
+        {
+            throw new BridgeSchemaException(
+                "Event ancestorCount does not match the projected ancestor nodes.");
+        }
+        var seen = new HashSet<int>();
+        var previous = -1;
+        foreach (var ancestor in ancestors)
+        {
+            var ordinal = ancestor.Key.PreorderOrdinal!.Value;
+            if (!seen.Add(ordinal) || ordinal <= previous)
+            {
+                throw new BridgeSchemaException(
+                    "Event ancestors are not a strictly increasing distinct set.");
+            }
+            previous = ordinal;
+        }
+
+        var total = RequiredInt32(export, "totalCount");
+        var returned = RequiredInt32(export, "returnedCount");
+        if (returned != matches.Count)
+        {
+            throw new BridgeSchemaException(
+                $"Event returnedCount {returned} does not match {matches.Count} projected nodes.");
+        }
+        var hasMore = RequiredBoolean(export, "hasMore");
+        int? next = hasMore ? checked(offset + returned) : null;
+        return new(
+            RequiredInt32(export, "visitedCount"),
+            ancestors,
+            new(matches, offset, rawLimit, total, returned, hasMore, next));
+    }
+
     /// <summary>
     /// Projects the range-grain skeleton. The bridge filters rows; this keeps
     /// each row's true preorder ordinal, so an outline ordinal addresses the
@@ -135,20 +220,10 @@ internal static class BridgeProjection
     public static TraceOutlineValue ProjectOutline(
         JsonElement root,
         int requestedCursor,
-        int requestedLimit)
+        int requestedLimit,
+        string requestedGrain)
     {
-        var views = RequiredArray(root, "eventViews");
-        if (views.GetArrayLength() != 1)
-        {
-            throw new BridgeSchemaException(
-                $"Expected one Event List view, observed {views.GetArrayLength()}.");
-        }
-
-        var export = RequiredObject(views[0], "export");
-        if (!RequiredBoolean(export, "totalCountExact"))
-        {
-            throw new BridgeSchemaException("The Event List total count is not exact.");
-        }
+        var export = RequireSingleEventExport(root);
         var offset = RequiredInt32(export, "offset");
         var rawLimit = RequiredInt32(export, "limit");
         if (offset != requestedCursor || rawLimit != requestedLimit)
@@ -161,6 +236,20 @@ internal static class BridgeProjection
         {
             throw new BridgeSchemaException(
                 "The outline projection requires the bridge event-range filter.");
+        }
+        var expectedNameMode = requestedGrain switch
+        {
+            EventGrain.Container => "include",
+            EventGrain.Marker => "exclude",
+            _ => null,
+        };
+        if (expectedNameMode is not null &&
+            (RequiredInt32(export, "nameColumn") != 0 ||
+                RequiredString(export, "nameMode") != expectedNameMode))
+        {
+            throw new BridgeSchemaException(
+                $"The outline projection requested grain '{requestedGrain}' but " +
+                "the bridge did not apply the matching name filter.");
         }
 
         var nodes = RequiredArray(export, "nodes");
@@ -179,11 +268,18 @@ internal static class BridgeProjection
                 RequiredInt32Array(node, "path"),
                 eventRange,
                 description);
+            var grain = EventGrain.Classify(description);
+            if (!EventGrain.IsSelected(requestedGrain, description))
+            {
+                throw new BridgeSchemaException(
+                    $"The bridge returned a '{grain}' row under grain " +
+                    $"'{requestedGrain}'.");
+            }
             items.Add(new(
                 key,
                 RequiredInt32(node, "depth"),
                 RequiredInt32(node, "childCount"),
-                OutlineGrain(description),
+                grain,
                 EmptyToNull(CellText(node, 8)),
                 EmptyToNull(CellText(node, 9)),
                 EmptyToNull(CellText(node, 10))));
@@ -201,6 +297,185 @@ internal static class BridgeProjection
         return new(
             RequiredInt32(export, "visitedCount"),
             new(items, offset, rawLimit, total, returned, hasMore, next));
+    }
+
+    public static RangeCandidatesValue ProjectRangeCandidates(
+        JsonElement root,
+        int requestedCursor,
+        int requestedLimit,
+        string? requestedNameContains,
+        string requestedGrain,
+        int? requestedWithinOrdinal)
+    {
+        var export = RequireSingleEventExport(root);
+        var offset = RequiredInt32(export, "offset");
+        var rawLimit = RequiredInt32(export, "limit");
+        if (offset != requestedCursor || rawLimit != requestedLimit)
+        {
+            throw new BridgeSchemaException(
+                $"Range candidate page mismatch: requested {requestedCursor}/{requestedLimit}, " +
+                $"observed {offset}/{rawLimit}.");
+        }
+        if (RequiredInt32(export, "filterColumn") != 1 ||
+            RequiredInt32(export, "sortDurationColumn") != 10 ||
+            !RequiredBoolean(export, "includeAncestors"))
+        {
+            throw new BridgeSchemaException(
+                "Range candidates require the event-range filter, duration ordering and ancestors.");
+        }
+
+        if (requestedNameContains is null)
+        {
+            if (RequiredInt32(export, "nameColumn") != -1)
+            {
+                throw new BridgeSchemaException(
+                    "The bridge applied an unexpected range-name filter.");
+            }
+        }
+        else if (RequiredInt32(export, "nameColumn") != 0 ||
+            OptionalString(export, "nameContains") != requestedNameContains)
+        {
+            throw new BridgeSchemaException(
+                "The bridge applied a different range-name substring than requested.");
+        }
+
+        var expectedGrainMode = requestedGrain switch
+        {
+            EventGrain.Container => "include",
+            EventGrain.Marker => "exclude",
+            _ => null,
+        };
+        if (expectedGrainMode is null)
+        {
+            if (RequiredInt32(export, "grainColumn") != -1)
+            {
+                throw new BridgeSchemaException(
+                    "The bridge applied an unexpected range-grain filter.");
+            }
+        }
+        else if (RequiredInt32(export, "grainColumn") != 0 ||
+            RequiredString(export, "grainMode") != expectedGrainMode ||
+            !RequiredStringArray(export, "grainPrefixes")
+                .SequenceEqual(EventGrain.ContainerPrefixes) ||
+            !RequiredStringArray(export, "grainSubstrings")
+                .SequenceEqual(EventGrain.ContainerSubstrings))
+        {
+            throw new BridgeSchemaException(
+                $"The bridge applied a different '{requestedGrain}' grain filter.");
+        }
+
+        var rawWithin = RequiredInt32(export, "withinOrdinal");
+        EventFact? withinScope = null;
+        if (requestedWithinOrdinal is null)
+        {
+            if (rawWithin != -1)
+            {
+                throw new BridgeSchemaException(
+                    "The bridge applied an unexpected ancestor scope.");
+            }
+        }
+        else
+        {
+            if (rawWithin != requestedWithinOrdinal.Value ||
+                !RequiredBoolean(export, "withinFound"))
+            {
+                throw new BridgeFactNotFoundException(
+                    "wrapper.within_event_not_found",
+                    "The exact ancestor preorder ordinal was not found.");
+            }
+            withinScope = ProjectEventNode(RequiredObject(export, "withinNode"));
+            if (withinScope.Key.PreorderOrdinal != requestedWithinOrdinal.Value)
+            {
+                throw new BridgeSchemaException(
+                    "The returned ancestor scope differs from the request.");
+            }
+        }
+
+        var nodes = RequiredArray(export, "nodes");
+        var candidates = new List<FindRangeCandidate>(nodes.GetArrayLength());
+        foreach (var node in nodes.EnumerateArray())
+        {
+            var eventFact = ProjectEventNode(node);
+            var eventRange = eventFact.Key.EventRange;
+            if (eventRange is null || !eventRange.Contains('-', StringComparison.Ordinal))
+            {
+                throw new BridgeSchemaException(
+                    "The range finder returned a single-command event.");
+            }
+            if (requestedNameContains is not null &&
+                !eventFact.Key.Description.Contains(
+                    requestedNameContains, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new BridgeSchemaException(
+                    "The range finder returned a name outside the requested substring.");
+            }
+            if (!EventGrain.IsSelected(requestedGrain, eventFact.Key.Description))
+            {
+                throw new BridgeSchemaException(
+                    "The range finder returned a row outside the requested grain.");
+            }
+            if (withinScope is not null &&
+                (eventFact.Key.TreePath.Count <= withinScope.Key.TreePath.Count ||
+                    !eventFact.Key.TreePath.Take(withinScope.Key.TreePath.Count)
+                        .SequenceEqual(withinScope.Key.TreePath)))
+            {
+                throw new BridgeSchemaException(
+                    "The range finder returned a row outside the requested ancestor.");
+            }
+
+            candidates.Add(new(
+                new(
+                    eventFact.Key,
+                    eventFact.Depth,
+                    eventFact.ChildCount,
+                    EventGrain.Classify(eventFact.Key.Description),
+                    eventFact.Start,
+                    eventFact.End,
+                    eventFact.Duration),
+                ParseDuration(eventFact.Duration)));
+        }
+
+        for (var index = 1; index < candidates.Count; index++)
+        {
+            var previous = candidates[index - 1];
+            var current = candidates[index];
+            if (CompareDurationOrder(previous, current) > 0)
+            {
+                throw new BridgeSchemaException(
+                    "Range candidates are not ordered by duration descending then preorder ordinal.");
+            }
+        }
+
+        var rawAncestors = ProjectEventNodes(RequiredArray(export, "ancestorNodes"));
+        if (rawAncestors.Count != RequiredInt32(export, "ancestorCount") ||
+            rawAncestors.Select(item => item.Key.PreorderOrdinal).Distinct().Count() != rawAncestors.Count ||
+            !rawAncestors.Select(item => item.Key.PreorderOrdinal!.Value)
+                .SequenceEqual(rawAncestors.Select(item => item.Key.PreorderOrdinal!.Value).Order()))
+        {
+            throw new BridgeSchemaException(
+                "Range candidate ancestors are not a strictly increasing distinct set.");
+        }
+        var ancestors = withinScope is null
+            ? rawAncestors
+            : rawAncestors.Where(item =>
+                item.Key.TreePath.Count > withinScope.Key.TreePath.Count &&
+                item.Key.TreePath.Take(withinScope.Key.TreePath.Count)
+                    .SequenceEqual(withinScope.Key.TreePath)).ToList();
+
+        var total = RequiredInt32(export, "totalCount");
+        var returned = RequiredInt32(export, "returnedCount");
+        if (returned != candidates.Count)
+        {
+            throw new BridgeSchemaException(
+                "Range candidate returnedCount does not match the projected rows.");
+        }
+        var hasMore = RequiredBoolean(export, "hasMore");
+        int? next = hasMore ? checked(offset + returned) : null;
+        return new(
+            RequiredInt32(export, "visitedCount"),
+            withinScope,
+            ancestors,
+            new(candidates, offset, rawLimit, total, returned, hasMore, next));
     }
 
     public static EventParametersValue ProjectEventParameters(
@@ -429,6 +704,89 @@ internal static class BridgeProjection
                 nextCursor));
     }
 
+    public static RangeMetricCatalogValue ProjectRangeMetricCatalog(
+        JsonElement root,
+        int? requestedOrdinal,
+        string? requestedPath,
+        int cursor,
+        int limit)
+    {
+        var scope = ProjectVerifiedScope(root, requestedOrdinal, requestedPath);
+        RequireRangeGrainScope(scope, "Range metric catalog");
+        var views = RequiredArray(root, "metricViews");
+        var tableOccurrences = new Dictionary<string, int>(StringComparer.Ordinal);
+        var tables = new List<RangeMetricTableFact>(views.GetArrayLength());
+        var sourceOrdinal = 0;
+        foreach (var view in views.EnumerateArray())
+        {
+            var export = RequiredObject(view, "export");
+            if (!RequiredBoolean(export, "catalogOnly") ||
+                !RequiredBoolean(export, "totalCountExact") ||
+                RequiredBoolean(export, "truncated"))
+            {
+                throw new BridgeSchemaException(
+                    "The Warp Metrics catalog projection was not header-only and complete.");
+            }
+            var headers = HeadersByColumn(export);
+            if (!headers.TryGetValue(0, out var tableName) ||
+                string.IsNullOrWhiteSpace(tableName))
+            {
+                throw new BridgeSchemaException(
+                    "A Warp Metrics catalog table has no semantic name.");
+            }
+            var tableOccurrence = tableOccurrences.GetValueOrDefault(tableName);
+            tableOccurrences[tableName] = tableOccurrence + 1;
+            var headerOccurrences = OccurrencesByColumn(headers);
+            var columns = headers
+                .Where(pair => pair.Key > 0)
+                .OrderBy(pair => pair.Key)
+                .Select(pair => new RangeMetricColumnFact(
+                    pair.Key,
+                    pair.Value,
+                    headerOccurrences[pair.Key],
+                    UnitFromHeader(pair.Value)))
+                .ToArray();
+            var rowCount = RequiredInt32(export, "rowCount");
+            if (RequiredInt32(export, "columnCount") != headers.Count)
+            {
+                throw new BridgeSchemaException(
+                    "A Warp Metrics catalog header count does not match columnCount.");
+            }
+            tables.Add(new(
+                tableName,
+                tableOccurrence,
+                sourceOrdinal++,
+                rowCount,
+                rowCount == 0 ? "empty" : "available",
+                columns));
+        }
+
+        tables.Sort((left, right) =>
+        {
+            var name = string.CompareOrdinal(left.Name, right.Name);
+            return name != 0
+                ? name
+                : left.NameOccurrence.CompareTo(right.NameOccurrence);
+        });
+        var total = tables.Count;
+        RangeMetricTableFact[] pageItems = cursor >= total
+            ? []
+            : tables.Skip(cursor).Take(limit).ToArray();
+        int? next = cursor + pageItems.Length < total
+            ? cursor + pageItems.Length
+            : null;
+        return new(
+            scope,
+            new(
+                pageItems,
+                cursor,
+                limit,
+                total,
+                pageItems.Length,
+                next is not null,
+                next));
+    }
+
     public static RangeShadersValue ProjectRangeShaders(
         JsonElement root,
         int? requestedOrdinal,
@@ -571,6 +929,44 @@ internal static class BridgeProjection
                 next));
     }
 
+    public static ShaderProfileValue ProjectShaderProfile(
+        JsonElement root,
+        int? requestedOrdinal,
+        string? requestedPath,
+        string requestedStage,
+        string requestedHash,
+        int requestedHashOccurrence)
+    {
+        var inventory = ProjectRangeShaders(
+            root,
+            requestedOrdinal,
+            requestedPath,
+            requestedHash,
+            requestedHashOccurrence,
+            0,
+            int.MaxValue);
+        var matches = inventory.Shaders.Items
+            .Where(item =>
+                item.Key.Stage.Equals(
+                    requestedStage, StringComparison.OrdinalIgnoreCase) &&
+                item.Key.Hash?.Equals(
+                    requestedHash, StringComparison.OrdinalIgnoreCase) == true &&
+                item.Key.HashOccurrence == requestedHashOccurrence)
+            .ToArray();
+        if (matches.Length == 0)
+        {
+            throw new BridgeFactNotFoundException(
+                "trace.shader_not_found",
+                "The exact shader stage/hash/occurrence was not found in the selected range.");
+        }
+        if (matches.Length != 1)
+        {
+            throw new BridgeSchemaException(
+                "The exact ShaderKey matched more than one shader row.");
+        }
+        return new(inventory.Scope, matches[0]);
+    }
+
     public static RangeInstructionMixValue ProjectRangeInstructionMix(
         JsonElement root,
         int? requestedOrdinal,
@@ -585,6 +981,14 @@ internal static class BridgeProjection
             "NV::ShaderProfiler::UI::InstructionMixModel",
             "range instruction mix");
         var export = RequiredObject(mixModel, "export");
+        if (export.TryGetProperty("emptyModel", out _) &&
+            RequiredBoolean(export, "emptyModel"))
+        {
+            throw new BridgeFactUnavailableException(
+                "trace.range_instruction_mix_not_loaded",
+                "The Viewer did not load range Instruction Mix rows for the exact selected scope.",
+                "The model was present but empty; this state is not accepted as a successful empty fact set.");
+        }
         ValidateCompleteModel(export, "Range instruction mix");
         var headers = HeadersByColumn(export);
         var expectedHeaders = new[]
@@ -1456,22 +1860,6 @@ internal static class BridgeProjection
             "with no matching class.");
     }
 
-    private static string OutlineGrain(string description) =>
-        description.StartsWith("ID3D12", StringComparison.Ordinal) ||
-        description.StartsWith("ExecuteCommandLists", StringComparison.Ordinal) ||
-        description.EndsWith("CommandQueue", StringComparison.Ordinal) ||
-        description.Contains("CommandQueue (", StringComparison.Ordinal) ||
-        D3D12CallPrefixes.Any(prefix =>
-            description.StartsWith(prefix, StringComparison.Ordinal))
-            ? "container"
-            : "marker";
-
-    private static readonly string[] D3D12CallPrefixes =
-    [
-        "Draw", "Dispatch", "Clear", "Copy", "Resolve", "Set", "Begin", "End",
-        "ResourceBarrier", "Present", "IASet", "OMSet", "RSSet", "ExecuteIndirect",
-    ];
-
     private static void ValidateCompleteModel(JsonElement export, string name)    {
         if (!RequiredBoolean(export, "totalCountExact"))
         {
@@ -1749,6 +2137,61 @@ internal static class BridgeProjection
         return null;
     }
 
+    private static DisplayDurationValue ParseDuration(string? display)
+    {
+        if (string.IsNullOrWhiteSpace(display))
+        {
+            return new(display, null, "absent");
+        }
+        var match = DurationPattern.Match(display);
+        if (!match.Success || !decimal.TryParse(
+                match.Groups["value"].Value,
+                NumberStyles.Float,
+                CultureInfo.InvariantCulture,
+                out var value))
+        {
+            return new(display, null, "unparsedDisplay");
+        }
+
+        var milliseconds = match.Groups["unit"].Value.ToLowerInvariant() switch
+        {
+            "ns" => value / 1_000_000m,
+            "us" or "µs" or "μs" => value / 1_000m,
+            "ms" => value,
+            "s" => value * 1_000m,
+            _ => throw new InvalidOperationException("Unreachable duration unit."),
+        };
+        return new(
+            display,
+            milliseconds,
+            match.Groups["bound"].Success
+                ? "upperBoundDisplay"
+                : "parsedDisplay");
+    }
+
+    private static int CompareDurationOrder(
+        FindRangeCandidate left,
+        FindRangeCandidate right)
+    {
+        var leftValid = left.Duration.Milliseconds is not null;
+        var rightValid = right.Duration.Milliseconds is not null;
+        if (leftValid != rightValid)
+        {
+            return leftValid ? -1 : 1;
+        }
+        if (leftValid)
+        {
+            var duration = right.Duration.Milliseconds!.Value.CompareTo(
+                left.Duration.Milliseconds!.Value);
+            if (duration != 0)
+            {
+                return duration;
+            }
+        }
+        return left.Range.Key.PreorderOrdinal!.Value.CompareTo(
+            right.Range.Key.PreorderOrdinal!.Value);
+    }
+
     private static string? EmptyToNull(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value;
 
@@ -1766,6 +2209,24 @@ internal static class BridgeProjection
         return value;
     }
 
+    private static IReadOnlyList<string> RequiredStringArray(
+        JsonElement parent,
+        string name)
+    {
+        var array = RequiredArray(parent, name);
+        var result = new List<string>(array.GetArrayLength());
+        foreach (var value in array.EnumerateArray())
+        {
+            if (value.ValueKind != JsonValueKind.String)
+            {
+                throw new BridgeSchemaException(
+                    $"Required string array '{name}' contains a non-string value.");
+            }
+            result.Add(value.GetString()!);
+        }
+        return result;
+    }
+
     private static JsonElement RequiredArray(JsonElement parent, string name)
     {
         if (!parent.TryGetProperty(name, out var value) ||
@@ -1778,6 +2239,22 @@ internal static class BridgeProjection
 
     private static JsonElement OptionalProperty(JsonElement parent, string name) =>
         parent.TryGetProperty(name, out var value) ? value : default;
+
+    private static string? OptionalString(JsonElement parent, string name)
+    {
+        if (!parent.TryGetProperty(name, out var value) ||
+            value.ValueKind == JsonValueKind.Null ||
+            value.ValueKind == JsonValueKind.Undefined)
+        {
+            return null;
+        }
+        if (value.ValueKind != JsonValueKind.String)
+        {
+            throw new BridgeSchemaException(
+                $"Property '{name}' is not a string.");
+        }
+        return value.GetString();
+    }
 
     private static string RequiredString(JsonElement parent, string name)
     {

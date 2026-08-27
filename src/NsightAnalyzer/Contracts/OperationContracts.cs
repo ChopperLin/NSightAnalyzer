@@ -1,4 +1,4 @@
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace NsightAnalyzer.Contracts;
 
@@ -113,6 +113,21 @@ public static class ContractLimits
     public const int MaximumResponseBytes = 1024 * 1024;
     public const int MaximumTimeoutMs = 600_000;
     public const int MaximumPageLimit = 500;
+
+    /// <summary>
+    /// Page bound for shader facts. One shader row carries its instruction mix
+    /// and stall reasons, so it is an order of magnitude larger than any other
+    /// row: a 500-row page of the widest observed rows exceeds
+    /// <see cref="MaximumResponseBytes"/> and fails after the work is done.
+    /// Publishing the bound that can actually be served keeps the schema
+    /// honest, at the cost of more pages.
+    /// <para>
+    /// Measured, not estimated: on a real range, 175 rows render to 991 KB and
+    /// 200 rows exceed the bound. 150 is the largest round page that keeps
+    /// meaningful headroom for a range whose rows are wider than that one's.
+    /// </para>
+    /// </summary>
+    public const int MaximumShaderPageLimit = 150;
     public const int MaximumMetricTableFilters = 32;
     public const int MaximumCounterFilters = 32;
     public const int MaximumRangeFilters = 32;

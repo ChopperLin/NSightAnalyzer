@@ -1,4 +1,4 @@
-using NsightAnalyzer.Adapters.NsightViewer2026_2;
+﻿using NsightAnalyzer.Adapters.NsightViewer2026_2;
 using Xunit;
 
 namespace NsightAnalyzer.Tests;
@@ -15,7 +15,7 @@ public sealed class OutlineTests
     {
         using var bridge = FixtureBridge.Load("outline-page0.json");
 
-        var value = BridgeProjection.ProjectOutline(bridge.RootElement, 0, 500);
+        var value = BridgeProjection.ProjectOutline(bridge.RootElement, 0, 500, EventGrain.All);
 
         Assert.Equal(493, value.Ranges.TotalCount);
         Assert.Equal(4951, value.TotalEventCount);
@@ -28,7 +28,7 @@ public sealed class OutlineTests
     {
         using var bridge = FixtureBridge.Load("outline-page0.json");
 
-        var items = BridgeProjection.ProjectOutline(bridge.RootElement, 0, 500).Ranges.Items;
+        var items = BridgeProjection.ProjectOutline(bridge.RootElement, 0, 500, EventGrain.All).Ranges.Items;
 
         // Filtered rows keep their position in the whole tree rather than being
         // renumbered, so an outline ordinal is directly usable as an EventKey.
@@ -43,12 +43,49 @@ public sealed class OutlineTests
     {
         using var bridge = FixtureBridge.Load("outline-page0.json");
 
-        var items = BridgeProjection.ProjectOutline(bridge.RootElement, 0, 500).Ranges.Items;
+        var items = BridgeProjection.ProjectOutline(bridge.RootElement, 0, 500, EventGrain.All).Ranges.Items;
 
         Assert.All(items, fact =>
             Assert.True(fact.Grain is "container" or "marker", fact.Grain));
         Assert.Contains(items, fact => fact.Grain == "container");
         Assert.Contains(items, fact => fact.Grain == "marker");
+    }
+
+    [Fact]
+    public void OutlineRefusesAGrainPageTheBridgeDidNotFilter()
+    {
+        // The fixture was captured without a grain filter. Projecting it as a
+        // grain page would report a marker-only total that silently counted
+        // containers too, making every "N of M" the caller derives wrong.
+        using var bridge = FixtureBridge.Load("outline-page0.json");
+
+        Assert.Throws<BridgeSchemaException>(() =>
+            BridgeProjection.ProjectOutline(
+                bridge.RootElement, 0, 500, EventGrain.Marker));
+        Assert.Throws<BridgeSchemaException>(() =>
+            BridgeProjection.ProjectOutline(
+                bridge.RootElement, 0, 500, EventGrain.Container));
+    }
+
+    [Fact]
+    public void GrainClassifierAgreesWithThePushedDownPatterns()
+    {
+        // The bridge filters on these patterns while this classifier labels the
+        // rows that come back. If they disagreed, a grain page would either drop
+        // rows it should keep or be rejected as contaminated, so the shared
+        // vocabulary is the thing under test.
+        using var bridge = FixtureBridge.Load("outline-page0.json");
+        var items = BridgeProjection.ProjectOutline(
+            bridge.RootElement, 0, 500, EventGrain.All).Ranges.Items;
+
+        Assert.All(items, fact =>
+            Assert.Equal(
+                EventGrain.IsContainer(fact.Key.Description)
+                    ? EventGrain.Container
+                    : EventGrain.Marker,
+                fact.Grain));
+        Assert.All(items, fact =>
+            Assert.True(EventGrain.IsSelected(EventGrain.All, fact.Key.Description)));
     }
 
     [Fact]
@@ -59,6 +96,6 @@ public sealed class OutlineTests
         using var bridge = FixtureBridge.Load("events-page0.json");
 
         Assert.Throws<BridgeSchemaException>(() =>
-            BridgeProjection.ProjectOutline(bridge.RootElement, 0, 100));
+            BridgeProjection.ProjectOutline(bridge.RootElement, 0, 100, EventGrain.All));
     }
 }

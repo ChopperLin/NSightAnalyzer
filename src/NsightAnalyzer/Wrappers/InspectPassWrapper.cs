@@ -9,7 +9,8 @@ internal sealed record PassInspectionData(
     int MetricRowCount,
     IReadOnlyList<RangeMetricFact> Metrics,
     IReadOnlyList<RangeShaderFact> Shaders,
-    IReadOnlyList<RangeInstructionMixFact> InstructionMix,
+    IReadOnlyList<RangeInstructionMixFact>? InstructionMix,
+    OperationError? InstructionMixError,
     WrapperContext Context);
 
 internal static class InspectPassWrapper
@@ -28,7 +29,8 @@ internal static class InspectPassWrapper
             viewerPath,
             eventOrdinal,
             metricTables,
-            deadline);
+            includeInstructionMix: false,
+            deadline: deadline);
         if (!inspected.IsSuccess)
         {
             return OperationResult.Failure(inspected.Error!);
@@ -36,6 +38,12 @@ internal static class InspectPassWrapper
 
         var data = inspected.Value!;
         data.Context.AddWarning(WrapperSupport.ShaderSampleWarning);
+        if (data.InstructionMixError is not null)
+        {
+            data.Context.AddWarning(new(
+                "wrapper.instruction_mix_unavailable",
+                "Instruction Mix is unavailable for this pass; complete metrics and shaders are still returned."));
+        }
         var value = Project(data, topShaderCount);
         return OperationResult.Success(
             value,
@@ -48,6 +56,7 @@ internal static class InspectPassWrapper
         string? viewerPath,
         int eventOrdinal,
         IReadOnlyList<string> metricTables,
+        bool includeInstructionMix,
         WrapperDeadline deadline)
     {
         var context = new WrapperContext(deadline);
@@ -62,12 +71,18 @@ internal static class InspectPassWrapper
         }
         var eventFact = eventResult.Value!;
 
-        // Metrics, shader inventory and instruction mix all hang off the same
-        // event selection, so they are read in one Viewer request instead of
-        // three. Each family is still projected and scope-verified separately.
+        // Metrics and the shader inventory hang off the same event selection,
+        // so they are read in one Viewer request. inspect-pass/v1 leaves the
+        // independently stateful Instruction Mix model to its explicit atom;
+        // compare-ranges opts into the strict uncached bundle below.
         var bundleResult = await context.InvokeAtomAsync(
             remainingMs => RangeBundleReader.ReadAsync(
-                tracePath, viewerPath, remainingMs, eventOrdinal, metricTables));
+                tracePath,
+                viewerPath,
+                remainingMs,
+                eventOrdinal,
+                metricTables,
+                includeInstructionMix));
         if (!bundleResult.IsSuccess)
         {
             return WrapperValueResult<PassInspectionData>.Failure(bundleResult.Error!);
@@ -83,7 +98,6 @@ internal static class InspectPassWrapper
                  {
                      (bundle.Metrics.Scope, "trace.range-metrics"),
                      (bundle.Shaders.Scope, "trace.range-shaders"),
-                     (bundle.InstructionMix.Scope, "trace.range-instruction-mix"),
                  })
         {
             if (!WrapperSupport.SameEventKey(eventFact.Key, scope))
@@ -96,8 +110,22 @@ internal static class InspectPassWrapper
 
         var metricsPage = bundle.Metrics.Metrics;
         var shadersPage = bundle.Shaders.Shaders;
-        var instructionPage = bundle.InstructionMix.Instructions;
-        if (metricsPage.Truncated || shadersPage.Truncated || instructionPage.Truncated)
+        var instructionPage = bundle.InstructionMix?.Instructions;
+        if (bundle.InstructionMix is not null &&
+            !WrapperSupport.SameEventKey(eventFact.Key, bundle.InstructionMix.Scope))
+        {
+            return WrapperValueResult<PassInspectionData>.Failure(
+                WrapperSupport.InternalError(
+                    "trace.range-instruction-mix returned a different exact scope."));
+        }
+        if ((bundle.InstructionMix is null) == (bundle.InstructionMixError is null))
+        {
+            return WrapperValueResult<PassInspectionData>.Failure(
+                WrapperSupport.InternalError(
+                    "The range bundle returned an invalid Instruction Mix availability state."));
+        }
+        if (metricsPage.Truncated || shadersPage.Truncated ||
+            instructionPage?.Truncated == true)
         {
             return WrapperValueResult<PassInspectionData>.Failure(
                 WrapperSupport.InternalError(
@@ -106,7 +134,7 @@ internal static class InspectPassWrapper
         context.AddRetrievedFacts(
             metricsPage.ReturnedCount +
             shadersPage.ReturnedCount +
-            instructionPage.ReturnedCount);
+            (instructionPage?.ReturnedCount ?? 0));
 
         return WrapperValueResult<PassInspectionData>.Success(
             new(
@@ -115,7 +143,8 @@ internal static class InspectPassWrapper
                 bundle.Metrics.RowCount,
                 metricsPage.Items,
                 shadersPage.Items,
-                instructionPage.Items,
+                instructionPage?.Items,
+                bundle.InstructionMixError,
                 context));
     }
 
@@ -158,12 +187,36 @@ internal static class InspectPassWrapper
                 coverage,
                 returnedShaders.Length < data.Shaders.Count,
                 returnedShaders),
-            new(
-                data.InstructionMix.Count,
-                data.InstructionMix
-                    .OrderBy(item => item.SourceOrdinal)
-                    .ToArray()),
+            ProjectInstructionMix(data.InstructionMix, data.InstructionMixError),
             data.Context.Stats(scannedEventCount: 1));
+    }
+
+    internal static CompleteRangeInstructionMix ProjectInstructionMix(
+        IReadOnlyList<RangeInstructionMixFact>? items,
+        OperationError? error)
+    {
+        if ((items is null) == (error is null))
+        {
+            throw new InvalidOperationException(
+                "Instruction Mix must be either available or carry one explicit error.");
+        }
+
+        if (items is not null)
+        {
+            return new(
+                "available",
+                items.Count,
+                items.OrderBy(item => item.SourceOrdinal).ToArray(),
+                null);
+        }
+
+        return new(
+            error!.Code == "trace.range_instruction_mix_not_loaded"
+                ? "notLoaded"
+                : "unavailable",
+            null,
+            null,
+            error);
     }
 
     private static async Task<WrapperValueResult<EventFact>> GetExactEventAsync(

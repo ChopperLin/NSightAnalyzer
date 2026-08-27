@@ -1,18 +1,25 @@
-﻿using System.Globalization;
+using System.Globalization;
 using NsightAnalyzer.Adapters.NsightViewer2026_2;
 using NsightAnalyzer.Contracts;
 
 namespace NsightAnalyzer.Operations;
 
-internal static class TraceOutlineOperation
+/// <summary>
+/// Internal objective projection used by find-ranges. The bridge performs one
+/// complete Event List traversal, orders the matched range subsequence, and
+/// returns only the requested page plus its shared ancestors.
+/// </summary>
+internal static class RangeCandidateOperation
 {
     public static async Task<OperationResult> ExecuteAsync(
         string tracePath,
         string? viewerPath,
         int timeoutMs,
+        string? nameContains,
+        string grain,
+        int? withinEventOrdinal,
         int cursor,
-        int limit,
-        string grain)
+        int limit)
     {
         var opened = await TraceArtifactReader.OpenAsync(
             tracePath, "localWeak", timeoutMs);
@@ -26,27 +33,33 @@ internal static class TraceOutlineOperation
             ["EVENT_OFFSET"] = cursor.ToString(CultureInfo.InvariantCulture),
             ["EVENT_LIMIT"] = limit.ToString(CultureInfo.InvariantCulture),
             ["EVENT_INCLUDE_ITEM_DATA"] = "0",
-            ["MAX_DEPTH"] = "64",
-            // The Event List reports column 1 as a single command index for one
-            // command and as an inclusive span for a range. Filtering on the
-            // separator keeps only span rows, so the bridge returns the range
-            // skeleton instead of every draw, barrier and descriptor call.
+            ["EVENT_INCLUDE_ANCESTORS"] = "1",
             ["EVENT_FILTER_COLUMN"] = "1",
             ["EVENT_FILTER_CONTAINS"] = "-",
+            ["EVENT_SORT_DURATION_COLUMN"] = "10",
+            ["MAX_DEPTH"] = "64",
         };
-        // Grain is pushed into the bridge rather than applied after paging.
-        // Filtering here would page over rows the caller discards, so a
-        // 28,000-range report would still cost every page to read one grain.
-        if (grain != EventGrain.All)
+        if (nameContains is not null)
         {
             settings["EVENT_NAME_COLUMN"] = "0";
-            settings["EVENT_NAME_PREFIXES"] =
+            settings["EVENT_NAME_CONTAINS"] = nameContains;
+        }
+        if (grain != EventGrain.All)
+        {
+            settings["EVENT_GRAIN_COLUMN"] = "0";
+            settings["EVENT_GRAIN_PREFIXES"] =
                 string.Join(';', EventGrain.ContainerPrefixes);
-            settings["EVENT_NAME_SUBSTRINGS"] =
+            settings["EVENT_GRAIN_SUBSTRINGS"] =
                 string.Join(';', EventGrain.ContainerSubstrings);
-            settings["EVENT_NAME_MODE"] =
+            settings["EVENT_GRAIN_MODE"] =
                 grain == EventGrain.Container ? "include" : "exclude";
         }
+        if (withinEventOrdinal is not null)
+        {
+            settings["EVENT_WITHIN_ORDINAL"] =
+                withinEventOrdinal.Value.ToString(CultureInfo.InvariantCulture);
+        }
+
         var probe = await ViewerProbeRunner.RunAsync(
             artifact,
             ViewerProbeMode.EventExport,
@@ -62,12 +75,25 @@ internal static class TraceOutlineOperation
         using var run = probe.Run!;
         try
         {
-            var value = BridgeProjection.ProjectOutline(
-                run.Document.RootElement, cursor, limit, grain);
+            var value = BridgeProjection.ProjectRangeCandidates(
+                run.Document.RootElement,
+                cursor,
+                limit,
+                nameContains,
+                grain,
+                withinEventOrdinal);
             return OperationResult.Success(
                 value,
-                [ViewerProbeRunner.CreateProvenance(run, artifact, "trace.outline/v1")],
+                [ViewerProbeRunner.CreateProvenance(
+                    run, artifact, "internal.range-candidates/v1")],
                 OperationSupport.ViewerWarnings);
+        }
+        catch (BridgeFactNotFoundException exception)
+        {
+            return OperationResult.Failure(
+                ErrorCategory.NotFound,
+                exception.Code,
+                exception.Message);
         }
         catch (BridgeSchemaException exception)
         {

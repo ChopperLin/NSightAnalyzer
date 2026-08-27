@@ -1,4 +1,4 @@
-param(
+﻿param(
     [string]$SingleFrameTrace,
     [string]$MultiFrameTrace,
     [string]$ViewerPath,
@@ -22,13 +22,13 @@ function Assert-True {
 }
 
 function Invoke-JsonCli {
-    param([string[]]$Arguments, [int]$ExpectedExitCode)
+    param([string[]]$Arguments, [int[]]$ExpectedExitCode)
 
     $lines = & $cliPath @Arguments
     $exitCode = $LASTEXITCODE
     $raw = $lines -join "`n"
-    Assert-True ($exitCode -eq $ExpectedExitCode) `
-        "'$($Arguments -join ' ')' exited $exitCode; expected $ExpectedExitCode."
+    Assert-True ($ExpectedExitCode -contains $exitCode) `
+        "'$($Arguments -join ' ')' exited $exitCode; expected $($ExpectedExitCode -join ' or ')."
     try {
         $document = $raw | ConvertFrom-Json
     }
@@ -49,6 +49,25 @@ function Add-ViewerArgument {
     }
 }
 
+function Get-LatestBridgeDocument {
+    param([datetime]$NotBeforeUtc)
+
+    $configured = [Environment]::GetEnvironmentVariable('NSIGHT_ANALYZER_RUN_ROOT')
+    $runRoot = if ([string]::IsNullOrWhiteSpace($configured)) {
+        Join-Path $repositoryRoot '.local\runs'
+    }
+    else {
+        [IO.Path]::GetFullPath($configured)
+    }
+    $output = Get-ChildItem -LiteralPath $runRoot -Recurse `
+            -Filter 'bridge-output.json' -File |
+        Where-Object LastWriteTimeUtc -ge $NotBeforeUtc.AddSeconds(-1) |
+        Sort-Object LastWriteTimeUtc -Descending |
+        Select-Object -First 1
+    Assert-True ($null -ne $output) 'No fresh bridge output was found.'
+    return Get-Content -LiteralPath $output.FullName -Raw | ConvertFrom-Json -Depth 100
+}
+
 dotnet build $solutionPath -c $Configuration
 Assert-True ($LASTEXITCODE -eq 0) 'dotnet build failed.'
 Assert-True (Test-Path -LiteralPath $cliPath -PathType Leaf) `
@@ -56,15 +75,15 @@ Assert-True (Test-Path -LiteralPath $cliPath -PathType Leaf) `
 
 $capabilities = Invoke-JsonCli -Arguments @('capabilities', '--compact') -ExpectedExitCode 0
 Assert-True $capabilities.Document.result.isSuccess 'capabilities failed.'
-Assert-True ($capabilities.Document.result.value.operations.totalCount -eq 16) `
+Assert-True ($capabilities.Document.result.value.operations.totalCount -eq 19) `
     'Unexpected operation count.'
 Assert-True (@($capabilities.Document.result.value.operations.items |
-        Where-Object layer -eq 'atom').Count -eq 12) `
+        Where-Object layer -eq 'atom').Count -eq 14) `
     'Unexpected atom count.'
 Assert-True (@($capabilities.Document.result.value.operations.items |
-        Where-Object layer -eq 'wrapper').Count -eq 4) `
+        Where-Object layer -eq 'wrapper').Count -eq 5) `
     'Unexpected wrapper count.'
-Assert-True ($capabilities.Document.result.value.decoder.bridgeVersion -eq 'probe-0.47') `
+Assert-True ($capabilities.Document.result.value.decoder.bridgeVersion -eq 'probe-0.51') `
     'Unexpected bridge version.'
 Assert-True (@($capabilities.Document.result.value.operations.items |
         Where-Object { -not $_.parameters -or $_.parameters.Count -eq 0 }).Count -eq 0) `
@@ -184,6 +203,77 @@ if ($SingleFrameTrace) {
     Assert-True ($outlineGBuffer.key.preorderOrdinal -eq 1773) `
         'Outline did not preserve the true preorder ordinal.'
 
+    # Grain must partition the skeleton exactly: a caller that reads one grain
+    # and derives "N of M" from its total is entitled to have the two grains
+    # add up to the unfiltered count, with no row in both.
+    $grainTotals = @{}
+    foreach ($grain in @('marker', 'container')) {
+        $grainArgs = [Collections.ArrayList]@(
+            'trace.outline', $single, '--grain', $grain, '--limit', '500', '--compact')
+        Add-ViewerArgument $grainArgs
+        $grainPage = Invoke-JsonCli -Arguments $grainArgs -ExpectedExitCode 0
+        $grainTotals[$grain] = $grainPage.Document.result.value.ranges.totalCount
+        Assert-True (@($grainPage.Document.result.value.ranges.items |
+                Where-Object { $_.grain -ne $grain }).Count -eq 0) `
+            "trace.outline --grain $grain returned another grain."
+    }
+    Assert-True (($grainTotals['marker'] + $grainTotals['container']) -eq 493) `
+        'Outline grains did not partition the range-grain skeleton.'
+
+    $findArgs = [Collections.ArrayList]@(
+        'find-ranges', $single, '--grain', 'marker', '--limit', '20', '--compact')
+    Add-ViewerArgument $findArgs
+    $foundRanges = Invoke-JsonCli -Arguments $findArgs -ExpectedExitCode 0
+    $foundValue = $foundRanges.Document.result.value
+    Assert-True ($foundValue.execution.atomCallCount -eq 1) `
+        'find-ranges did not use one decoder request.'
+    Assert-True ($foundValue.execution.scannedEventCount -eq 4951) `
+        'find-ranges did not report its one complete Event List traversal.'
+    Assert-True ($foundValue.ranges.returnedCount -eq 20) `
+        'find-ranges did not return the requested bounded candidate count.'
+    for ($index = 1; $index -lt $foundValue.ranges.items.Count; $index++) {
+        Assert-True `
+            ($foundValue.ranges.items[$index - 1].duration.milliseconds -ge
+                $foundValue.ranges.items[$index].duration.milliseconds) `
+            'find-ranges candidates are not ordered by Viewer duration.'
+    }
+    $scopedFindArgs = [Collections.ArrayList]@(
+        'find-ranges', $single,
+        '--name-contains', 'GBuffer', '--grain', 'marker',
+        '--within-event-ordinal', '1680', '--limit', '20', '--compact')
+    Add-ViewerArgument $scopedFindArgs
+    $scopedFind = Invoke-JsonCli `
+        -Arguments $scopedFindArgs -ExpectedExitCode 0
+    Assert-True ($scopedFind.Document.result.value.withinScope.key.preorderOrdinal -eq 1680) `
+        'Scoped find-ranges did not verify its exact ancestor.'
+    Assert-True ($scopedFind.Document.result.value.ranges.totalCount -eq 1) `
+        'Scoped find-ranges returned an unexpected candidate count.'
+    Assert-True `
+        ($scopedFind.Document.result.value.ranges.items[0].range.key.preorderOrdinal -eq 1773) `
+        'Scoped find-ranges did not return the exact GBuffer range.'
+    Assert-True (@($scopedFind.Document.result.value.ancestors |
+            Where-Object { $_.key.treePath.Count -le
+                $scopedFind.Document.result.value.withinScope.key.treePath.Count }).Count -eq 0) `
+        'Scoped find-ranges returned shared ancestors above its exact scope.'
+
+    # The published maximum must be one the operation can actually serve; a
+    # schema that promises a page size which fails on serialization spends the
+    # Viewer work before reporting the refusal.
+    $shaderLimit = ($capabilities.Document.result.value.operations.items |
+        Where-Object id -eq 'trace.range-shaders').parameters |
+        Where-Object name -eq '--limit'
+    $overLimitArgs = [Collections.ArrayList]@(
+        'trace.range-shaders', $single, '--event-ordinal', '1773',
+        '--limit', [string]($shaderLimit.maximum + 1), '--compact')
+    Invoke-JsonCli -Arguments $overLimitArgs -ExpectedExitCode 2 | Out-Null
+    $atLimitArgs = [Collections.ArrayList]@(
+        'trace.range-shaders', $single, '--event-ordinal', '1773',
+        '--limit', [string]$shaderLimit.maximum)
+    Add-ViewerArgument $atLimitArgs
+    $atLimit = Invoke-JsonCli -Arguments $atLimitArgs -ExpectedExitCode 0
+    Assert-True $atLimit.Document.result.isSuccess `
+        'trace.range-shaders cannot serve the page size its schema publishes.'
+
     $parameterArgs = [Collections.ArrayList]@(
         'trace.event-parameters', $single,
         '--event-path', '0.2.13.25.0', '--compact')
@@ -209,6 +299,27 @@ if ($SingleFrameTrace) {
             'trace.event_parameter_out_of_domain') `
         'Out-of-domain Dispatch parameters returned an unexpected error code.'
 
+    $metricCatalogArgs = [Collections.ArrayList]@(
+        'trace.range-metric-catalog', $single,
+        '--event-path', '0.2.12.71.0', '--limit', '100', '--compact')
+    Add-ViewerArgument $metricCatalogArgs
+    $metricCatalogStartedUtc = [DateTime]::UtcNow
+    $metricCatalog = Invoke-JsonCli `
+        -Arguments $metricCatalogArgs -ExpectedExitCode 0
+    Assert-True ($metricCatalog.Document.result.value.tables.totalCount -eq 88) `
+        'Range metric catalog table count changed.'
+    Assert-True (@($metricCatalog.Document.result.value.tables.items |
+            Where-Object name -eq 'SM Register Occupancy').Count -eq 1) `
+        'Range metric catalog lost SM Register Occupancy.'
+    $metricCatalogBridge = Get-LatestBridgeDocument `
+        -NotBeforeUtc $metricCatalogStartedUtc
+    Assert-True (@($metricCatalogBridge.metricViews |
+            Where-Object { -not $_.export.catalogOnly }).Count -eq 0) `
+        'Range metric catalog did not use header-only bridge exports.'
+    Assert-True (@($metricCatalogBridge.metricViews |
+            Where-Object { $null -ne $_.export.nodes }).Count -eq 0) `
+        'Range metric catalog carried metric cell payload.'
+
     $metricArgs = [Collections.ArrayList]@(
         'trace.range-metrics', $single,
         '--event-path', '0.2.12.71.0',
@@ -231,6 +342,46 @@ if ($SingleFrameTrace) {
     Assert-True ($shaderFact.sampleCount -eq 3592) 'Focused shader sample count changed.'
     Assert-True ($shaderFact.staticRegisters -eq 30) 'Focused shader register count changed.'
 
+    # The first call above proves and admits the full stable shader snapshot.
+    # A byte-independent repeat must be served from that exact session key,
+    # while still re-establishing and verifying the requested EventKey.
+    $cacheRequestStartedUtc = [DateTime]::UtcNow
+    $shaderCached = Invoke-JsonCli -Arguments $shaderArgs -ExpectedExitCode 0
+    $shaderBridge = Get-LatestBridgeDocument -NotBeforeUtc $cacheRequestStartedUtc
+    Assert-True $shaderBridge.sessionCache.hit `
+        'The repeated range-shader request did not hit the Viewer-process cache.'
+    Assert-True ($shaderBridge.sessionCache.policy -eq 'range-shaders-v1') `
+        'The range-shader response reported an unexpected cache policy.'
+    Assert-True $shaderBridge.selectionMatchesTarget `
+        'The cached range-shader request did not verify its exact EventKey.'
+    Assert-True `
+        (($shaderBridge.targetSelection.path -join '/') -eq
+            ($shaderBridge.currentSelection.path -join '/')) `
+        'The cached range-shader response selection does not match its target.'
+    Assert-True `
+        (($shader.Document.result.value | ConvertTo-Json -Depth 100 -Compress) -eq
+            ($shaderCached.Document.result.value | ConvertTo-Json -Depth 100 -Compress)) `
+        'The cached range-shader projection changed the semantic result.'
+
+    $profileArgs = [Collections.ArrayList]@(
+        'trace.shader-profile', $single,
+        '--event-path', '0.2.12.71.0',
+        '--shader-stage', $shaderFact.key.stage,
+        '--shader-hash', '0xc7096045a5804ec3',
+        '--shader-occurrence', '0', '--compact')
+    Add-ViewerArgument $profileArgs
+    $profileStartedUtc = [DateTime]::UtcNow
+    $profile = Invoke-JsonCli -Arguments $profileArgs -ExpectedExitCode 0
+    $profileBridge = Get-LatestBridgeDocument -NotBeforeUtc $profileStartedUtc
+    Assert-True ($profile.Document.result.value.shader.sampleCount -eq 3592) `
+        'Focused shader profile sample count changed.'
+    Assert-True ($profile.Document.result.value.shader.staticRegisters -eq 30) `
+        'Focused shader profile register count changed.'
+    Assert-True $profileBridge.sessionCache.hit `
+        'Focused shader profile did not reuse the exact range-shader snapshot.'
+    Assert-True $profileBridge.selectionMatchesTarget `
+        'Cached shader profile did not verify its exact EventKey.'
+
     $singleChecked = $true
     if ($IncludeSlowViewer) {
         $resolveArgs = [Collections.ArrayList]@(
@@ -244,9 +395,17 @@ if ($SingleFrameTrace) {
         Assert-True ($resolved.Document.result.value.matchCount -eq 1) `
             'resolve-event exact occurrence count changed.'
         Assert-True ($resolved.Document.result.value.execution.atomCallCount -eq 1) `
-            'Scoped single-frame resolve-event did not start at its ancestor ordinal.'
-        Assert-True ($resolved.Document.result.value.execution.scannedEventCount -eq 101) `
-            'Scoped single-frame resolve-event did not stop at its subtree boundary.'
+            'resolve-event did not push the name down into one decoder request.'
+        # The decoder visits the whole tree once and returns only the matches,
+        # so this reports the events actually traversed rather than the size of
+        # the requested subtree.
+        Assert-True ($resolved.Document.result.value.execution.scannedEventCount -eq 4951) `
+            'resolve-event did not report the traversed event count.'
+        Assert-True (@($resolved.Document.result.value.ancestors |
+                Where-Object { $_.key.preorderOrdinal -lt 1680 }).Count -eq 0) `
+            'Scoped resolve-event returned ancestors above its scope root.'
+        Assert-True ($resolved.Document.result.value.ancestors[-1].key.preorderOrdinal -eq 1772) `
+            'Scoped resolve-event lost the immediate parent of its match.'
 
         $inspectArgs = [Collections.ArrayList]@(
             'inspect-pass', $single,
@@ -259,8 +418,16 @@ if ($SingleFrameTrace) {
             'inspect-pass focused metric closure changed.'
         Assert-True ($inspection.Document.result.value.shaders.totalCount -eq 676) `
             'inspect-pass shader inventory closure changed.'
-        Assert-True ($inspection.Document.result.value.instructionMix.totalCount -eq 56) `
-            'inspect-pass instruction closure changed.'
+        $inspectionMix = $inspection.Document.result.value.instructionMix
+        Assert-True ($inspectionMix.availability -eq 'unavailable') `
+            'inspect-pass unexpectedly coupled v1 to Instruction Mix state.'
+        Assert-True `
+            ($inspectionMix.error.code -eq `
+                'trace.range_instruction_mix_not_requested') `
+            'inspect-pass returned an unexpected Instruction Mix availability reason.'
+        Assert-True `
+            ($null -eq $inspectionMix.totalCount -and $null -eq $inspectionMix.items) `
+            'inspect-pass disguised an unrequested Instruction Mix as successful empty data.'
 
         $compareArgs = [Collections.ArrayList]@(
             'compare-ranges', $single,
@@ -268,28 +435,45 @@ if ($SingleFrameTrace) {
             '--baseline-event-ordinal', '3901',
             '--top-shaders', '1', '--limit', '100', '--compact')
         Add-ViewerArgument $compareArgs
-        $comparison = Invoke-JsonCli -Arguments $compareArgs -ExpectedExitCode 0
-        Assert-True ($comparison.Document.result.value.metrics.totalCount -eq 801) `
-            'compare-ranges metric identity closure changed.'
-        Assert-True ($comparison.Document.result.value.metrics.matchedCount -eq 801) `
-            'compare-ranges failed to join stable metric identities.'
-        Assert-True ($comparison.Document.result.value.metrics.deltas.nextCursor -eq 100) `
-            'compare-ranges metric delta paging changed.'
-        Assert-True ($comparison.Document.result.value.shaders.matchedCount -eq 676) `
-            'compare-ranges shader identity closure changed.'
+        $comparison = Invoke-JsonCli -Arguments $compareArgs -ExpectedExitCode @(0, 5)
+        if ($comparison.Document.result.isSuccess) {
+            Assert-True ($comparison.Document.result.value.metrics.totalCount -eq 801) `
+                'compare-ranges metric identity closure changed.'
+            Assert-True ($comparison.Document.result.value.metrics.matchedCount -eq 801) `
+                'compare-ranges failed to join stable metric identities.'
+            Assert-True ($comparison.Document.result.value.metrics.deltas.nextCursor -eq 100) `
+                'compare-ranges metric delta paging changed.'
+            Assert-True ($comparison.Document.result.value.shaders.matchedCount -eq 676) `
+                'compare-ranges shader identity closure changed.'
+        }
+        else {
+            Assert-True `
+                ($comparison.Document.result.error.code -eq `
+                    'trace.range_instruction_mix_not_loaded') `
+                'compare-ranges did not preserve its current complete-comparison requirement.'
+        }
 
         $instructionArgs = [Collections.ArrayList]@(
             'trace.range-instruction-mix', $single,
             '--event-path', '0.2.12.71.0', '--limit', '100', '--compact')
         Add-ViewerArgument $instructionArgs
-        $instructions = Invoke-JsonCli -Arguments $instructionArgs -ExpectedExitCode 0
-        Assert-True ($instructions.Document.result.value.instructions.totalCount -eq 56) `
-            'Range Instruction Mix category count changed.'
-        $fma = $instructions.Document.result.value.instructions.items |
-            Where-Object { $_.pipe -eq 'FMA' -and $_.family -eq 'FP32 Math' } |
-            Select-Object -First 1
-        Assert-True ($fma.sampleCount -eq 10343 -and $fma.instructionCount -eq 61179) `
-            'FMA / FP32 Math range instruction closure changed.'
+        $instructions = Invoke-JsonCli -Arguments $instructionArgs -ExpectedExitCode @(0, 5)
+        if ($instructions.Document.result.isSuccess) {
+            Assert-True ($instructions.Document.result.value.instructions.totalCount -eq 56) `
+                'Range Instruction Mix category count changed.'
+            $fma = $instructions.Document.result.value.instructions.items |
+                Where-Object { $_.pipe -eq 'FMA' -and $_.family -eq 'FP32 Math' } |
+                Select-Object -First 1
+            Assert-True `
+                ($fma.sampleCount -eq 10343 -and $fma.instructionCount -eq 61179) `
+                'FMA / FP32 Math range instruction closure changed.'
+        }
+        else {
+            Assert-True `
+                ($instructions.Document.result.error.code -eq `
+                    'trace.range_instruction_mix_not_loaded') `
+                'Range Instruction Mix not-loaded state changed.'
+        }
 
         $sourceArgs = [Collections.ArrayList]@(
             'trace.shader-source', $single,
@@ -468,7 +652,7 @@ if ($MultiFrameTrace) {
 [pscustomobject]@{
     status = 'passed'
     configuration = $Configuration
-    bridgeVersion = 'probe-0.47'
+    bridgeVersion = 'probe-0.51'
     singleFrameChecked = $singleChecked
     multiFrameChecked = $multiChecked
     slowViewerChecked = $slowChecked

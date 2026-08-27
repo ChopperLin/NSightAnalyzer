@@ -1,4 +1,4 @@
-using NsightAnalyzer.Contracts;
+﻿using NsightAnalyzer.Contracts;
 
 namespace NsightAnalyzer.Cli;
 
@@ -57,6 +57,21 @@ internal static class OperationParameters
         Minimum: 1,
         Maximum: ContractLimits.MaximumPageLimit);
 
+    /// <summary>
+    /// The shader page bound is lower than every other family's. Publishing the
+    /// general maximum here would promise a page size that fails on serialization
+    /// after the Viewer work is already spent.
+    /// </summary>
+    public static OperationParameter ShaderLimit { get; } = new(
+        "--limit",
+        "integer",
+        false,
+        "Maximum shader rows to return in one page. Lower than other families " +
+        "because one shader row carries its instruction mix and stall reasons.",
+        Default: "100",
+        Minimum: 1,
+        Maximum: ContractLimits.MaximumShaderPageLimit);
+
     public static OperationParameter EventOrdinal { get; } = new(
         "--event-ordinal",
         "integer",
@@ -95,14 +110,32 @@ internal static class OperationParameters
         false,
         "Shader hash as 0x followed by 16 hexadecimal digits.");
 
+    public static OperationParameter RequiredShaderHash { get; } = new(
+        "--shader-hash",
+        "string",
+        true,
+        "Shader hash as 0x followed by 16 hexadecimal digits.");
+
+    public static OperationParameter ShaderStage { get; } = new(
+        "--shader-stage",
+        "string",
+        true,
+        "Exact semantic shader stage returned by trace.range-shaders, for example Pixel or Compute.");
+
     public static OperationParameter ShaderOccurrence { get; } = new(
         "--shader-occurrence",
         "integer",
         false,
-        "Zero-based index among shaders sharing the same hash in this range. " +
+        "Zero-based index among shaders sharing the same stage and hash in this range. " +
         "The first occurrence is 0.",
         Default: "0",
         Minimum: 0);
+
+    public static OperationParameter RangeNameContains { get; } = new(
+        "--name-contains",
+        "string",
+        false,
+        "Case-insensitive range-name substring. Omit to consider every selected-grain range.");
 
     public static OperationParameter TopShaders { get; } = new(
         "--top-shaders",

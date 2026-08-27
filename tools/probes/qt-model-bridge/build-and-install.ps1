@@ -80,7 +80,14 @@ function Invoke-Rollback {
         throw "No backup directory at '$backupDirectory'."
     }
     $backup = Get-ChildItem -LiteralPath $backupDirectory -Filter 'solidprobe.*.dll' |
-        Sort-Object LastWriteTime -Descending | Select-Object -First 1
+        # Copy-Item preserves the source DLL's LastWriteTime and the version
+        # segment does not sort chronologically. Extract the timestamp suffix.
+        Sort-Object {
+            if ($_.Name -match '\.(\d{8}-\d{6})\.dll$') {
+                return $Matches[1]
+            }
+            return ''
+        } -Descending | Select-Object -First 1
     if (-not $backup) {
         throw "No solidprobe backup found under '$backupDirectory'."
     }

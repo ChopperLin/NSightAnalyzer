@@ -3,7 +3,7 @@ using NsightAnalyzer.Contracts;
 
 namespace NsightAnalyzer.Operations;
 
-internal static class TraceRangeShadersOperation
+internal static class TraceShaderProfileOperation
 {
     public static async Task<OperationResult> ExecuteAsync(
         string tracePath,
@@ -11,10 +11,9 @@ internal static class TraceRangeShadersOperation
         int timeoutMs,
         int? eventOrdinal,
         string? eventPath,
-        string? shaderHash,
-        int? shaderOccurrence,
-        int cursor,
-        int limit)
+        string shaderStage,
+        string shaderHash,
+        int shaderOccurrence)
     {
         var opened = await TraceArtifactReader.OpenAsync(
             tracePath, "localWeak", timeoutMs);
@@ -23,8 +22,8 @@ internal static class TraceRangeShadersOperation
             return OperationResult.Failure(opened.Error!);
         }
         var artifact = opened.Artifact!;
-        var settings = BridgeSettings(eventOrdinal, eventPath);
-
+        var settings = TraceRangeShadersOperation.BridgeSettings(
+            eventOrdinal, eventPath);
         var probe = await ViewerProbeRunner.RunAsync(
             artifact,
             ViewerProbeMode.SelectionMetricsExport,
@@ -41,20 +40,17 @@ internal static class TraceRangeShadersOperation
         using var run = probe.Run!;
         try
         {
-            var value = BridgeProjection.ProjectRangeShaders(
+            var value = BridgeProjection.ProjectShaderProfile(
                 run.Document.RootElement,
                 eventOrdinal,
                 eventPath,
+                shaderStage,
                 shaderHash,
-                shaderOccurrence,
-                cursor,
-                limit);
+                shaderOccurrence);
             return OperationResult.Success(
                 value,
-                [
-                    ViewerProbeRunner.CreateProvenance(
-                        run, artifact, "trace.range-shaders/v1"),
-                ],
+                [ViewerProbeRunner.CreateProvenance(
+                    run, artifact, "trace.shader-profile/v1")],
                 OperationSupport.ViewerWarnings);
         }
         catch (BridgeFactNotFoundException exception)
@@ -72,32 +68,5 @@ internal static class TraceRangeShadersOperation
         {
             return OperationSupport.ProjectionFailure(exception);
         }
-    }
-
-    internal static Dictionary<string, string> BridgeSettings(
-        int? eventOrdinal,
-        string? eventPath)
-    {
-        var settings = TraceEventParametersOperation.ScopedSettings(
-            eventOrdinal, eventPath);
-        settings["POLL_INTERVAL_MS"] = "200";
-        settings["MODEL_CLASS_MATCH"] =
-            "NV::ShaderProfiler::UI::SampleItemTreeModel";
-        settings["MODEL_OBJECT_MATCH"] = "SampleItemModel";
-        settings["MODEL_MATCH_MODE"] = "exact";
-        settings["MODEL_ATTACHED_VIEW_OBJECT_MATCH"] = "SampleTreeView";
-        settings["MODEL_COLUMNS"] = "0,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,38";
-        settings["MODEL_LIMIT"] = "25000";
-        settings["MODEL_SETTLE_MIN_POLLS"] = "16";
-        settings["ACTIVATE_PANEL"] = "FlatTabPanel_Shader Pipelines";
-        settings["ACTIVATE_PANEL_VIA_BUTTON"] = "1";
-        settings["PANEL_SETTLE_MIN_POLLS"] = "6";
-        settings["COMBO_OBJECT_MATCH"] = "GroupByComboBox";
-        settings["COMBO_MATCH_MODE"] = "exact";
-        settings["COMBO_SELECT_MATCH"] = "Pipeline Object";
-        settings["COMBO_SELECT_MATCH_MODE"] = "exact";
-        settings["COMBO_SELECT_TRIGGER"] = "activated";
-        settings["COMBO_SELECT_SETTLE_MIN_POLLS"] = "12";
-        return settings;
     }
 }

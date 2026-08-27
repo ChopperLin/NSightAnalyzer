@@ -67,6 +67,14 @@ internal static class TraceRangeInstructionMixOperation
         {
             return OperationSupport.ScopeUnsupportedFailure(exception);
         }
+        catch (BridgeFactUnavailableException exception)
+        {
+            return OperationResult.Failure(
+                ErrorCategory.Unavailable,
+                exception.Code,
+                exception.Message,
+                exception.Detail);
+        }
         catch (BridgeSchemaException exception)
         {
             return OperationSupport.ProjectionFailure(exception);

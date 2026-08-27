@@ -28,10 +28,16 @@ internal static class CompareRangesWrapper
             viewerPath,
             targetEventOrdinal,
             metricTables,
-            deadline);
+            includeInstructionMix: true,
+            deadline: deadline);
         if (!targetResult.IsSuccess)
         {
             return OperationResult.Failure(targetResult.Error!);
+        }
+        var target = targetResult.Value!;
+        if (target.InstructionMix is null)
+        {
+            return OperationResult.Failure(target.InstructionMixError!);
         }
 
         var baselineResult = await InspectPassWrapper.InspectCoreAsync(
@@ -39,14 +45,18 @@ internal static class CompareRangesWrapper
             viewerPath,
             baselineEventOrdinal,
             metricTables,
-            deadline);
+            includeInstructionMix: true,
+            deadline: deadline);
         if (!baselineResult.IsSuccess)
         {
             return OperationResult.Failure(baselineResult.Error!);
         }
-
-        var target = targetResult.Value!;
         var baseline = baselineResult.Value!;
+        if (baseline.InstructionMix is null)
+        {
+            return OperationResult.Failure(baseline.InstructionMixError!);
+        }
+
         if (target.Context.SourceIdentity is null ||
             baseline.Context.SourceIdentity is null)
         {

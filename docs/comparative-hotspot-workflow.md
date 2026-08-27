@@ -31,10 +31,12 @@ but it is not causal proof.
         |
     counter catalog/export only for a named missing fact
 
-`inspect-pass` closes range metrics, range shaders, and range instruction mix. Metrics and
-instructions are complete. Shader output is a deterministic sample-count Top-N with total and
-returned sample counts, coverage percentage, and explicit truncation. Samples remain PC-sampling
-attribution candidates, not precise shader GPU time.
+`inspect-pass` closes range metrics and range shaders. Shader output is a deterministic
+sample-count Top-N with total and returned sample counts, coverage percentage, and explicit
+truncation. V1 does not activate the independently stateful range Instruction Mix model; its nested
+section says `trace.range_instruction_mix_not_requested`, and the explicit
+`trace.range-instruction-mix` atom is the opt-in path. Samples remain PC-sampling attribution
+candidates, not precise shader GPU time.
 
 `compare-ranges` joins metric identity by exact table/row/column name and occurrence. Each side
 retains its own source ordinal. Missing on one side remains target-only or baseline-only; it never

@@ -21,6 +21,29 @@ public sealed record ResolveEventValue(
     WrapperExecutionStats Execution,
     string? ResolvedName = null);
 
+public sealed record FindRangesQuery(
+    string? NameContains,
+    string Grain,
+    int? WithinPreorderOrdinal,
+    string Order);
+
+public sealed record FindRangeCandidate(
+    OutlineFact Range,
+    DisplayDurationValue Duration);
+
+public sealed record RangeCandidatesValue(
+    int TotalEventCount,
+    EventFact? WithinScope,
+    IReadOnlyList<EventFact> Ancestors,
+    Page<FindRangeCandidate> Ranges);
+
+public sealed record FindRangesValue(
+    FindRangesQuery Query,
+    EventFact? WithinScope,
+    IReadOnlyList<EventFact> Ancestors,
+    Page<FindRangeCandidate> Ranges,
+    WrapperExecutionStats Execution);
+
 public sealed record CompleteRangeMetrics(
     int TableCount,
     int RowCount,
@@ -39,8 +62,10 @@ public sealed record RankedRangeShaders(
     IReadOnlyList<RangeShaderFact> Items);
 
 public sealed record CompleteRangeInstructionMix(
-    int TotalCount,
-    IReadOnlyList<RangeInstructionMixFact> Items);
+    string Availability,
+    int? TotalCount,
+    IReadOnlyList<RangeInstructionMixFact>? Items,
+    OperationError? Error);
 
 public sealed record InspectPassValue(
     EventFact Event,

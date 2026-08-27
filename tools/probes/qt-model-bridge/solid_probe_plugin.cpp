@@ -5,6 +5,7 @@
 #include <QApplication>
 #include <QComboBox>
 #include <QCoreApplication>
+#include <QCryptographicHash>
 #include <QDateTime>
 #include <QDir>
 #include <QEvent>
@@ -20,6 +21,7 @@
 #include <QMetaProperty>
 #include <QMouseEvent>
 #include <QPointer>
+#include <QRegularExpression>
 #include <QSaveFile>
 #include <QSet>
 #include <QStackedWidget>
@@ -34,7 +36,7 @@
 
 namespace {
 
-constexpr auto kPluginVersion = "probe-0.47";
+constexpr auto kPluginVersion = "probe-0.51";
 constexpr auto kVerifiedNsightVersion = "2026.2.0";
 constexpr auto kVerifiedNsightBuild = "37991608";
 constexpr auto kSessionSchema = "NsightSolidProbeSessionV1";
@@ -56,6 +58,18 @@ int EnvironmentInt(const QString& name)
     return qEnvironmentVariableIntValue(key.constData());
 }
 
+QStringList SplitFilterList(const QString& raw)
+{
+    QStringList values;
+    for (const QString& value : raw.split(';', Qt::SkipEmptyParts)) {
+        const QString trimmed = value.trimmed();
+        if (!trimmed.isEmpty() && !values.contains(trimmed)) {
+            values.append(trimmed);
+        }
+    }
+    return values;
+}
+
 struct ExportOptions
 {
     int offset = 0;
@@ -68,7 +82,99 @@ struct ExportOptions
     QString valueMode = "normal";
     int filterColumn = -1;
     QString filterContains;
+
+    // An independent second predicate over its own column. The existing
+    // column/contains gate selects a row *kind*; this selects rows by name. A
+    // row is returned only when both pass, so a caller can ask for "ranges"
+    // and "named like this" without the two competing for one column.
+    //
+    // The bridge only knows how to test a column against a caller-supplied
+    // pattern set. What the patterns mean stays with the caller, so no report
+    // vocabulary leaks into the probing oracle.
+    int nameColumn = -1;
+
+    // Single verbatim values. A caller-supplied name is arbitrary report text
+    // and may itself contain the list separator, so these are never split.
+    QString nameExact;
+    bool hasNameExact = false;
+    QString nameContains;
+    bool hasNameContains = false;
+
+    // Separator-joined pattern sets. Only ever carry caller-defined vocabulary,
+    // which is why splitting them is safe.
+    QStringList namePrefixes;
+    QStringList nameSubstrings;
+
+    bool nameExclude = false;
+    bool includeAncestors = false;
+
+    // A third independent predicate used by the product range finder. Grain
+    // and caller text are separate constraints and therefore must not share a
+    // union-style name pattern set.
+    int grainColumn = -1;
+    QStringList grainPrefixes;
+    QStringList grainSubstrings;
+    bool grainExclude = false;
+
+    // Duration ordering is deliberately narrow: the product proves the exact
+    // Event List duration column and asks the bridge to page the ordered
+    // matched subsequence without returning every range to the wrapper.
+    int sortDurationColumn = -1;
+
+    // Restricts matches to strict descendants while retaining the true global
+    // preorder ordinals used by every other operation.
+    int withinOrdinal = -1;
+
+    bool hasNameFilter() const
+    {
+        return nameColumn >= 0
+            && (hasNameExact || hasNameContains || !namePrefixes.isEmpty()
+                || !nameSubstrings.isEmpty());
+    }
+
+    bool hasGrainFilter() const
+    {
+        return grainColumn >= 0
+            && (!grainPrefixes.isEmpty() || !grainSubstrings.isEmpty());
+    }
 };
+
+bool NameSpecMatches(const QString& value, const ExportOptions& options)
+{
+    if (options.hasNameExact && value == options.nameExact) {
+        return true;
+    }
+    if (options.hasNameContains
+        && value.contains(options.nameContains, Qt::CaseInsensitive)) {
+        return true;
+    }
+    for (const QString& prefix : options.namePrefixes) {
+        if (value.startsWith(prefix, Qt::CaseSensitive)) {
+            return true;
+        }
+    }
+    for (const QString& substring : options.nameSubstrings) {
+        if (value.contains(substring, Qt::CaseSensitive)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool GrainSpecMatches(const QString& value, const ExportOptions& options)
+{
+    for (const QString& prefix : options.grainPrefixes) {
+        if (value.startsWith(prefix, Qt::CaseSensitive)) {
+            return true;
+        }
+    }
+    for (const QString& substring : options.grainSubstrings) {
+        if (value.contains(substring, Qt::CaseSensitive)) {
+            return true;
+        }
+    }
+    return false;
+}
 
 ExportOptions ReadExportOptions(const QString& scope, bool defaultItemData = false)
 {
@@ -115,6 +221,63 @@ ExportOptions ReadExportOptions(const QString& scope, bool defaultItemData = fal
     }
     options.filterContains = qEnvironmentVariable(
         (prefix + "_FILTER_CONTAINS").toUtf8().constData()).trimmed();
+    bool nameColumnOk = false;
+    const int nameColumn = qEnvironmentVariable(
+        (prefix + "_NAME_COLUMN").toUtf8().constData())
+        .trimmed().toInt(&nameColumnOk);
+    if (nameColumnOk && nameColumn >= 0) {
+        options.nameColumn = nameColumn;
+    }
+    const QByteArray nameExactKey = (prefix + "_NAME_EXACT").toUtf8();
+    if (qEnvironmentVariableIsSet(nameExactKey.constData())) {
+        options.nameExact = qEnvironmentVariable(nameExactKey.constData());
+        options.hasNameExact = !options.nameExact.isEmpty();
+    }
+    const QByteArray nameContainsKey = (prefix + "_NAME_CONTAINS").toUtf8();
+    if (qEnvironmentVariableIsSet(nameContainsKey.constData())) {
+        options.nameContains = qEnvironmentVariable(nameContainsKey.constData());
+        options.hasNameContains = !options.nameContains.isEmpty();
+    }
+    options.namePrefixes = SplitFilterList(qEnvironmentVariable(
+        (prefix + "_NAME_PREFIXES").toUtf8().constData()));
+    options.nameSubstrings = SplitFilterList(qEnvironmentVariable(
+        (prefix + "_NAME_SUBSTRINGS").toUtf8().constData()));
+    options.nameExclude = qEnvironmentVariable(
+        (prefix + "_NAME_MODE").toUtf8().constData())
+        .trimmed().compare("exclude", Qt::CaseInsensitive) == 0;
+    options.includeAncestors =
+        EnvironmentInt(prefix + "_INCLUDE_ANCESTORS") == 1;
+
+    bool grainColumnOk = false;
+    const int grainColumn = qEnvironmentVariable(
+        (prefix + "_GRAIN_COLUMN").toUtf8().constData())
+        .trimmed().toInt(&grainColumnOk);
+    if (grainColumnOk && grainColumn >= 0) {
+        options.grainColumn = grainColumn;
+    }
+    options.grainPrefixes = SplitFilterList(qEnvironmentVariable(
+        (prefix + "_GRAIN_PREFIXES").toUtf8().constData()));
+    options.grainSubstrings = SplitFilterList(qEnvironmentVariable(
+        (prefix + "_GRAIN_SUBSTRINGS").toUtf8().constData()));
+    options.grainExclude = qEnvironmentVariable(
+        (prefix + "_GRAIN_MODE").toUtf8().constData())
+        .trimmed().compare("exclude", Qt::CaseInsensitive) == 0;
+
+    bool sortDurationColumnOk = false;
+    const int sortDurationColumn = qEnvironmentVariable(
+        (prefix + "_SORT_DURATION_COLUMN").toUtf8().constData())
+        .trimmed().toInt(&sortDurationColumnOk);
+    if (sortDurationColumnOk && sortDurationColumn >= 0) {
+        options.sortDurationColumn = sortDurationColumn;
+    }
+
+    bool withinOrdinalOk = false;
+    const int withinOrdinal = qEnvironmentVariable(
+        (prefix + "_WITHIN_ORDINAL").toUtf8().constData())
+        .trimmed().toInt(&withinOrdinalOk);
+    if (withinOrdinalOk && withinOrdinal >= 0) {
+        options.withinOrdinal = withinOrdinal;
+    }
 
     const QString valueMode = qEnvironmentVariable(
         (prefix + "_VALUE_MODE").toUtf8().constData()).trimmed().toLower();
@@ -171,14 +334,44 @@ void InsertVariantValue(
         : VariantToJson(value));
 }
 
+/// One visited row that is an ancestor of rows still being traversed. Kept so
+/// a filtered export can still return the identity chain of what it matched.
+struct PendingAncestor
+{
+    QModelIndex parent;
+    int row = 0;
+    int depth = 0;
+    QJsonArray path;
+    int ordinal = 0;
+    bool emitted = false;
+};
+
+struct PendingDurationRow
+{
+    QModelIndex parent;
+    int row = 0;
+    int depth = 0;
+    QJsonArray path;
+    int ordinal = 0;
+    int childCount = 0;
+    bool durationValid = false;
+    double durationMilliseconds = 0.0;
+    QList<PendingAncestor> ancestors;
+};
+
 struct ExportState
 {
     ExportOptions options;
     QJsonArray nodes;
+    QJsonArray ancestorNodes;
+    QList<PendingAncestor> ancestorStack;
+    QList<PendingDurationRow> durationRows;
     int totalCount = 0;
     int matchedCount = 0;
     int returnedCount = 0;
     bool totalCountExact = true;
+    bool withinFound = false;
+    QJsonObject withinNode;
 };
 
 QString StandardRoleName(int role)
@@ -224,6 +417,169 @@ QJsonArray ExportItemData(QAbstractItemModel* model, const QModelIndex& index)
     return roles;
 }
 
+QJsonObject EncodeRow(
+    QAbstractItemModel* model,
+    const QModelIndex& parent,
+    int row,
+    int depth,
+    const QJsonArray& path,
+    int ordinal,
+    int childCount,
+    const ExportOptions& options)
+{
+    const int columns = model->columnCount(parent);
+    QJsonArray cells;
+    for (const int column : SelectedColumns(columns, options)) {
+        const QModelIndex cellIndex = model->index(row, column, parent);
+        const QVariant display = model->data(cellIndex, Qt::DisplayRole);
+
+        QJsonObject cell{
+            {"column", column},
+        };
+        InsertVariantValue(cell, "display", display, options.valueMode);
+        if (options.valueMode != "type") {
+            const QVariant tooltip = model->data(cellIndex, Qt::ToolTipRole);
+            if (tooltip.isValid() && tooltip != display) {
+                InsertVariantValue(cell, "tooltip", tooltip, options.valueMode);
+            }
+        }
+        if (options.includeItemData && options.valueMode == "normal") {
+            cell.insert("roles", ExportItemData(model, cellIndex));
+        }
+        cells.append(cell);
+    }
+
+    return QJsonObject{
+        {"ordinal", ordinal},
+        {"path", path},
+        {"depth", depth},
+        {"row", row},
+        {"childCount", childCount},
+        {"cells", cells},
+    };
+}
+
+/// Emits every not-yet-emitted ancestor of the row currently being returned,
+/// outermost first. A row filter removes exactly the rows that give a match its
+/// position in the tree, so without this a filtered export could report what it
+/// found but not where it sits.
+void FlushAncestors(QAbstractItemModel* model, ExportState& state)
+{
+    for (PendingAncestor& ancestor : state.ancestorStack) {
+        if (ancestor.emitted) {
+            continue;
+        }
+        ancestor.emitted = true;
+        state.ancestorNodes.append(EncodeRow(
+            model,
+            ancestor.parent,
+            ancestor.row,
+            ancestor.depth,
+            ancestor.path,
+            ancestor.ordinal,
+            model->rowCount(model->index(ancestor.row, 0, ancestor.parent)),
+            state.options));
+    }
+}
+
+bool TryDurationMilliseconds(const QString& display, double* milliseconds)
+{
+    QString normalized = display.trimmed();
+    normalized.replace(QChar(0x00b5), 'u');
+    normalized.replace(QChar(0x03bc), 'u');
+    static const QRegularExpression pattern(
+        R"(^\s*<?\s*(\d+(?:\.\d+)?)\s*(ns|us|ms|s)\s*$)",
+        QRegularExpression::CaseInsensitiveOption);
+    const QRegularExpressionMatch match = pattern.match(normalized);
+    if (!match.hasMatch()) {
+        return false;
+    }
+
+    bool valueOk = false;
+    const double value = match.captured(1).toDouble(&valueOk);
+    if (!valueOk) {
+        return false;
+    }
+    const QString unit = match.captured(2).toLower();
+    if (unit == "ns") {
+        *milliseconds = value / 1000000.0;
+    } else if (unit == "us") {
+        *milliseconds = value / 1000.0;
+    } else if (unit == "ms") {
+        *milliseconds = value;
+    } else if (unit == "s") {
+        *milliseconds = value * 1000.0;
+    } else {
+        return false;
+    }
+    return true;
+}
+
+void FinalizeDurationRows(QAbstractItemModel* model, ExportState& state)
+{
+    std::sort(
+        state.durationRows.begin(),
+        state.durationRows.end(),
+        [](const PendingDurationRow& left, const PendingDurationRow& right) {
+            if (left.durationValid != right.durationValid) {
+                return left.durationValid;
+            }
+            if (left.durationValid
+                && left.durationMilliseconds != right.durationMilliseconds) {
+                return left.durationMilliseconds > right.durationMilliseconds;
+            }
+            return left.ordinal < right.ordinal;
+        });
+
+    const int first = qMin(state.options.offset, state.durationRows.size());
+    const int last = qMin(first + state.options.limit, state.durationRows.size());
+    QSet<int> selectedOrdinals;
+    for (int index = first; index < last; ++index) {
+        selectedOrdinals.insert(state.durationRows.at(index).ordinal);
+    }
+
+    QList<PendingAncestor> ancestors;
+    for (int index = first; index < last; ++index) {
+        const PendingDurationRow& pending = state.durationRows.at(index);
+        state.nodes.append(EncodeRow(
+            model,
+            pending.parent,
+            pending.row,
+            pending.depth,
+            pending.path,
+            pending.ordinal,
+            pending.childCount,
+            state.options));
+        ++state.returnedCount;
+        ancestors.append(pending.ancestors);
+    }
+
+    std::sort(
+        ancestors.begin(),
+        ancestors.end(),
+        [](const PendingAncestor& left, const PendingAncestor& right) {
+            return left.ordinal < right.ordinal;
+        });
+    QSet<int> emittedAncestors;
+    for (const PendingAncestor& ancestor : ancestors) {
+        if (selectedOrdinals.contains(ancestor.ordinal)
+            || emittedAncestors.contains(ancestor.ordinal)) {
+            continue;
+        }
+        emittedAncestors.insert(ancestor.ordinal);
+        state.ancestorNodes.append(EncodeRow(
+            model,
+            ancestor.parent,
+            ancestor.row,
+            ancestor.depth,
+            ancestor.path,
+            ancestor.ordinal,
+            model->rowCount(model->index(
+                ancestor.row, 0, ancestor.parent)),
+            state.options));
+    }
+}
+
 void AppendRows(
     QAbstractItemModel* model,
     const QModelIndex& parent,
@@ -239,7 +595,6 @@ void AppendRows(
     }
 
     const int rows = model->rowCount(parent);
-    const int columns = model->columnCount(parent);
     for (int row = 0; row < rows; ++row) {
         const QModelIndex treeIndex = model->index(row, 0, parent);
         if (!treeIndex.isValid()) {
@@ -250,6 +605,13 @@ void AppendRows(
         path.append(row);
 
         const int ordinal = state.totalCount++;
+        const int childCount = state.options.flat ? 0 : model->rowCount(treeIndex);
+        if (ordinal == state.options.withinOrdinal) {
+            state.withinFound = true;
+            state.withinNode = EncodeRow(
+                model, parent, row, depth, path, ordinal, childCount,
+                state.options);
+        }
 
         // A row filter selects which rows are returned without renumbering
         // them: "ordinal" stays the true preorder ordinal so a caller can
@@ -264,50 +626,81 @@ void AppendRows(
             matchesFilter = filterValue.toString().contains(
                 state.options.filterContains, Qt::CaseInsensitive);
         }
+        if (matchesFilter && state.options.hasNameFilter()) {
+            const QVariant nameValue = model->data(
+                model->index(row, state.options.nameColumn, parent),
+                Qt::DisplayRole);
+            const bool specMatches =
+                NameSpecMatches(nameValue.toString(), state.options);
+            matchesFilter =
+                state.options.nameExclude ? !specMatches : specMatches;
+        }
+        if (matchesFilter && state.options.hasGrainFilter()) {
+            const QVariant grainValue = model->data(
+                model->index(row, state.options.grainColumn, parent),
+                Qt::DisplayRole);
+            const bool grainMatches =
+                GrainSpecMatches(grainValue.toString(), state.options);
+            matchesFilter =
+                state.options.grainExclude ? !grainMatches : grainMatches;
+        }
+        if (matchesFilter && state.options.withinOrdinal >= 0) {
+            matchesFilter = std::any_of(
+                state.ancestorStack.cbegin(),
+                state.ancestorStack.cend(),
+                [&state](const PendingAncestor& ancestor) {
+                    return ancestor.ordinal == state.options.withinOrdinal;
+                });
+        }
 
         const int matchedOrdinal = matchesFilter ? state.matchedCount++ : -1;
-        const bool includeNode = matchesFilter
+        const bool durationOrdered = state.options.sortDurationColumn >= 0;
+        const bool includeNode = !durationOrdered && matchesFilter
             && matchedOrdinal >= state.options.offset
             && state.returnedCount < state.options.limit;
 
-        const int childCount = state.options.flat ? 0 : model->rowCount(treeIndex);
-        if (includeNode) {
-            QJsonArray cells;
-            for (const int column : SelectedColumns(columns, state.options)) {
-                const QModelIndex cellIndex = model->index(row, column, parent);
-                const QVariant display = model->data(cellIndex, Qt::DisplayRole);
-
-                QJsonObject cell{
-                    {"column", column},
-                };
-                InsertVariantValue(
-                    cell, "display", display, state.options.valueMode);
-                if (state.options.valueMode != "type") {
-                    const QVariant tooltip = model->data(cellIndex, Qt::ToolTipRole);
-                    if (tooltip.isValid() && tooltip != display) {
-                        InsertVariantValue(
-                            cell, "tooltip", tooltip, state.options.valueMode);
-                    }
-                }
-                if (state.options.includeItemData && state.options.valueMode == "normal") {
-                    cell.insert("roles", ExportItemData(model, cellIndex));
-                }
-                cells.append(cell);
-            }
-
-            state.nodes.append(QJsonObject{
-                {"ordinal", ordinal},
-                {"path", path},
-                {"depth", depth},
-                {"row", row},
-                {"childCount", childCount},
-                {"cells", cells},
+        if (durationOrdered && matchesFilter) {
+            const QString duration = model->data(
+                model->index(
+                    row, state.options.sortDurationColumn, parent),
+                Qt::DisplayRole).toString();
+            double durationMilliseconds = 0.0;
+            const bool durationValid =
+                TryDurationMilliseconds(duration, &durationMilliseconds);
+            state.durationRows.append(PendingDurationRow{
+                parent,
+                row,
+                depth,
+                path,
+                ordinal,
+                childCount,
+                durationValid,
+                durationMilliseconds,
+                state.ancestorStack,
             });
+        }
+        if (includeNode) {
+            if (state.options.includeAncestors) {
+                FlushAncestors(model, state);
+            }
+            state.nodes.append(EncodeRow(
+                model, parent, row, depth, path, ordinal, childCount,
+                state.options));
             ++state.returnedCount;
         }
 
         if (!state.options.flat && childCount > 0) {
+            const bool trackAncestors = state.options.includeAncestors
+                || state.options.withinOrdinal >= 0
+                || durationOrdered;
+            if (trackAncestors) {
+                state.ancestorStack.append(
+                    PendingAncestor{parent, row, depth, path, ordinal, includeNode});
+            }
             AppendRows(model, treeIndex, depth + 1, path, state);
+            if (trackAncestors) {
+                state.ancestorStack.removeLast();
+            }
         }
     }
 }
@@ -343,6 +736,18 @@ QJsonObject ExportModel(QAbstractItemModel* model, const ExportOptions& options)
             {"includeHeaders", state.options.includeHeaders},
             {"flat", state.options.flat},
             {"valueMode", state.options.valueMode},
+            {"ancestorNodes", QJsonArray()},
+            {"ancestorCount", 0},
+            {"grainColumn", state.options.grainColumn},
+            {"grainPrefixes", QJsonArray::fromStringList(
+                state.options.grainPrefixes)},
+            {"grainSubstrings", QJsonArray::fromStringList(
+                state.options.grainSubstrings)},
+            {"grainMode", state.options.grainExclude ? "exclude" : "include"},
+            {"sortDurationColumn", state.options.sortDurationColumn},
+            {"withinOrdinal", state.options.withinOrdinal},
+            {"withinFound", false},
+            {"withinNode", QJsonObject()},
             {"emptyModel", true},
             {"truncated", false},
         };
@@ -373,6 +778,9 @@ QJsonObject ExportModel(QAbstractItemModel* model, const ExportOptions& options)
     }
 
     AppendRows(model, QModelIndex(), 0, QJsonArray(), state);
+    if (state.options.sortDurationColumn >= 0) {
+        FinalizeDurationRows(model, state);
+    }
     // With a row filter active, paging closes against the matched subsequence;
     // without one every visited row matches and this is the visited count.
     const int pageableCount = state.matchedCount;
@@ -403,7 +811,50 @@ QJsonObject ExportModel(QAbstractItemModel* model, const ExportOptions& options)
         {"valueMode", state.options.valueMode},
         {"filterColumn", state.options.filterColumn},
         {"filterContains", state.options.filterContains},
+        {"nameColumn", state.options.nameColumn},
+        {"nameExact", state.options.hasNameExact
+            ? QJsonValue(state.options.nameExact) : QJsonValue()},
+        {"nameContains", state.options.hasNameContains
+            ? QJsonValue(state.options.nameContains) : QJsonValue()},
+        {"namePrefixes", QJsonArray::fromStringList(state.options.namePrefixes)},
+        {"nameSubstrings",
+            QJsonArray::fromStringList(state.options.nameSubstrings)},
+        {"nameMode", state.options.nameExclude ? "exclude" : "include"},
+        {"includeAncestors", state.options.includeAncestors},
+        {"ancestorNodes", state.ancestorNodes},
+        {"ancestorCount", state.ancestorNodes.size()},
+        {"grainColumn", state.options.grainColumn},
+        {"grainPrefixes", QJsonArray::fromStringList(
+            state.options.grainPrefixes)},
+        {"grainSubstrings", QJsonArray::fromStringList(
+            state.options.grainSubstrings)},
+        {"grainMode", state.options.grainExclude ? "exclude" : "include"},
+        {"sortDurationColumn", state.options.sortDurationColumn},
+        {"withinOrdinal", state.options.withinOrdinal},
+        {"withinFound", state.withinFound},
+        {"withinNode", state.withinNode},
         {"truncated", hasMore},
+    };
+}
+
+QJsonObject ExportMetricCatalog(QAbstractItemModel* model)
+{
+    QJsonArray headers;
+    const int columns = model->columnCount();
+    for (int column = 0; column < columns; ++column) {
+        const QVariant display = model->headerData(
+            column, Qt::Horizontal, Qt::DisplayRole);
+        QJsonObject header{{"column", column}};
+        InsertVariantValue(header, "display", display, "normal");
+        headers.append(header);
+    }
+    return QJsonObject{
+        {"catalogOnly", true},
+        {"headers", headers},
+        {"rowCount", model->rowCount()},
+        {"columnCount", columns},
+        {"totalCountExact", true},
+        {"truncated", false},
     };
 }
 
@@ -519,7 +970,11 @@ QJsonArray CollectMetricViews(
             {"columns", columns},
         };
         if (includeData) {
-            match.insert("export", ExportModel(model, ReadExportOptions("METRIC")));
+            const bool catalogOnly = qEnvironmentVariableIntValue(
+                "NSIGHT_SOLID_PROBE_METRIC_CATALOG_ONLY") == 1;
+            match.insert("export", catalogOnly
+                ? ExportMetricCatalog(model)
+                : ExportModel(model, ReadExportOptions("METRIC")));
         }
         matches.append(match);
     }
@@ -2065,11 +2520,24 @@ const QSet<QString>& ProductSessionSettingNames()
         "EVENT_FILTER_COLUMN",
         "EVENT_STABLE_SAMPLES",
         "EVENT_FILTER_CONTAINS",
+        "EVENT_GRAIN_COLUMN",
+        "EVENT_GRAIN_MODE",
+        "EVENT_GRAIN_PREFIXES",
+        "EVENT_GRAIN_SUBSTRINGS",
+        "EVENT_INCLUDE_ANCESTORS",
+        "EVENT_NAME_COLUMN",
+        "EVENT_NAME_CONTAINS",
+        "EVENT_NAME_EXACT",
+        "EVENT_NAME_MODE",
+        "EVENT_NAME_PREFIXES",
+        "EVENT_NAME_SUBSTRINGS",
         "EVENT_INCLUDE_ITEM_DATA",
         "EVENT_LIMIT",
         "EVENT_OFFSET",
         "EVENT_ORDINAL",
         "EVENT_PATH",
+        "EVENT_SORT_DURATION_COLUMN",
+        "EVENT_WITHIN_ORDINAL",
         "EXTERNAL_KILL_ON_TIMEOUT",
         "INVOKE_CLASS_MATCH",
         "INVOKE_MATCH_MODE",
@@ -2079,6 +2547,7 @@ const QSet<QString>& ProductSessionSettingNames()
         "INVOKE_SETTLE_MIN_POLLS",
         "MAX_DEPTH",
         "METRIC_LIMIT",
+        "METRIC_CATALOG_ONLY",
         "METRIC_SETTLE_MAX_POLLS",
         "METRIC_SETTLE_MIN_POLLS",
         "MODEL_ATTACHED_VIEW_OBJECT_MATCH",
@@ -2101,6 +2570,7 @@ const QSet<QString>& ProductSessionSettingNames()
         "MODEL_SELECT_VIEW_OBJECT",
         "MODEL_SETTLE_MIN_POLLS",
         "PANEL_SETTLE_MIN_POLLS",
+        "POLL_INTERVAL_MS",
         "SELECTION_BASELINE_METRIC_MIN_COUNT",
         "SELECTION_BASELINE_METRIC_STABLE_MIN_POLLS",
     };
@@ -2126,6 +2596,77 @@ QString ExpectedProductSchema(const QString& mode)
         return "NsightSolidProbeSelectionMetricsV1";
     }
     return {};
+}
+
+bool IsRangeShaderCacheRequest(
+    const QString& mode,
+    const QString& expectedSchema,
+    const QString& cachePolicy,
+    const QJsonObject& settings)
+{
+    if (mode != "selection-metrics-export"
+        || expectedSchema != "NsightSolidProbeSelectionMetricsV1"
+        || cachePolicy != "range-shaders-v1") {
+        return false;
+    }
+
+    static const QHash<QString, QString> required{
+        {"SELECTION_BASELINE_METRIC_MIN_COUNT", "80"},
+        {"SELECTION_BASELINE_METRIC_STABLE_MIN_POLLS", "2"},
+        {"METRIC_SETTLE_MIN_POLLS", "4"},
+        {"METRIC_SETTLE_MAX_POLLS", "60"},
+        {"METRIC_LIMIT", "1000"},
+        {"POLL_INTERVAL_MS", "200"},
+        {"MODEL_CLASS_MATCH", "NV::ShaderProfiler::UI::SampleItemTreeModel"},
+        {"MODEL_OBJECT_MATCH", "SampleItemModel"},
+        {"MODEL_MATCH_MODE", "exact"},
+        {"MODEL_ATTACHED_VIEW_OBJECT_MATCH", "SampleTreeView"},
+        {"MODEL_COLUMNS", "0,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,38"},
+        {"MODEL_LIMIT", "25000"},
+        {"MODEL_SETTLE_MIN_POLLS", "16"},
+        {"ACTIVATE_PANEL", "FlatTabPanel_Shader Pipelines"},
+        {"ACTIVATE_PANEL_VIA_BUTTON", "1"},
+        {"PANEL_SETTLE_MIN_POLLS", "6"},
+        {"COMBO_OBJECT_MATCH", "GroupByComboBox"},
+        {"COMBO_MATCH_MODE", "exact"},
+        {"COMBO_SELECT_MATCH", "Pipeline Object"},
+        {"COMBO_SELECT_MATCH_MODE", "exact"},
+        {"COMBO_SELECT_TRIGGER", "activated"},
+        {"COMBO_SELECT_SETTLE_MIN_POLLS", "12"},
+    };
+    if (settings.size() != required.size() + 1) {
+        return false;
+    }
+    for (auto iterator = required.constBegin(); iterator != required.constEnd(); ++iterator) {
+        if (settings.value(iterator.key()).toString() != iterator.value()) {
+            return false;
+        }
+    }
+
+    const bool hasOrdinal = settings.contains("EVENT_ORDINAL")
+        && !settings.value("EVENT_ORDINAL").toString().isEmpty();
+    const bool hasPath = settings.contains("EVENT_PATH")
+        && !settings.value("EVENT_PATH").toString().isEmpty();
+    return hasOrdinal != hasPath;
+}
+
+QString ResponseCacheKey(
+    const QString& reportId,
+    const QString& mode,
+    const QString& expectedSchema,
+    const QString& cachePolicy,
+    const QJsonObject& settings)
+{
+    const QByteArray material = QJsonDocument(QJsonObject{
+        {"pluginVersion", kPluginVersion},
+        {"reportId", reportId},
+        {"mode", mode},
+        {"expectedSchema", expectedSchema},
+        {"cachePolicy", cachePolicy},
+        {"settings", settings},
+    }).toJson(QJsonDocument::Compact);
+    return QString::fromLatin1(QCryptographicHash::hash(
+        material, QCryptographicHash::Sha256).toHex());
 }
 
 void ClearProductRequestEnvironment()
@@ -2173,7 +2714,12 @@ public:
                 "NSIGHT_SOLID_PROBE_DIALOG_AUTO_PATH").trimmed().isEmpty()) {
             QCoreApplication::setAttribute(Qt::AA_DontUseNativeDialogs, true);
         }
-        m_timer.setInterval(500);
+        const int configuredPollInterval = qEnvironmentVariableIntValue(
+            "NSIGHT_SOLID_PROBE_POLL_INTERVAL_MS");
+        m_pollIntervalMs = configuredPollInterval > 0
+            ? qBound(10, configuredPollInterval, 500)
+            : 500;
+        m_timer.setInterval(m_pollIntervalMs);
         connect(&m_timer, &QTimer::timeout, this, &SolidProbeAgent::Poll);
         QTimer::singleShot(0, this, [this] {
             Poll();
@@ -2203,6 +2749,7 @@ private slots:
             {"qtCompileVersion", QT_VERSION_STR},
             {"qtRuntimeVersion", qVersion()},
             {"pollCount", m_pollCount},
+            {"pollIntervalMs", m_pollIntervalMs},
             {"applicationFound", application != nullptr},
             {"guiThread", application != nullptr && QThread::currentThread() == application->thread()},
             {"verifiedHostTarget", QJsonObject{
@@ -4090,6 +4637,7 @@ private:
     QString m_mode;
     QTimer m_timer;
     int m_pollCount = 0;
+    int m_pollIntervalMs = 500;
     int m_selectionAppliedPoll = 0;
     int m_modelSelectionAppliedPoll = 0;
     int m_modelPreparePanelActivatedPoll = 0;
@@ -4272,9 +4820,21 @@ private slots:
             m_agent->deleteLater();
             m_agent = nullptr;
         }
+        if (reusable && m_currentCacheEligible) {
+            StoreCurrentResponseInCache();
+        }
+        CompleteRequest(reusable);
+    }
+
+private:
+    void CompleteRequest(bool reusable)
+    {
         ClearProductRequestEnvironment();
         m_lastRequestId = m_currentRequestId;
         m_currentRequestId.clear();
+        m_currentOutputPath.clear();
+        m_currentCacheKey.clear();
+        m_currentCacheEligible = false;
         m_lastActivityMs = QDateTime::currentMSecsSinceEpoch();
 
         if (!reusable) {
@@ -4299,7 +4859,6 @@ private slots:
         });
     }
 
-private:
     bool ReadBoundedObject(
         const QString& path,
         qint64 maximumBytes,
@@ -4326,6 +4885,180 @@ private:
         return true;
     }
 
+    bool IsCacheableRangeShaderResponse(const QJsonObject& root) const
+    {
+        if (root.value("schema").toString()
+                != "NsightSolidProbeSelectionMetricsV1"
+            || root.value("pluginVersion").toString() != kPluginVersion
+            || root.value("reportId").toString() != m_reportId
+            || root.value("requestId").toString() != m_currentRequestId
+            || root.value("status").toString() != "complete"
+            || root.value("stage").toString() != "complete"
+            || !root.value("metricsStable").toBool()
+            || root.value("settleTimedOut").toBool()
+            || !root.value("selectionMatchesTarget").toBool()
+            || !root.value("requiredModelsReady").toBool()
+            || root.value("modelReturned").toInt() != 1
+            || root.value("currentModelReturned").toInt() != 1
+            || !root.value("comboSelectionMatchesTarget").toBool()) {
+            return false;
+        }
+
+        const QJsonObject target = root.value("targetSelection").toObject();
+        const QJsonObject current = root.value("currentSelection").toObject();
+        if (!target.value("valid").toBool()
+            || QJsonDocument(target).toJson(QJsonDocument::Compact)
+                != QJsonDocument(current).toJson(QJsonDocument::Compact)) {
+            return false;
+        }
+
+        const QJsonObject combo = root.value("currentComboSelection").toObject();
+        if (combo.value("text").toString() != "Pipeline Object") {
+            return false;
+        }
+
+        const QJsonArray models = root.value("models").toArray();
+        if (models.size() != 1) {
+            return false;
+        }
+        const QJsonObject model = models.first().toObject();
+        const QJsonObject exportValue = model.value("export").toObject();
+        return model.value("class").toString()
+                == "NV::ShaderProfiler::UI::SampleItemTreeModel"
+            && model.value("objectName").toString() == "SampleItemModel"
+            && exportValue.value("totalCountExact").toBool()
+            && !exportValue.value("truncated").toBool()
+            && exportValue.value("returnedCount").toInt()
+                == exportValue.value("totalCount").toInt();
+    }
+
+    void TouchCacheKey(const QString& key)
+    {
+        m_cacheOrder.removeAll(key);
+        m_cacheOrder.append(key);
+    }
+
+    void StoreCurrentResponseInCache()
+    {
+        constexpr qint64 maximumEntryBytes = 32LL * 1024 * 1024;
+        constexpr qint64 maximumCacheBytes = 64LL * 1024 * 1024;
+        constexpr int maximumEntries = 4;
+
+        QJsonObject root;
+        QString error;
+        if (!ReadBoundedObject(
+                m_currentOutputPath, maximumEntryBytes, &root, &error)
+            || !IsCacheableRangeShaderResponse(root)) {
+            return;
+        }
+
+        root.remove("sessionCache");
+        const QByteArray compact = QJsonDocument(root).toJson(QJsonDocument::Compact);
+        if (compact.isEmpty() || compact.size() > maximumEntryBytes) {
+            return;
+        }
+
+        if (m_responseCache.contains(m_currentCacheKey)) {
+            m_cacheBytes -= m_responseCache.value(m_currentCacheKey).size();
+        }
+        m_responseCache.insert(m_currentCacheKey, compact);
+        m_cacheBytes += compact.size();
+        TouchCacheKey(m_currentCacheKey);
+
+        while (m_cacheOrder.size() > maximumEntries
+            || m_cacheBytes > maximumCacheBytes) {
+            const QString evicted = m_cacheOrder.takeFirst();
+            m_cacheBytes -= m_responseCache.take(evicted).size();
+            ++m_cacheEvictions;
+        }
+    }
+
+    bool TryServeRangeShaderCache(const QString& outputPath)
+    {
+        if (!m_responseCache.contains(m_currentCacheKey)) {
+            return false;
+        }
+
+        auto* application = qobject_cast<QApplication*>(QCoreApplication::instance());
+        QAbstractItemView* eventView = application == nullptr
+            ? nullptr
+            : FindEventView(application);
+        if (eventView == nullptr || eventView->model() == nullptr
+            || eventView->selectionModel() == nullptr) {
+            return false;
+        }
+
+        QJsonObject selector;
+        int visited = 0;
+        const QModelIndex target = ResolveEventIndex(
+            eventView->model(), &selector, &visited);
+        if (!target.isValid()) {
+            return false;
+        }
+
+        const QJsonObject targetSummary = IndexSummary(eventView->model(), target);
+        QJsonParseError parseError;
+        QJsonDocument cached = QJsonDocument::fromJson(
+            m_responseCache.value(m_currentCacheKey), &parseError);
+        if (parseError.error != QJsonParseError::NoError || !cached.isObject()) {
+            return false;
+        }
+        QJsonObject root = cached.object();
+        // The cache entry retains the request that originally proved the
+        // snapshot. Rebind only the transport identity before applying the
+        // same completeness checks to this request.
+        root.insert("requestId", m_currentRequestId);
+        if (!IsCacheableRangeShaderResponse(root)
+            || QJsonDocument(root.value("targetSelection").toObject())
+                    .toJson(QJsonDocument::Compact)
+                != QJsonDocument(targetSummary).toJson(QJsonDocument::Compact)) {
+            return false;
+        }
+
+        const QJsonObject before = IndexSummary(
+            eventView->model(), eventView->currentIndex());
+        if (eventView->currentIndex() != target) {
+            eventView->selectionModel()->setCurrentIndex(
+                target,
+                QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+        }
+        const QJsonObject current = IndexSummary(
+            eventView->model(), eventView->currentIndex());
+        if (eventView->currentIndex() != target
+            || QJsonDocument(current).toJson(QJsonDocument::Compact)
+                != QJsonDocument(targetSummary).toJson(QJsonDocument::Compact)) {
+            return false;
+        }
+
+        root.insert("requestId", m_currentRequestId);
+        root.insert("eventSelector", selector);
+        root.insert("eventNodesVisited", visited);
+        root.insert("beforeSelection", before);
+        root.insert("targetSelection", targetSummary);
+        root.insert("currentSelection", current);
+        root.insert("selectionMatchesTarget", true);
+        root.insert("sessionCache", QJsonObject{
+            {"hit", true},
+            {"policy", "range-shaders-v1"},
+            {"scope", "viewerProcessMemory"},
+            {"keyPrefix", m_currentCacheKey.left(16)},
+        });
+
+        QSaveFile file(outputPath);
+        if (!file.open(QIODevice::WriteOnly)) {
+            return false;
+        }
+        // Cache hits are transport snapshots, so pretty-printing several
+        // megabytes again only adds I/O and JSON parsing cost for the caller.
+        if (file.write(QJsonDocument(root).toJson(QJsonDocument::Compact)) <= 0
+            || !file.commit()) {
+            return false;
+        }
+
+        TouchCacheKey(m_currentCacheKey);
+        return true;
+    }
+
     void StartRequest(const QString& requestPath)
     {
         QJsonObject request;
@@ -4343,6 +5076,7 @@ private:
         const QString sessionId = request.value("sessionId").toString();
         const QString mode = request.value("mode").toString().trimmed();
         const QString expectedSchema = request.value("expectedSchema").toString();
+        const QString cachePolicy = request.value("cachePolicy").toString();
         const QString outputPath = QDir::cleanPath(QFileInfo(
             request.value("outputPath").toString()).absoluteFilePath());
         const QJsonValue settingsValue = request.value("settings");
@@ -4371,6 +5105,10 @@ private:
         if (!IsProductSessionMode(mode)
             || expectedSchema != ExpectedProductSchema(mode)) {
             Poison("request-operation-invalid");
+            return;
+        }
+        if (cachePolicy != "none" && cachePolicy != "range-shaders-v1") {
+            Poison("request-cache-policy-invalid");
             return;
         }
         if (QFileInfo(outputPath).fileName() != "bridge-output.json") {
@@ -4407,6 +5145,12 @@ private:
                 return;
             }
         }
+        const bool cacheEligible = IsRangeShaderCacheRequest(
+            mode, expectedSchema, cachePolicy, settings);
+        if (cachePolicy == "range-shaders-v1" && !cacheEligible) {
+            Poison("request-cache-contract-invalid");
+            return;
+        }
 
         ClearProductRequestEnvironment();
         qputenv("NSIGHT_SOLID_PROBE_OUTPUT", outputPath.toUtf8());
@@ -4421,8 +5165,28 @@ private:
         }
 
         m_currentRequestId = requestId;
+        m_currentOutputPath = outputPath;
+        m_currentCacheEligible = cacheEligible;
+        m_currentCacheKey = cacheEligible
+            ? ResponseCacheKey(
+                m_reportId, mode, expectedSchema, cachePolicy, settings)
+            : QString();
         m_closeRequestWindows = settings.contains("ACTION_TRIGGER_TEXT_MATCH")
             || settings.contains("DIALOG_AUTO_PATH");
+        m_state = "busy";
+        m_protocolError.clear();
+        m_lastActivityMs = QDateTime::currentMSecsSinceEpoch();
+        WriteManifest();
+
+        if (cacheEligible) {
+            if (TryServeRangeShaderCache(outputPath)) {
+                ++m_cacheHits;
+                CompleteRequest(true);
+                return;
+            }
+            ++m_cacheMisses;
+        }
+
         if (auto* application = qobject_cast<QApplication*>(
                 QCoreApplication::instance())) {
             for (QWidget* topLevel : application->topLevelWidgets()) {
@@ -4431,10 +5195,6 @@ private:
                 }
             }
         }
-        m_state = "busy";
-        m_protocolError.clear();
-        m_lastActivityMs = QDateTime::currentMSecsSinceEpoch();
-        WriteManifest();
         m_agent = new SolidProbeAgent(this);
         connect(
             m_agent,
@@ -4500,6 +5260,11 @@ private:
             {"lastActivityUtc", QDateTime::fromMSecsSinceEpoch(
                 m_lastActivityMs, Qt::UTC).toString(Qt::ISODateWithMs)},
             {"applicationFound", application != nullptr},
+            {"responseCacheEntries", m_responseCache.size()},
+            {"responseCacheBytes", m_cacheBytes},
+            {"responseCacheHits", m_cacheHits},
+            {"responseCacheMisses", m_cacheMisses},
+            {"responseCacheEvictions", m_cacheEvictions},
         };
         if (!m_currentRequestId.isEmpty()) {
             manifest.insert("currentRequestId", m_currentRequestId);
@@ -4528,6 +5293,8 @@ private:
     QString m_reportId;
     QString m_state;
     QString m_currentRequestId;
+    QString m_currentOutputPath;
+    QString m_currentCacheKey;
     QString m_lastRequestId;
     QString m_protocolError;
     QString m_shutdownReason;
@@ -4535,10 +5302,17 @@ private:
     QTimer m_timer;
     QPointer<SolidProbeAgent> m_agent;
     QSet<QWidget*> m_requestBaselineTopLevels;
+    QHash<QString, QByteArray> m_responseCache;
+    QStringList m_cacheOrder;
     qint64 m_lastActivityMs = 0;
+    qint64 m_cacheBytes = 0;
+    qint64 m_cacheHits = 0;
+    qint64 m_cacheMisses = 0;
+    qint64 m_cacheEvictions = 0;
     int m_idleTimeoutMs = 300000;
     bool m_valid = false;
     bool m_closeRequestWindows = false;
+    bool m_currentCacheEligible = false;
 };
 
 class SolidProbePlugin final : public QGenericPlugin

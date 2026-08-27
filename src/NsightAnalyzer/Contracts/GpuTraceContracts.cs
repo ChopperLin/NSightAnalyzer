@@ -1,4 +1,4 @@
-namespace NsightAnalyzer.Contracts;
+﻿namespace NsightAnalyzer.Contracts;
 
 public sealed record TraceArtifactInfo(
     string FileName,
@@ -62,6 +62,16 @@ public sealed record TraceOutlineValue(
     int TotalEventCount,
     Page<OutlineFact> Ranges);
 
+/// <summary>
+/// Events matching one name, plus every ancestor of those matches. Ancestors
+/// are carried separately because they are context, not matches: counting them
+/// as results would corrupt the occurrence index the caller addresses by.
+/// </summary>
+public sealed record EventNameMatchesValue(
+    int TotalEventCount,
+    IReadOnlyList<EventFact> Ancestors,
+    Page<EventFact> Matches);
+
 public sealed record EventParameterFact(
     IReadOnlyList<string> Path,
     string Name,
@@ -95,6 +105,24 @@ public sealed record RangeMetricsValue(
     int TableCount,
     int RowCount,
     Page<RangeMetricFact> Metrics);
+
+public sealed record RangeMetricColumnFact(
+    int ColumnIndex,
+    string Name,
+    int NameOccurrence,
+    string? Unit);
+
+public sealed record RangeMetricTableFact(
+    string Name,
+    int NameOccurrence,
+    int SourceOrdinal,
+    int RowCount,
+    string Availability,
+    IReadOnlyList<RangeMetricColumnFact> Columns);
+
+public sealed record RangeMetricCatalogValue(
+    EventKey Scope,
+    Page<RangeMetricTableFact> Tables);
 
 public sealed record ShaderKey(
     int PreorderOrdinal,
@@ -141,6 +169,10 @@ public sealed record RangeShaderFact(
 public sealed record RangeShadersValue(
     EventKey Scope,
     Page<RangeShaderFact> Shaders);
+
+public sealed record ShaderProfileValue(
+    EventKey Scope,
+    RangeShaderFact Shader);
 
 public sealed record RangeInstructionMixFact(
     int SourceOrdinal,

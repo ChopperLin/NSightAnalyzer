@@ -1,3 +1,4 @@
+﻿using NsightAnalyzer.Adapters.NsightViewer2026_2;
 using NsightAnalyzer.Contracts;
 
 namespace NsightAnalyzer.Cli;
@@ -28,7 +29,10 @@ internal sealed record ParsedCommand(
     int? BaselineFrameIndex,
     int? AnalysisSeedEventOrdinal,
     int? PresentQueueEventOrdinal,
-    int TopShaderCount);
+    int TopShaderCount,
+    string Grain,
+    string? RangeNameContains,
+    string? ShaderStage);
 
 internal sealed record CommandLineParseResult(ParsedCommand? Command, string? Error)
 {
@@ -60,6 +64,8 @@ internal static class CommandLine
         var timeoutSpecified = false;
         var identityMode = "localWeak";
         var identityModeSpecified = false;
+        var grain = EventGrain.All;
+        var grainSpecified = false;
         var cursor = 0;
         var cursorSpecified = false;
         var limit = 100;
@@ -68,6 +74,7 @@ internal static class CommandLine
         string? eventPath = null;
         var metricTables = new List<string>();
         string? shaderHash = null;
+        string? shaderStage = null;
         int? shaderOccurrence = null;
         var counterNames = new List<string>();
         var rangeNames = new List<string>();
@@ -83,6 +90,7 @@ internal static class CommandLine
         int? presentQueueEventOrdinal = null;
         var topShaderCount = 32;
         var topShaderCountSpecified = false;
+        string? rangeNameContains = null;
 
         for (var index = 1; index < args.Length; index++)
         {
@@ -115,6 +123,17 @@ internal static class CommandLine
                     }
                     identityModeSpecified = true;
                     break;
+                case "--grain":
+                    if (!TryTakeValue(args, ref index, out var grainText) ||
+                        grainText is not (EventGrain.Marker or EventGrain.Container
+                            or EventGrain.All))
+                    {
+                        return Fail(
+                            "--grain must be 'marker', 'container', or 'all'.");
+                    }
+                    grain = grainText;
+                    grainSpecified = true;
+                    break;
                 case "--cursor":
                     if (!TryTakeValue(args, ref index, out var cursorText) ||
                         !int.TryParse(cursorText, out cursor) || cursor < 0)
@@ -124,11 +143,13 @@ internal static class CommandLine
                     cursorSpecified = true;
                     break;
                 case "--limit":
+                    // The upper bound depends on how large one row of the
+                    // requested fact family can be, so it is checked once the
+                    // operation is known rather than against a global maximum.
                     if (!TryTakeValue(args, ref index, out var limitText) ||
-                        !int.TryParse(limitText, out limit) ||
-                        limit is < 1 or > ContractLimits.MaximumPageLimit)
+                        !int.TryParse(limitText, out limit) || limit < 1)
                     {
-                        return Fail($"--limit must be an integer from 1 to {ContractLimits.MaximumPageLimit}.");
+                        return Fail("--limit must be a positive integer.");
                     }
                     limitSpecified = true;
                     break;
@@ -167,6 +188,14 @@ internal static class CommandLine
                         return Fail("--shader-hash must be 0x followed by 16 hexadecimal digits.");
                     }
                     shaderHash = shaderHash!.ToLowerInvariant();
+                    break;
+                case "--shader-stage":
+                    if (!TryTakeValue(args, ref index, out shaderStage) ||
+                        string.IsNullOrWhiteSpace(shaderStage) ||
+                        shaderStage.Length > 64)
+                    {
+                        return Fail("--shader-stage requires a non-empty semantic stage of at most 64 characters.");
+                    }
                     break;
                 case "--shader-occurrence":
                     if (!TryTakeValue(args, ref index, out var shaderOccurrenceText) ||
@@ -271,6 +300,14 @@ internal static class CommandLine
                     }
                     topShaderCountSpecified = true;
                     break;
+                case "--name-contains":
+                    if (!TryTakeValue(args, ref index, out rangeNameContains) ||
+                        string.IsNullOrWhiteSpace(rangeNameContains) ||
+                        rangeNameContains.Length > 512)
+                    {
+                        return Fail("--name-contains requires a non-empty substring of at most 512 characters.");
+                    }
+                    break;
                 case "--counter":
                     if (!TryTakeValue(args, ref index, out var counterName) ||
                         string.IsNullOrWhiteSpace(counterName) ||
@@ -317,7 +354,7 @@ internal static class CommandLine
 
         var isTraceOperation = operation.StartsWith("trace.", StringComparison.Ordinal);
         var isWrapperOperation = operation is
-            "resolve-event" or "inspect-pass" or "compare-ranges" or
+            "resolve-event" or "find-ranges" or "inspect-pass" or "compare-ranges" or
             "compare-frame-timing";
         var requiresTrace = isTraceOperation || isWrapperOperation ||
             operation == "viewer-session.close";
@@ -329,23 +366,35 @@ internal static class CommandLine
         {
             return Fail($"{operation} does not accept Viewer options.");
         }
+        var maximumLimit = MaximumLimitFor(operation);
+        if (limit > maximumLimit)
+        {
+            return Fail(
+                $"--limit must be an integer from 1 to {maximumLimit} for {operation}.");
+        }
+        if (grainSpecified && operation is not ("trace.outline" or "find-ranges"))
+        {
+            return Fail($"{operation} does not accept --grain.");
+        }
         if (identityModeSpecified && operation != "trace.info")
         {
             return Fail($"{operation} does not accept --identity-mode.");
         }
         if ((cursorSpecified || limitSpecified) &&
-            operation is not ("trace.events" or "trace.outline" or "trace.range-metrics" or
+            operation is not ("trace.events" or "trace.outline" or
+                "trace.range-metric-catalog" or "trace.range-metrics" or
                 "trace.range-shaders" or "trace.shader-source" or
                 "trace.analysis" or "trace.counter-catalog" or
                 "trace.range-counters" or "trace.range-instruction-mix" or
-                "compare-ranges"))
+                "find-ranges" or "compare-ranges"))
         {
             return Fail($"{operation} does not accept paging options.");
         }
 
         var isAtomicScoped = operation is
             "trace.event-parameters" or "trace.range-metrics" or
-            "trace.range-shaders" or "trace.shader-source" or
+            "trace.range-metric-catalog" or "trace.range-shaders" or
+            "trace.shader-profile" or "trace.shader-source" or
             "trace.analysis" or "trace.counter-catalog" or
             "trace.range-counters" or "trace.range-instruction-mix";
         if (isAtomicScoped && (eventOrdinal is null) == (eventPath is null))
@@ -387,12 +436,14 @@ internal static class CommandLine
             return Fail($"{operation} does not accept --table.");
         }
         if (shaderHash is not null &&
-            operation is not ("trace.range-shaders" or "trace.shader-source"))
+            operation is not ("trace.range-shaders" or "trace.shader-profile" or
+                "trace.shader-source"))
         {
             return Fail($"{operation} does not accept --shader-hash.");
         }
         if (shaderOccurrence is not null &&
-            operation is not ("trace.range-shaders" or "trace.shader-source"))
+            operation is not ("trace.range-shaders" or "trace.shader-profile" or
+                "trace.shader-source"))
         {
             return Fail($"{operation} does not accept --shader-occurrence.");
         }
@@ -403,6 +454,15 @@ internal static class CommandLine
         if (operation == "trace.shader-source" && shaderHash is null)
         {
             return Fail("trace.shader-source requires --shader-hash.");
+        }
+        if (operation == "trace.shader-profile" &&
+            (shaderHash is null || shaderStage is null))
+        {
+            return Fail("trace.shader-profile requires --shader-stage and --shader-hash.");
+        }
+        if (operation != "trace.shader-profile" && shaderStage is not null)
+        {
+            return Fail($"{operation} does not accept --shader-stage.");
         }
         if (counterNames.Count > 0 && operation != "trace.range-counters")
         {
@@ -426,10 +486,18 @@ internal static class CommandLine
             return Fail($"{operation} does not accept --event-name-mode.");
         }
         if (operation != "resolve-event" &&
-            (eventName is not null || eventOccurrence is not null ||
-                withinEventOrdinal is not null))
+            (eventName is not null || eventOccurrence is not null))
         {
             return Fail($"{operation} does not accept event-resolution options.");
+        }
+        if (withinEventOrdinal is not null &&
+            operation is not ("resolve-event" or "find-ranges"))
+        {
+            return Fail($"{operation} does not accept --within-event-ordinal.");
+        }
+        if (rangeNameContains is not null && operation != "find-ranges")
+        {
+            return Fail($"{operation} does not accept --name-contains.");
         }
         if (operation is not ("compare-ranges" or "compare-frame-timing") &&
             (baselineTracePath is not null || baselineEventOrdinal is not null))
@@ -478,7 +546,10 @@ internal static class CommandLine
             baselineFrameIndex,
             analysisSeedEventOrdinal,
             presentQueueEventOrdinal,
-            topShaderCount), null);
+            topShaderCount,
+            grain,
+            rangeNameContains,
+            shaderStage), null);
     }
 
     private static bool TryTakeValue(string[] args, ref int index, out string? value)
@@ -491,6 +562,16 @@ internal static class CommandLine
         value = args[++index];
         return true;
     }
+
+    /// <summary>
+    /// The largest page this operation can actually serve. Shader rows carry
+    /// their instruction mix and stall reasons, so a full-size page of them
+    /// would breach the response bound after the work was already spent.
+    /// </summary>
+    internal static int MaximumLimitFor(string operation) =>
+        operation is "trace.range-shaders"
+            ? ContractLimits.MaximumShaderPageLimit
+            : ContractLimits.MaximumPageLimit;
 
     private static bool TryNormalizeIdentityMode(string? value, out string normalized)
     {

@@ -36,7 +36,7 @@ the most recent backup.
 - Viewer application version:
   `2026.2.0.0 (build 37991608) (public-release)`
 - Qt 6.8.1, MSVC 2022 x64
-- Probe schema implementation: `probe-0.47`; committed Probe 0.44 outputs remain the frozen
+- Probe schema implementation: `probe-0.51`; committed Probe 0.44 outputs remain the frozen
   semantic oracle
 
 The downloaded Qt Core, Gui, and Widgets release DLLs were byte-identical to
@@ -201,6 +201,18 @@ Common settings:
 - `OUTPUT`, `MODE`, `REQUEST_ID`, `REPORT_ID`
 - `QUIT_WHEN_READY=1`
 - `MAX_DEPTH` (default 24, maximum 64)
+- `POLL_INTERVAL_MS` (10-500ms) changes only the probe's bounded observation
+  cadence. Product operations admit it explicitly and use fixture-proven values:
+  range metrics use 100ms and range shaders use 200ms. A shorter shader cadence
+  was rejected because a cold Viewer exposed the stable static inventory before
+  dynamic sample counts arrived.
+
+The product session accepts one explicit cache policy, `range-shaders-v1`. It retains only a
+complete, stable, non-truncated shader-model response in bounded Viewer-process memory (four entries,
+64 MiB). The key closes report/version/schema/mode and the complete settings object. A hit still
+resolves and selects the exact requested event and verifies that current selection before rebinding
+the response request id. Other selection-metrics requests, including Instruction Mix and source
+activation, cannot opt into this policy.
 
 Event export and selectors:
 
@@ -210,6 +222,13 @@ Event export and selectors:
 - `EVENT_ORDINAL`
 - `EVENT_MATCH`, `EVENT_MATCH_MODE=exact|contains`
 - `EVENT_OCCURRENCE`, `EVENT_SEARCH_LIMIT`
+- `EVENT_GRAIN_COLUMN`, `EVENT_GRAIN_PREFIXES`,
+  `EVENT_GRAIN_SUBSTRINGS`, `EVENT_GRAIN_MODE=include|exclude` apply an
+  independent range-kind predicate alongside a caller name filter
+- `EVENT_SORT_DURATION_COLUMN` orders the matched subsequence by parsed Viewer
+  duration descending, with true preorder ordinal as the tie-breaker
+- `EVENT_WITHIN_ORDINAL` restricts matches to strict descendants and returns
+  the exact resolved scope plus ancestors
 
 Selector precedence is path, range, ordinal, then description.
 
@@ -219,6 +238,8 @@ Warp Metrics:
 - `METRIC_TABLE_MATCH_MODE=exact|contains`
 - `METRIC_OFFSET`, `METRIC_LIMIT`
 - `METRIC_INCLUDE_ITEM_DATA=1` for explicit role probing only
+- `METRIC_CATALOG_ONLY=1` returns stable table headers and row/column counts
+  without metric cells
 - `METRICS_MIN_POLL` (safe default 10)
 - `SELECTION_BASELINE_METRIC_MIN_COUNT` and
   `SELECTION_BASELINE_METRIC_STABLE_MIN_POLLS` gate event selection on a stable

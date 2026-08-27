@@ -62,9 +62,13 @@ Wrappers are added only after the P0 atom denominator closes. They may:
 - emit bounded deterministic summaries.
 
 The first wrapper slice is exposed by the same JSON CLI with descriptor `layer: wrapper`.
-`inspect-pass` closes all source pages before emitting complete metrics/instructions and a
-coverage-labelled shader Top-N. `compare-ranges` joins semantic identities, retains each side's
-source ordinal, and pages metric deltas; target-only and baseline-only are never coerced to zero.
+`inspect-pass` closes all available source pages before emitting complete metrics and a
+coverage-labelled shader Top-N. V1 does not request the independently stateful range Instruction
+Mix model; the nested section is `unavailable` with
+`trace.range_instruction_mix_not_requested` and no `items`/`totalCount`, while the explicit atom
+remains available for callers that need it. `compare-ranges` joins semantic
+identities, retains each side's source ordinal, and pages metric deltas; target-only and
+baseline-only are never coerced to zero.
 
 Wrappers may not invent a metric meaning, choose an optimization priority, infer causality, or turn
 a candidate into a confirmed fact.
@@ -132,7 +136,7 @@ The adapter verifies:
 
 The first adapter is concrete and pinned:
 
-    NsightViewer2026_2 / build 37991608 / bridge probe-0.47
+    NsightViewer2026_2 / build 37991608 / bridge probe-0.51
 
 A mismatched build returns adapterMismatch. A new Viewer build is re-probed and either gets a new
 adapter mapping or an explicitly verified compatibility entry. No nominal 2026.x fallback exists.
@@ -148,6 +152,15 @@ Every request remains self-contained: it sets its own selection, waits, verifies
 and returns its own envelope. The normal Viewer-owned CrashReporter pipe guardian is recorded once at
 startup and is not a crash signal. Viewer loss or an additional/replacement guardian invalidates the
 session; a later atom creates a fresh session.
+
+The first admitted response cache is deliberately narrower than session reuse. A complete,
+non-timeout, stable `trace.range-shaders/v1` bridge response may be retained only in the current
+Viewer process, under a key containing report identity, decoder/bridge version, mode, schema, exact
+EventKey selector, and every adapter setting. On a hit the adapter resolves the EventKey again,
+establishes that Qt selection, and verifies the final selected index before writing a fresh response
+with the new request identity. The cache is bounded to four entries / 64 MiB with LRU eviction and
+dies with the Viewer. Unavailable/error responses, truncated models, Instruction Mix, generic model
+requests, shader-source actions, and local-artifact operations are excluded.
 
 ## Repository layout
 

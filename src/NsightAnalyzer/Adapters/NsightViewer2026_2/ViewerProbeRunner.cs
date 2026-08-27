@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Text.Json;
 using NsightAnalyzer.Contracts;
 
@@ -9,6 +9,12 @@ internal enum ViewerProbeMode
     Heartbeat,
     EventExport,
     SelectionMetricsExport,
+}
+
+internal enum ViewerProbeCachePolicy
+{
+    None,
+    RangeShadersV1,
 }
 
 internal sealed class ViewerProbeRun : IDisposable
@@ -48,7 +54,7 @@ internal static class ViewerProbeRunner
     public const string ExpectedProductBuild = "37991608";
     public const string ExpectedProductSku = "public-release";
     public const string ExpectedQtVersion = "6.8.1";
-    public const string ExpectedBridgeVersion = "probe-0.47";
+    public const string ExpectedBridgeVersion = "probe-0.51";
     public const string DefaultViewerPath =
         @"C:\Program Files\NVIDIA Corporation\Nsight Graphics 2026.2.0\host\windows-desktop-nomad-x64\ngfx-ui.exe";
 
@@ -76,11 +82,24 @@ internal static class ViewerProbeRunner
         "EVENT_FILTER_COLUMN",
         "EVENT_STABLE_SAMPLES",
         "EVENT_FILTER_CONTAINS",
+        "EVENT_GRAIN_COLUMN",
+        "EVENT_GRAIN_MODE",
+        "EVENT_GRAIN_PREFIXES",
+        "EVENT_GRAIN_SUBSTRINGS",
+        "EVENT_INCLUDE_ANCESTORS",
+        "EVENT_NAME_COLUMN",
+        "EVENT_NAME_CONTAINS",
+        "EVENT_NAME_EXACT",
+        "EVENT_NAME_MODE",
+        "EVENT_NAME_PREFIXES",
+        "EVENT_NAME_SUBSTRINGS",
         "EVENT_INCLUDE_ITEM_DATA",
         "EVENT_LIMIT",
         "EVENT_OFFSET",
         "EVENT_ORDINAL",
         "EVENT_PATH",
+        "EVENT_SORT_DURATION_COLUMN",
+        "EVENT_WITHIN_ORDINAL",
         "EXTERNAL_KILL_ON_TIMEOUT",
         "INVOKE_CLASS_MATCH",
         "INVOKE_MATCH_MODE",
@@ -90,6 +109,7 @@ internal static class ViewerProbeRunner
         "INVOKE_SETTLE_MIN_POLLS",
         "MAX_DEPTH",
         "METRIC_LIMIT",
+        "METRIC_CATALOG_ONLY",
         "METRIC_SETTLE_MAX_POLLS",
         "METRIC_SETTLE_MIN_POLLS",
         "MODEL_ATTACHED_VIEW_OBJECT_MATCH",
@@ -112,6 +132,7 @@ internal static class ViewerProbeRunner
         "MODEL_SELECT_VIEW_OBJECT",
         "MODEL_SETTLE_MIN_POLLS",
         "PANEL_SETTLE_MIN_POLLS",
+        "POLL_INTERVAL_MS",
         "SELECTION_BASELINE_METRIC_MIN_COUNT",
         "SELECTION_BASELINE_METRIC_STABLE_MIN_POLLS",
     ];
@@ -122,7 +143,8 @@ internal static class ViewerProbeRunner
         string expectedSchema,
         IReadOnlyDictionary<string, string> settings,
         string? viewerPathOverride,
-        int timeoutMs)
+        int timeoutMs,
+        ViewerProbeCachePolicy cachePolicy = ViewerProbeCachePolicy.None)
     {
         var viewerPath = string.IsNullOrWhiteSpace(viewerPathOverride)
             ? DefaultViewerPath
@@ -222,7 +244,8 @@ internal static class ViewerProbeRunner
             runDirectory,
             outputPath,
             requestId,
-            timeoutMs);
+            timeoutMs,
+            CachePolicyName(cachePolicy));
         stopwatch.Stop();
         if (!invoked.IsSuccess)
         {
@@ -437,6 +460,13 @@ internal static class ViewerProbeRunner
         ViewerProbeMode.EventExport => "event-export",
         ViewerProbeMode.SelectionMetricsExport => "selection-metrics-export",
         _ => throw new ArgumentOutOfRangeException(nameof(mode)),
+    };
+
+    private static string CachePolicyName(ViewerProbeCachePolicy policy) => policy switch
+    {
+        ViewerProbeCachePolicy.None => "none",
+        ViewerProbeCachePolicy.RangeShadersV1 => "range-shaders-v1",
+        _ => throw new ArgumentOutOfRangeException(nameof(policy)),
     };
 
     private static bool IsSafeSettingName(string name) =>

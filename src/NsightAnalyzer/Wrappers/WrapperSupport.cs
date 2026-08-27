@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using NsightAnalyzer.Contracts;
 
 namespace NsightAnalyzer.Wrappers;
@@ -67,7 +67,13 @@ internal sealed class WrapperContext
         var result = await invocation(remainingMs);
         if (!result.IsSuccess)
         {
-            return result;
+            // An atom that timed out did so against whatever was left of the
+            // wrapper's budget, not against a limit the caller chose. Reporting
+            // the atom's remainder verbatim reads as "the timeout was set to
+            // 924ms" and invites raising a limit that was never the problem.
+            return result.Error is { Category: ErrorCategory.Timeout }
+                ? BudgetExhaustedFailure(result.Error)
+                : result;
         }
 
         var provenanceError = AcceptProvenance(result.Provenance);
@@ -149,7 +155,30 @@ internal sealed class WrapperContext
             ErrorCategory.Timeout,
             "wrapper.timeout",
             "The deterministic wrapper exceeded its total runtime bound.",
-            $"timeoutMs={Deadline.TimeoutMs}");
+            BudgetDetail(null));
+
+    private OperationResult BudgetExhaustedFailure(OperationError atomError) =>
+        OperationResult.Failure(
+            ErrorCategory.Timeout,
+            "wrapper.timeout",
+            "The deterministic wrapper exceeded its total runtime bound.",
+            BudgetDetail(atomError.Code));
+
+    /// <summary>
+    /// States the budget the caller actually set and how much work was done
+    /// against it, so the reader can tell "raise the timeout" apart from
+    /// "narrow the request".
+    /// </summary>
+    private string BudgetDetail(string? atomCode)
+    {
+        var detail =
+            $"timeoutMs={Deadline.TimeoutMs}; " +
+            $"elapsedMs={Deadline.ElapsedMilliseconds}; " +
+            $"atomCalls={AtomCallCount}; " +
+            $"retrievedFacts={RetrievedFactCount}; " +
+            "the timeout bounds the whole wrapper, not one call";
+        return atomCode is null ? detail : $"{detail}; exhaustedIn={atomCode}";
+    }
 }
 
 internal sealed record WrapperValueResult<T>(T? Value, OperationError? Error)
@@ -178,7 +207,8 @@ internal static class WrapperSupport
         WrapperContext context,
         Func<int, int, int, Task<OperationResult>> invoke,
         Func<TValue, Page<TItem>> selectPage,
-        Func<TValue, OperationError?>? validateValue = null)
+        Func<TValue, OperationError?>? validateValue = null,
+        Action<TValue>? observeValue = null)
         where TValue : class
     {
         var items = new List<TItem>();
@@ -203,6 +233,10 @@ internal static class WrapperSupport
             {
                 return WrapperValueResult<CollectedPage<TItem>>.Failure(valueError);
             }
+            // Some atoms return per-page context alongside the paged items.
+            // The caller sees every page, so nothing outside the page contract
+            // is silently dropped on the way to the concatenated result.
+            observeValue?.Invoke(value);
 
             var page = selectPage(value);
             var pageError = ValidatePage(page, cursor, AtomPageLimit, expectedTotal);
