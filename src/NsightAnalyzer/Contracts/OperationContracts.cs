@@ -128,6 +128,10 @@ public static class ContractLimits
     /// </para>
     /// </summary>
     public const int MaximumShaderPageLimit = 150;
+    // Event descriptions can contain expanded API structs and arrays. Keep
+    // discovery pages compact enough that a successful decoder request cannot
+    // fail only while serializing its result.
+    public const int MaximumEventSearchPageLimit = 50;
     public const int MaximumMetricTableFilters = 32;
     public const int MaximumCounterFilters = 32;
     public const int MaximumRangeFilters = 32;

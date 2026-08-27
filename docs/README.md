@@ -16,6 +16,6 @@
 The committed probe README remains the detailed low-level experiment log. Product documentation
 does not promote generic Qt model access into a public operation.
 
-The current catalog has 14 atoms and five deterministic wrappers. `capabilities` is the
+The current catalog has 14 atoms and six deterministic wrappers. `capabilities` is the
 machine-readable source of truth and labels every entry as `atom` or `wrapper`; the matrix records
 evidence and boundaries, not a second hand-maintained API schema.

@@ -22,6 +22,7 @@ groups operations by user intent and does not create a second operation registry
   guess an identity, or compose avoidable calls;
 - **build**: the missing shape can be implemented from facts already proven by the oracle;
 - **probe**: useful for GPU Trace only if a real decoded Viewer model proves the fact first;
+- **unavailable**: a real report/build audit proved that the decoded semantic surface is absent;
 - **excluded**: requires Graphics Capture/replay rather than an existing GPU Trace report.
 
 ## Matrix
@@ -32,7 +33,7 @@ groups operations by user intent and does not create a second operation registry
 | Decoder and trace identity | `get_capture_info` | `trace.info`, `capabilities` | current | Keep the stronger version/build/bridge provenance. |
 | Compact frame overview | `get_frame_overview`, `get_frame_summary` | `find-ranges` plus `trace.info` | current | Use bounded ordered candidates instead of a second large overview payload. |
 | Browse the action/range tree | `list_actions`, `get_draw_calls` | `trace.events`, `trace.outline` | current | Keep exact EventKey identity, hierarchy and paging. |
-| Search actions by name | `search_actions` | `resolve-event --event-name-mode contains` | partial | Replace fail-on-ambiguity discovery with a bounded candidate-returning range query. |
+| Search actions by name | `search_actions` | `find-events` | current | Return bounded exact EventKeys for any API event/range substring, optionally under one exact ancestor. |
 | Find interesting draws/ranges | `find_draws` | `find-ranges` | current | Bounded name/grain/scope filtering and Viewer-duration ordering over objective outline facts. |
 | Inspect one API command | `get_action`, `get_draw_call_details` | `trace.event-parameters` | current | Keep structured command parameters; do not pretend they are full pipeline state. |
 | Rank expensive passes/actions | `get_pass_timing`, `get_action_timings` | `find-ranges`, `trace.outline`, `trace.analysis` | current | `find-ranges` returns bounded Viewer-duration-ranked candidates. |
@@ -45,7 +46,7 @@ groups operations by user intent and does not create a second operation registry
 | Read shader/range instruction mix | no direct PC-sampling equivalent | `trace.range-shaders`, `trace.range-instruction-mix` | current | Keep shader and range attribution as distinct fact families. |
 | Read Viewer analysis findings | performance-analysis helpers | `trace.analysis` | current | Return Viewer facts only; diagnosis remains in the Skill. |
 | Read raw GPU counters | timing/counter helpers | `trace.counter-catalog`, `trace.range-counters` | current | Keep exact seed scope and validated local export evidence. |
-| Inspect full event execution state | `get_pipeline_state`, `get_draw_call_state` | command parameters and range-level shader membership only | probe | Probe PSO, shader-stage, topology, viewport and target metadata; admit only fields decoded from the report. |
+| Inspect full event execution state | `get_pipeline_state`, `get_draw_call_state` | command parameters and range-level shader inventory only | unavailable | The tested report/build exposes no exact state model; do not reconstruct one from command history or profiler grouping. |
 | Inspect shader/resource bindings | `get_shader_bindings`, shader reflection | no proven product fact | probe | Probe independently after execution-state evidence; do not reconstruct state from pointer-like command text. |
 | Browse resource metadata | `list_textures`, `list_buffers`, `list_resources`, `get_texture_info` | no proven product fact | probe | In scope only for metadata materialized by the GPU Trace Viewer. |
 | Trace resource read/write usage | `get_resource_usage` | no reliable resource identity/usage atom | probe | Require stable report resource identity and a real usage model before contract design. |
@@ -79,15 +80,26 @@ request includes stage, normalized hash and hash occurrence so a duplicate hash 
 stages. It reuses the verified range-shader model and its Viewer-process cache; source rows stay in the
 separate `trace.shader-source` atom.
 
-## Next probe-gated gap
+## Event execution-context audit
 
 ### Event execution context
 
-Use the frozen probe oracle on a real fixture to determine whether the normal GPU Trace document
-materializes exact PSO, shader-stage, topology, viewport, render/depth-target, binding or resource
-metadata. Each proven fact is considered separately. A profiler grouping named after a pipeline is
-not evidence of complete event pipeline state. If the Viewer exposes no stable semantic model, the
-capability remains unavailable rather than being reconstructed from GUI state or command history.
+On the real single-frame report, selecting exact `ClearRenderTargetView` event 1774 changed only the
+Instruction Mix pair among 380 decoded models. Resource, descriptor and current-target actions were
+disabled. Selecting draw 1661 and its enclosing GBufferPass produced the same set of 506 Shader
+Pipelines roots; only attribution values and asynchronous order differed. Therefore this build has
+no proven exact PSO, topology, viewport, render/depth-target or binding state fact. A future report
+captured with additional metadata may reopen the binding/resource rows independently, but the
+current product does not publish a synthetic execution-state operation.
+
+## Closed after the `probe-0.51` bridge
+
+### `find-events` wrapper
+
+Reuses the verified bridge-side name and exact-ancestor predicates. It searches any Event List row,
+not only ranges, and returns one bounded preorder page plus exact EventKeys and shared ancestor
+context. The single-frame report has 52 `ClearRenderTargetView` matches; a warm scoped query returned
+the seven strict descendants of ordinal 1680 in 2.08 s, one atom call and 3.7 KB.
 
 ## Acceptance for new public operations
 

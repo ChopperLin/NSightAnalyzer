@@ -85,6 +85,39 @@ public sealed class OperationCatalogTests
 public sealed class AgentInterfaceCommandLineTests
 {
     [Fact]
+    public void FindEventsRequiresACompactNameQuery()
+    {
+        var missing = CommandLine.Parse([
+            "find-events",
+            "trace.ngfx-gputrace",
+        ]);
+        var parsed = CommandLine.Parse([
+            "find-events",
+            "trace.ngfx-gputrace",
+            "--name-contains", "Dispatch",
+        ]);
+
+        Assert.False(missing.IsSuccess);
+        Assert.True(parsed.IsSuccess, parsed.Error);
+        Assert.Equal("Dispatch", parsed.Command!.RangeNameContains);
+        Assert.Equal(20, parsed.Command.Limit);
+    }
+
+    [Fact]
+    public void FindEventsEnforcesItsPayloadBound()
+    {
+        var parsed = CommandLine.Parse([
+            "find-events",
+            "trace.ngfx-gputrace",
+            "--name-contains", "ResourceBarrier",
+            "--limit", "51",
+        ]);
+
+        Assert.False(parsed.IsSuccess);
+        Assert.Contains("1 to 50", parsed.Error);
+    }
+
+    [Fact]
     public void FindRangesAcceptsCompactDiscoveryFilters()
     {
         var parsed = CommandLine.Parse([

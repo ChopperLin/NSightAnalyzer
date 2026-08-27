@@ -212,6 +212,89 @@ internal static class BridgeProjection
             new(matches, offset, rawLimit, total, returned, hasMore, next));
     }
 
+    public static EventCandidatesValue ProjectEventCandidates(
+        JsonElement root,
+        int requestedCursor,
+        int requestedLimit,
+        string requestedNameContains,
+        int? requestedWithinOrdinal)
+    {
+        var matches = ProjectEventNameMatches(
+            root,
+            requestedCursor,
+            requestedLimit,
+            requestedNameContains,
+            contains: true);
+        var export = RequireSingleEventExport(root);
+        var rawWithin = RequiredInt32(export, "withinOrdinal");
+        EventFact? withinScope = null;
+        if (requestedWithinOrdinal is null)
+        {
+            if (rawWithin != -1)
+            {
+                throw new BridgeSchemaException(
+                    "The bridge applied an unexpected event ancestor scope.");
+            }
+        }
+        else
+        {
+            if (rawWithin != requestedWithinOrdinal.Value ||
+                !RequiredBoolean(export, "withinFound"))
+            {
+                throw new BridgeFactNotFoundException(
+                    "wrapper.within_event_not_found",
+                    "The exact ancestor preorder ordinal was not found.");
+            }
+            withinScope = ProjectEventNode(RequiredObject(export, "withinNode"));
+            if (withinScope.Key.PreorderOrdinal != requestedWithinOrdinal.Value)
+            {
+                throw new BridgeSchemaException(
+                    "The returned event ancestor scope differs from the request.");
+            }
+        }
+
+        foreach (var match in matches.Matches.Items)
+        {
+            if (!match.Key.Description.Contains(
+                    requestedNameContains,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                throw new BridgeSchemaException(
+                    "The event finder returned a name outside the requested substring.");
+            }
+            if (withinScope is not null &&
+                (match.Key.TreePath.Count <= withinScope.Key.TreePath.Count ||
+                    !match.Key.TreePath.Take(withinScope.Key.TreePath.Count)
+                        .SequenceEqual(withinScope.Key.TreePath)))
+            {
+                throw new BridgeSchemaException(
+                    "The event finder returned a row outside the requested ancestor.");
+            }
+        }
+
+        for (var index = 1; index < matches.Matches.Items.Count; index++)
+        {
+            if (matches.Matches.Items[index - 1].Key.PreorderOrdinal >=
+                matches.Matches.Items[index].Key.PreorderOrdinal)
+            {
+                throw new BridgeSchemaException(
+                    "Event candidates are not in strict preorder ordinal order.");
+            }
+        }
+
+        var ancestors = withinScope is null
+            ? matches.Ancestors
+            : matches.Ancestors.Where(item =>
+                item.Key.TreePath.Count > withinScope.Key.TreePath.Count &&
+                item.Key.TreePath.Take(withinScope.Key.TreePath.Count)
+                    .SequenceEqual(withinScope.Key.TreePath)).ToArray();
+        return new(
+            matches.TotalEventCount,
+            withinScope,
+            ancestors,
+            matches.Matches);
+    }
+
     /// <summary>
     /// Projects the range-grain skeleton. The bridge filters rows; this keeps
     /// each row's true preorder ordinal, so an outline ordinal addresses the

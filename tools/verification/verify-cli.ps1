@@ -75,13 +75,13 @@ Assert-True (Test-Path -LiteralPath $cliPath -PathType Leaf) `
 
 $capabilities = Invoke-JsonCli -Arguments @('capabilities', '--compact') -ExpectedExitCode 0
 Assert-True $capabilities.Document.result.isSuccess 'capabilities failed.'
-Assert-True ($capabilities.Document.result.value.operations.totalCount -eq 19) `
+Assert-True ($capabilities.Document.result.value.operations.totalCount -eq 20) `
     'Unexpected operation count.'
 Assert-True (@($capabilities.Document.result.value.operations.items |
         Where-Object layer -eq 'atom').Count -eq 14) `
     'Unexpected atom count.'
 Assert-True (@($capabilities.Document.result.value.operations.items |
-        Where-Object layer -eq 'wrapper').Count -eq 5) `
+        Where-Object layer -eq 'wrapper').Count -eq 6) `
     'Unexpected wrapper count.'
 Assert-True ($capabilities.Document.result.value.decoder.bridgeVersion -eq 'probe-0.51') `
     'Unexpected bridge version.'
@@ -255,6 +255,43 @@ if ($SingleFrameTrace) {
             Where-Object { $_.key.treePath.Count -le
                 $scopedFind.Document.result.value.withinScope.key.treePath.Count }).Count -eq 0) `
         'Scoped find-ranges returned shared ancestors above its exact scope.'
+
+    $findEventArgs = [Collections.ArrayList]@(
+        'find-events', $single,
+        '--name-contains', 'ClearRenderTargetView', '--limit', '20', '--compact')
+    Add-ViewerArgument $findEventArgs
+    $foundEvents = Invoke-JsonCli -Arguments $findEventArgs -ExpectedExitCode 0
+    $foundEventValue = $foundEvents.Document.result.value
+    Assert-True ($foundEventValue.execution.atomCallCount -eq 1) `
+        'find-events did not use one decoder request.'
+    Assert-True ($foundEventValue.execution.scannedEventCount -eq 4951) `
+        'find-events did not report its one complete Event List traversal.'
+    Assert-True ($foundEventValue.events.totalCount -eq 52) `
+        'find-events returned an unexpected ClearRenderTargetView total.'
+    Assert-True (@($foundEventValue.events.items |
+            Where-Object { $_.key.description -notmatch 'ClearRenderTargetView' }).Count -eq 0) `
+        'find-events returned a row outside the requested substring.'
+    for ($index = 1; $index -lt $foundEventValue.events.items.Count; $index++) {
+        Assert-True `
+            ($foundEventValue.events.items[$index - 1].key.preorderOrdinal -lt
+                $foundEventValue.events.items[$index].key.preorderOrdinal) `
+            'find-events candidates are not in strict preorder.'
+    }
+    $scopedEventArgs = [Collections.ArrayList]@(
+        'find-events', $single,
+        '--name-contains', 'ClearRenderTargetView',
+        '--within-event-ordinal', '1680', '--limit', '20', '--compact')
+    Add-ViewerArgument $scopedEventArgs
+    $scopedEvents = Invoke-JsonCli -Arguments $scopedEventArgs -ExpectedExitCode 0
+    $scopedEventValue = $scopedEvents.Document.result.value
+    Assert-True ($scopedEventValue.withinScope.key.preorderOrdinal -eq 1680) `
+        'Scoped find-events did not verify its exact ancestor.'
+    Assert-True ($scopedEventValue.events.totalCount -eq 7) `
+        'Scoped find-events returned an unexpected candidate count.'
+    Assert-True (@($scopedEventValue.ancestors |
+            Where-Object { $_.key.treePath.Count -le
+                $scopedEventValue.withinScope.key.treePath.Count }).Count -eq 0) `
+        'Scoped find-events returned shared ancestors above its exact scope.'
 
     # The published maximum must be one the operation can actually serve; a
     # schema that promises a page size which fails on serialization spends the

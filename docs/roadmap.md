@@ -113,14 +113,20 @@ gaps backed by already-proven facts:
    with no metric value payload;
 3. `trace.shader-profile/v1` atom: one exact stage/hash/occurrence shader fact, reusing the verified
    shader snapshot and cache;
-The remaining candidate is probe-gated event execution context: consider PSO, shader-stage,
-topology, viewport, target, binding and resource-metadata facts separately, only after a real Viewer
-model proves each one.
+4. `find-events` wrapper: bounded substring search across ordinary API events and ranges, with
+   optional exact-ancestor scoping and no ambiguity failure.
+
+The execution-context candidate was audited and rejected for this report/build: selecting an exact
+event changed no state model among 380 decoded models, and draw/range selection exposed the same 506
+Shader Pipelines roots. Binding and resource metadata remain probe-gated on a future real fixture
+that actually materializes those facts.
 
 Real single-frame dogfood returned warm `find-ranges` in 2.10 s (one 4,951-event traversal), the
 88-table header-only metric catalog in 1.88 s, and a cached singular shader profile in 1.25 s. Their
 compact JSON results were 3.6-22.4 KB. The first shader snapshot remained the expensive operation at
 9.23 s in an already-open Viewer; the profile projection adds no second model read.
+The first `find-events ClearRenderTargetView` request took 8.60 s and returned 20 of 52 matches in
+10.7 KB; the next exact-scope request took 2.08 s and returned all seven matches in 3.7 KB.
 
 Resource contents, pixel history/debugging, post-VS mesh data and render-target export remain
 outside GPU Trace and are not roadmap candidates. New operations must report dogfood call count,

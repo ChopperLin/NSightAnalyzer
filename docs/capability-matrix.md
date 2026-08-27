@@ -11,9 +11,9 @@
 The current 95 percent estimate describes the proven ordinary-analysis data surface, not product
 implementation completeness.
 
-The public catalog additionally labels five deterministic wrapper operations: `find-ranges`,
-`resolve-event`, `inspect-pass`, `compare-ranges`, and `compare-frame-timing`. They compose the
-verified fact families below and do not add new facts or bottleneck judgments.
+The public catalog additionally labels six deterministic wrapper operations: `find-events`,
+`find-ranges`, `resolve-event`, `inspect-pass`, `compare-ranges`, and `compare-frame-timing`. They
+compose the verified fact families below and do not add new facts or bottleneck judgments.
 
 | ID | Semantic fact family | Probe evidence | Product status | Acceptance |
 |---|---|---|---|---|
@@ -22,6 +22,7 @@ verified fact families below and do not add new facts or bottleneck judgments.
 | NAV-000 | range-grain outline | 493 of 4,951 single-frame events are ranges | verified | bridge-filtered skeleton, true preorder ordinals, grain label |
 | NAV-001 | event page | 306,576-node report and final six-node page | verified | exact page closure, stable EventKey |
 | NAV-002 | event parameters | DrawIndexedInstanced typed values; out-of-domain Dispatch fixture | verified | exact scope and typed leaf projection; invalid Viewer-decoded D3D12 values return unavailable |
+| NAV-003 | bounded event candidate search | 52 single-frame ClearRenderTargetView matches; seven under exact scope 1680 | verified | one traversal, true EventKeys, preorder paging, exact optional ancestor |
 | MET-001 | range metric catalog | 88 tables, 409 rows | verified | exact tables/headers/descriptions/occurrences |
 | MET-002 | range metric values | generated export equality and two real reports | verified | long-form values, precise Tooltip, paging |
 | MET-003 | cross-frame refresh | frame 0/29 GBuffer values differ | verified | distinct EventKeys, no stale selection |
@@ -37,6 +38,7 @@ verified fact families below and do not add new facts or bottleneck judgments.
 | CNT-001 | counter catalog/values | 226 ranges by 646 counters | verified | duplicate occurrences and safe trace-copy cleanup |
 | SCP-001 | pass/marker PC sampling | stable on tested ranges | verified | only proven range grains |
 | SCP-002 | single-draw PC sampling | sample denominator expanded unexpectedly | unavailable | range/shader/instruction atoms refuse a single-command scope with `trace.unsupported_draw_scope` |
+| EXE-001 | full event execution state | 380-model selection audit; draw and range expose the same 506 pipeline roots | unavailable | no exact topology, viewport, target, binding or resource-state model in this report/build |
 | RES-001 | resource contents/pixel history | absent from GPU Trace domain | out of scope | requires Graphics Capture |
 | PRF-001 | Nsight Perf SDK live metrics | different producer and workflow | out of scope | user-approved future scope only |
 

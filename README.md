@@ -28,9 +28,9 @@ The committed probing implementation under tools/probes/qt-model-bridge is the l
 The atom layer exposes 14 operations: capability/identity, outline, events, event parameters,
 range-metric catalog/values, range instruction mix, range shader inventory, exact shader profile,
 shader source, Trace Analysis, and raw-counter catalog/value retrieval. The deterministic wrapper
-slice adds `find-ranges`, `resolve-event`, `inspect-pass`, `compare-ranges`, and the same-trace
-`compare-frame-timing` timeline decomposition. Agent diagnosis remains intentionally above those
-wrappers.
+slice adds `find-events`, `find-ranges`, `resolve-event`, `inspect-pass`, `compare-ranges`, and the
+same-trace `compare-frame-timing` timeline decomposition. Agent diagnosis remains intentionally
+above those wrappers.
 
 `inspect-pass/v1` returns complete metrics and its coverage-labelled shader Top-N without coupling
 the summary to the Viewer's independently stateful range Instruction Mix model. Its nested

@@ -44,6 +44,24 @@ public sealed record FindRangesValue(
     Page<FindRangeCandidate> Ranges,
     WrapperExecutionStats Execution);
 
+public sealed record EventCandidatesValue(
+    int TotalEventCount,
+    EventFact? WithinScope,
+    IReadOnlyList<EventFact> Ancestors,
+    Page<EventFact> Events);
+
+public sealed record FindEventsQuery(
+    string NameContains,
+    int? WithinPreorderOrdinal,
+    string Order);
+
+public sealed record FindEventsValue(
+    FindEventsQuery Query,
+    EventFact? WithinScope,
+    IReadOnlyList<EventFact> Ancestors,
+    Page<EventFact> Events,
+    WrapperExecutionStats Execution);
+
 public sealed record CompleteRangeMetrics(
     int TableCount,
     int RowCount,

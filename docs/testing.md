@@ -49,6 +49,8 @@ and confirm the oracle counts above still hold.
   instead report `trace.range_instruction_mix_not_loaded`; that state must never become empty rows;
 - built-in export contains 226 ranges and 646 counters, removes its generated trace copy, and
   reports GBuffer PS register allocation 62.7392% versus Warp Metrics 62.739219%.
+- `find-events ClearRenderTargetView` finds 52 exact-key candidates; scope ordinal 1680 contains
+  seven strict descendants at ordinals 1772 and 1774-1779.
 
 ### Real 30-frame trace
 
@@ -90,6 +92,10 @@ in 1.88 s and 22.4 KB; every raw metric export was header-only and carried no `n
 singular shader profile took 9.23 s to establish the shader snapshot in an already-open Viewer, then
 1.25 s / 3.9 KB from cache while re-verifying the exact EventKey.
 
+The first `find-events ClearRenderTargetView --limit 20` request took 8.60 s, traversed 4,951 events
+once, and returned 10.7 KB. The next scoped request took 2.08 s and returned all seven matches in
+3.7 KB. Both used one atom call; the second request paid no report-open warmup.
+
 Range metrics, range shaders, and range instruction mix additionally verify scope grain. The Viewer
 reports an event range as a single command index or an inclusive span; only a span is a pass/marker
 range. A single-command scope returns `unsupported` / `trace.unsupported_draw_scope` (SCP-002)
@@ -110,6 +116,8 @@ Every real run verifies:
 
 ## Wrapper gates
 
+- `find-events` traverses the Event List once, pages the matching subsequence in strict preorder,
+  preserves true EventKeys, and verifies an optional exact ancestor before applying scope;
 - `find-ranges` traverses the Event List once, returns a bounded duration-ordered page, preserves
   true EventKeys, and verifies an optional exact ancestor before applying strict-descendant scope;
 - `resolve-event` scans stable preorder pages, requires an explicit occurrence, and never chooses

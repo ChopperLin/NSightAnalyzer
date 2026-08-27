@@ -3,6 +3,27 @@ using Xunit;
 
 namespace NsightAnalyzer.Tests;
 
+public sealed class EventCandidateProjectionTests
+{
+    [Fact]
+    public void CandidatesRetainExactKeysAndPreorder()
+    {
+        using var bridge = FixtureBridge.LoadEventCandidates(
+            "event-name-matches-pass01.json");
+
+        var value = BridgeProjection.ProjectEventCandidates(
+            bridge.RootElement, 0, 500, "Pass01", null);
+
+        Assert.Null(value.WithinScope);
+        Assert.Equal(4951, value.TotalEventCount);
+        Assert.All(value.Events.Items, candidate =>
+            Assert.Contains("Pass01", candidate.Key.Description));
+        Assert.Equal(
+            value.Events.Items.Select(item => item.Key.PreorderOrdinal).Order(),
+            value.Events.Items.Select(item => item.Key.PreorderOrdinal));
+    }
+}
+
 public sealed class RangeCandidateProjectionTests
 {
     [Fact]

@@ -271,6 +271,26 @@ internal static class OperationRegistry
                 command.Limit)),
         new(
             new(
+                "find-events",
+                SchemaVersion.V1,
+                "readOnly",
+                true,
+                "implemented",
+                "Returns bounded matching Event List candidates in preorder, with exact EventKeys and shared ancestor context.",
+                "find-events <trace> --name-contains S [--within-event-ordinal N] " +
+                "[--cursor N] [--limit N] [--viewer <path>]",
+                "wrapper",
+                Parameters: [OperationParameters.Trace, OperationParameters.EventNameContains, new("--within-event-ordinal", "integer", false, "Restrict candidates to strict descendants of this exact ancestor ordinal.", Minimum: 0), OperationParameters.Cursor, OperationParameters.EventSearchLimit, OperationParameters.Viewer, OperationParameters.TimeoutMs, OperationParameters.Compact]),
+            command => FindEventsWrapper.ExecuteAsync(
+                command.TracePath!,
+                command.ViewerPath,
+                command.TimeoutMs,
+                command.RangeNameContains!,
+                command.WithinEventOrdinal,
+                command.Cursor,
+                command.Limit)),
+        new(
+            new(
                 "find-ranges",
                 SchemaVersion.V1,
                 "readOnly",

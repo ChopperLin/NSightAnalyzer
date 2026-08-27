@@ -72,6 +72,16 @@ internal static class OperationParameters
         Minimum: 1,
         Maximum: ContractLimits.MaximumShaderPageLimit);
 
+    public static OperationParameter EventSearchLimit { get; } = new(
+        "--limit",
+        "integer",
+        false,
+        "Maximum matching events to return. Kept small because an event name " +
+        "may contain expanded API structures and arrays.",
+        Default: "20",
+        Minimum: 1,
+        Maximum: ContractLimits.MaximumEventSearchPageLimit);
+
     public static OperationParameter EventOrdinal { get; } = new(
         "--event-ordinal",
         "integer",
@@ -136,6 +146,12 @@ internal static class OperationParameters
         "string",
         false,
         "Case-insensitive range-name substring. Omit to consider every selected-grain range.");
+
+    public static OperationParameter EventNameContains { get; } = new(
+        "--name-contains",
+        "string",
+        true,
+        "Case-insensitive substring of the exact Event List description or API command name.");
 
     public static OperationParameter TopShaders { get; } = new(
         "--top-shaders",

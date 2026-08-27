@@ -354,7 +354,7 @@ internal static class CommandLine
 
         var isTraceOperation = operation.StartsWith("trace.", StringComparison.Ordinal);
         var isWrapperOperation = operation is
-            "resolve-event" or "find-ranges" or "inspect-pass" or "compare-ranges" or
+            "resolve-event" or "find-events" or "find-ranges" or "inspect-pass" or "compare-ranges" or
             "compare-frame-timing";
         var requiresTrace = isTraceOperation || isWrapperOperation ||
             operation == "viewer-session.close";
@@ -365,6 +365,10 @@ internal static class CommandLine
         if (!requiresTrace && (viewerPath is not null || timeoutSpecified))
         {
             return Fail($"{operation} does not accept Viewer options.");
+        }
+        if (!limitSpecified && operation == "find-events")
+        {
+            limit = 20;
         }
         var maximumLimit = MaximumLimitFor(operation);
         if (limit > maximumLimit)
@@ -386,7 +390,7 @@ internal static class CommandLine
                 "trace.range-shaders" or "trace.shader-source" or
                 "trace.analysis" or "trace.counter-catalog" or
                 "trace.range-counters" or "trace.range-instruction-mix" or
-                "find-ranges" or "compare-ranges"))
+                "find-events" or "find-ranges" or "compare-ranges"))
         {
             return Fail($"{operation} does not accept paging options.");
         }
@@ -491,11 +495,16 @@ internal static class CommandLine
             return Fail($"{operation} does not accept event-resolution options.");
         }
         if (withinEventOrdinal is not null &&
-            operation is not ("resolve-event" or "find-ranges"))
+            operation is not ("resolve-event" or "find-events" or "find-ranges"))
         {
             return Fail($"{operation} does not accept --within-event-ordinal.");
         }
-        if (rangeNameContains is not null && operation != "find-ranges")
+        if (operation == "find-events" && rangeNameContains is null)
+        {
+            return Fail("find-events requires --name-contains.");
+        }
+        if (rangeNameContains is not null &&
+            operation is not ("find-events" or "find-ranges"))
         {
             return Fail($"{operation} does not accept --name-contains.");
         }
@@ -569,9 +578,12 @@ internal static class CommandLine
     /// would breach the response bound after the work was already spent.
     /// </summary>
     internal static int MaximumLimitFor(string operation) =>
-        operation is "trace.range-shaders"
-            ? ContractLimits.MaximumShaderPageLimit
-            : ContractLimits.MaximumPageLimit;
+        operation switch
+        {
+            "trace.range-shaders" => ContractLimits.MaximumShaderPageLimit,
+            "find-events" => ContractLimits.MaximumEventSearchPageLimit,
+            _ => ContractLimits.MaximumPageLimit,
+        };
 
     private static bool TryNormalizeIdentityMode(string? value, out string normalized)
     {

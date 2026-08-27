@@ -69,6 +69,18 @@ internal static class FixtureBridge
         return JsonDocument.Parse(root.ToJsonString());
     }
 
+    public static JsonDocument LoadEventCandidates(string name)
+    {
+        var root = LoadNode(name);
+        var export = root["eventViews"]![0]!["export"]!.AsObject();
+        export["nameContains"] = export["nameExact"]!.DeepClone();
+        export["nameExact"] = null;
+        export["withinOrdinal"] = -1;
+        export["withinFound"] = false;
+        export["withinNode"] = new JsonObject();
+        return JsonDocument.Parse(root.ToJsonString());
+    }
+
     private static JsonObject LoadNode(string name)
     {
         var path = Path.Combine(AppContext.BaseDirectory, "Fixtures", name);
