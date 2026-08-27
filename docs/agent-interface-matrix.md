@@ -47,10 +47,10 @@ groups operations by user intent and does not create a second operation registry
 | Read Viewer analysis findings | performance-analysis helpers | `trace.analysis` | current | Return Viewer facts only; diagnosis remains in the Skill. |
 | Read raw GPU counters | timing/counter helpers | `trace.counter-catalog`, `trace.range-counters` | current | Keep exact seed scope and validated local export evidence. |
 | Inspect full event execution state | `get_pipeline_state`, `get_draw_call_state` | command parameters and range-level shader inventory only | unavailable | The tested report/build exposes no exact state model; do not reconstruct one from command history or profiler grouping. |
-| Inspect shader/resource bindings | `get_shader_bindings`, shader reflection | no proven product fact | probe | Probe independently after execution-state evidence; do not reconstruct state from pointer-like command text. |
-| Browse resource metadata | `list_textures`, `list_buffers`, `list_resources`, `get_texture_info` | no proven product fact | probe | In scope only for metadata materialized by the GPU Trace Viewer. |
-| Trace resource read/write usage | `get_resource_usage` | no reliable resource identity/usage atom | probe | Require stable report resource identity and a real usage model before contract design. |
-| Compare two scopes | `diff_draw_calls` | `compare-ranges`, `compare-frame-timing` | partial | Performance deltas are current; state diff waits for execution-state facts. |
+| Inspect shader/resource bindings | `get_shader_bindings`, shader reflection | no decoded binding model | unavailable | D3D12 and Vulkan descriptor fixtures expose command handles only; do not reconstruct bindings from pointer-like text. |
+| Browse resource metadata | `list_textures`, `list_buffers`, `list_resources`, `get_texture_info` | no decoded resource model | unavailable | Resource/descriptor/current-target actions are disabled in both tested GPU Trace documents. |
+| Trace resource read/write usage | `get_resource_usage` | barriers without stable resource identity | unavailable | Barrier parameters alone cannot establish report-wide resource identity or usage. |
+| Compare two performance scopes | timing/performance parts of `diff_draw_calls` | `compare-ranges`, `compare-frame-timing` | current | Keep exact metric, shader-attribution, instruction and timeline deltas; full state diff is unavailable with EXE-001. |
 | Retrieve texture/buffer contents | `get_texture_data`, `get_buffer_data`, texture export | none | excluded | Requires Graphics Capture replayable resource contents. |
 | Pixel inspection/history/debug | `pick_pixel`, `pixel_history`, `debug_shader_at_pixel` | none | excluded | Requires replay and is outside GPU Trace. |
 | Mesh and post-VS data | `get_post_vs_data`, `export_mesh` | none | excluded | Requires Graphics Capture replay. |
@@ -91,6 +91,12 @@ Pipelines roots; only attribution values and asynchronous order differed. Theref
 no proven exact PSO, topology, viewport, render/depth-target or binding state fact. A future report
 captured with additional metadata may reopen the binding/resource rows independently, but the
 current product does not publish a synthetic execution-state operation.
+
+The Vulkan descriptor-heap fixture closes the input variant rather than changing that result. It
+contains `vkCmdBindShadersEXT`, `vkCmdBindDescriptorSets`, image barriers and indexed draws. Selecting
+draw 13 changed Event Parameters and Instruction Mix but created no binding/resource model among 381
+models; all resource/descriptor/current-target actions remained disabled. Marker 9 and draw 13 had
+the same four Shader Pipelines roots: two `VkShaderEXT` groups, one `VkPipeline`, and Unattributed.
 
 ## Closed after the `probe-0.51` bridge
 

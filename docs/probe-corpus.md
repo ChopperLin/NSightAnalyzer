@@ -11,6 +11,7 @@ are removed.
 | generated validation | local generated .ngfx-gputrace plus official counter export | exact 18-value metric closure |
 | real single frame | Ananta_2026_08_11_11_33_36.ngfx-gputrace | pass metrics, event parameters, shader/source oracle |
 | real 30 frame | pkg20260819_Nvidia-RTX-5070ti_...ngfx-gputrace | large paging, repeated frame markers, shader scale |
+| Vulkan descriptor heap | vk_descriptor_heap_2026_08_24_01_54_26.ngfx-gputrace | bind/barrier input variant and binding/resource-model absence |
 
 The reports remain at user/local paths; tests receive them explicitly. Product defaults never scan
 Downloads or other broad directories.
@@ -30,6 +31,6 @@ These are fixture facts, not constants for every trace.
 
 ## Future corpus expansion
 
-Additional traces are added only when real dogfood requires a missing variant: Vulkan, async compute,
-ray tracing, multiple queues, Pro Viewer SASS, or a trace with matching shader PDBs. A hypothetical
+Additional traces are added only when real dogfood requires a missing variant: async compute, ray
+tracing, multiple queues, Pro Viewer SASS, or a trace with matching shader PDBs. A hypothetical
 variant does not justify a new atom or abstraction.

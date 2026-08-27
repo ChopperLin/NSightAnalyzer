@@ -39,6 +39,7 @@ compose the verified fact families below and do not add new facts or bottleneck 
 | SCP-001 | pass/marker PC sampling | stable on tested ranges | verified | only proven range grains |
 | SCP-002 | single-draw PC sampling | sample denominator expanded unexpectedly | unavailable | range/shader/instruction atoms refuse a single-command scope with `trace.unsupported_draw_scope` |
 | EXE-001 | full event execution state | 380-model selection audit; draw and range expose the same 506 pipeline roots | unavailable | no exact topology, viewport, target, binding or resource-state model in this report/build |
+| EXE-002 | binding/resource metadata and usage | Vulkan descriptor fixture has bind/barrier commands but no decoded model; related actions disabled | unavailable | pointer-like command handles are not stable resource identities |
 | RES-001 | resource contents/pixel history | absent from GPU Trace domain | out of scope | requires Graphics Capture |
 | PRF-001 | Nsight Perf SDK live metrics | different producer and workflow | out of scope | user-approved future scope only |
 

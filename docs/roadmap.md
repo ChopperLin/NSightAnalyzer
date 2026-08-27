@@ -101,7 +101,7 @@ first snapshot, then 3.02 s when repeated, `compare-ranges` 12 calls -> two stri
 its exact-event reads, and repeated range-shader calls -> about 1.3 s after the first stable snapshot.
 Two pre-existing ordering instabilities were found and fixed while diffing before against after.
 
-## R5.6 — Compact Agent interface gaps (in progress)
+## R5.6 — Compact Agent interface gaps (complete)
 
 The [Agent interface comparison](agent-interface-matrix.md) separates useful GPU Trace interaction
 patterns from RenderDoc operations that require Graphics Capture replay. Probe 0.51 closed the three
@@ -118,8 +118,10 @@ gaps backed by already-proven facts:
 
 The execution-context candidate was audited and rejected for this report/build: selecting an exact
 event changed no state model among 380 decoded models, and draw/range selection exposed the same 506
-Shader Pipelines roots. Binding and resource metadata remain probe-gated on a future real fixture
-that actually materializes those facts.
+Shader Pipelines roots. A Vulkan descriptor-heap trace with explicit bind and barrier commands also
+created no binding/resource model among 381 models; marker and draw selection exposed the same four
+pipeline roots. Binding and resource metadata are unavailable for the tested build/reports and may
+be reopened only by a future real fixture that actually materializes those facts.
 
 Real single-frame dogfood returned warm `find-ranges` in 2.10 s (one 4,951-event traversal), the
 88-table header-only metric catalog in 1.88 s, and a cached singular shader profile in 1.25 s. Their

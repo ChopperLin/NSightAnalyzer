@@ -51,6 +51,9 @@ and confirm the oracle counts above still hold.
   reports GBuffer PS register allocation 62.7392% versus Warp Metrics 62.739219%.
 - `find-events ClearRenderTargetView` finds 52 exact-key candidates; scope ordinal 1680 contains
   seven strict descendants at ordinals 1772 and 1774-1779.
+- the Vulkan descriptor fixture contains bind, descriptor-set and barrier commands, but exact draw
+  selection creates no binding/resource model; marker 9 and draw 13 retain the same four Shader
+  Pipelines roots.
 
 ### Real 30-frame trace
 
