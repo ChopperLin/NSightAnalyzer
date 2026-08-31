@@ -62,6 +62,16 @@ dotnet .\src\NsightAnalyzer\bin\Release\net9.0-windows\nsight-analyzer.dll `
   capabilities --compact
 ```
 
+Build the Agent Skill package and publish it to the sibling `lx6-hub\skills\nsight-analyzer`:
+
+```powershell
+pwsh -NoProfile -File .\scripts\build-package.ps1
+```
+
+The package contains the framework-dependent CLI host, `SKILL.md`, and a hash manifest. Use
+`-SkipHubPublish` for an independent package build or `-HubPath <path>` for a non-sibling hub.
+The package does not contain NVIDIA Viewer files or install the version-pinned SolidProbe bridge.
+
 Start with:
 
 - [survey](docs/survey.md)
