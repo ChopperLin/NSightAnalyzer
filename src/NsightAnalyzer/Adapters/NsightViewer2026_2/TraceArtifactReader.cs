@@ -97,7 +97,7 @@ internal static class TraceArtifactReader
         string? sha256 = null;
         var artifactIdentity = string.Create(
             CultureInfo.InvariantCulture,
-            $"localWeak:length={before.ByteLength}:mtimeUtcTicks={before.LastWriteTimeUtc.Ticks}");
+            $"localWeak:pathSha256={Convert.ToHexString(SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(fullPath.ToUpperInvariant())))}:length={before.ByteLength}:mtimeUtcTicks={before.LastWriteTimeUtc.Ticks}");
         if (identityMode.Equals("sha256", StringComparison.Ordinal))
         {
             try
@@ -170,6 +170,20 @@ internal static class TraceArtifactReader
                 sha256,
                 reportId),
             null);
+    }
+
+    internal static bool MatchesSnapshot(TraceArtifact artifact)
+    {
+        try
+        {
+            var current = Snapshot(artifact.FullPath);
+            return current.ByteLength == artifact.ByteLength &&
+                current.LastWriteTimeUtc == artifact.LastWriteTimeUtc;
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            return false;
+        }
     }
 
     private static FileSnapshot Snapshot(string fullPath)

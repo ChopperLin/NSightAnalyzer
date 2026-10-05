@@ -8,11 +8,12 @@ and availability state is preserved verbatim, so a fixture still closes the
 same structural oracles (88 tables / 409 rows / 56 categories) as the real
 report.
 
-The mapping is deterministic and shared across fixtures: the same input
-identifier always becomes the same placeholder, so cross-fixture joins in the
-tests stay meaningful.
+Shader hashes use a deterministic, collision-checked mapping across fixture
+runs, preserving both distinct identities and shared hashes. Marker placeholders
+remain local to each fixture's traversal; they are not cross-fixture join keys.
 """
 import argparse
+import hashlib
 import json
 import re
 import sys
@@ -41,7 +42,13 @@ D3D12_TOKENS = re.compile(
 )
 
 POINTER = re.compile(r"0x[0-9a-fA-F]{6,}")
-SHADER_HASH = re.compile(r"\b[0-9a-fA-F]{8,16}\b")
+SHADER_HASH = re.compile(r"^(?:0x)?([0-9a-fA-F]{8,16})$", re.IGNORECASE)
+SOURCE_HASH_LABEL = re.compile(r"\b(dxil\s*\()([0-9a-fA-F]{8,16})(\))", re.IGNORECASE)
+SOURCE_FILE = re.compile(
+    r"\b[A-Za-z0-9_.-]+\.(?:pdb|hlsl|hlsli|glsl|cpp|cxx|cc|c|hpp|h)\b",
+    re.IGNORECASE)
+SHADER_MODEL = "NV::ShaderProfiler::UI::SampleItemTreeModel"
+SOURCE_MODEL = "NV::SourceCorrelation::SourceModel"
 WIN_PATH = re.compile(r"[A-Za-z]:[\\/][^\"',;]*")
 # BeginEvent/SetMarker carry the caller's marker name as an embedded literal,
 # e.g. pData = "MeshSkinning.SkinOnGPU". The surrounding call is Viewer/D3D12
@@ -53,6 +60,7 @@ class Mapper:
     def __init__(self):
         self.markers = {}
         self.hashes = {}
+        self.hash_inputs = {}
         self.files = {}
 
     def marker(self, name):
@@ -61,13 +69,24 @@ class Mapper:
         return self.markers[name]
 
     def shader_hash(self, value):
+        match = SHADER_HASH.fullmatch(value)
+        if not match:
+            raise ValueError("Expected a shader hash in a semantic hash field")
+        value = match.group(1).lower().zfill(16)
         if value not in self.hashes:
-            self.hashes[value] = f"{0xA0000000 + len(self.hashes):08x}"
+            # Independent fixture runs must preserve the same equality relation.
+            # A collision is an error, never a silent merge of shader identities.
+            mapped = hashlib.sha256(("nsa-fixture-shader-v1:" + value).encode("ascii")).hexdigest()[:16]
+            if mapped in self.hash_inputs and self.hash_inputs[mapped] != value:
+                raise ValueError("Shader fixture hash collision")
+            self.hash_inputs[mapped] = value
+            self.hashes[value] = mapped
         return self.hashes[value]
 
     def file(self, name):
         if name not in self.files:
-            self.files[name] = f"source{len(self.files) + 1:02d}.hlsl"
+            extension = name.rsplit(".", 1)[-1].lower()
+            self.files[name] = f"source{len(self.files) + 1:02d}.{extension}"
         return self.files[name]
 
 
@@ -117,6 +136,7 @@ def scrub_text(text, mapper):
 
     # Paths and pointers never carry semantic value for the projection.
     text = WIN_PATH.sub("X:/redacted/path", text)
+    text = SOURCE_FILE.sub(lambda match: mapper.file(match.group(0)), text)
     text = POINTER.sub("0x0000000000000000", text)
 
     if is_preserved(text):
@@ -128,20 +148,38 @@ def scrub_text(text, mapper):
     return mapper.marker(text) if is_caller_marker(text) else text
 
 
-def walk(node, mapper, key=None, in_headers=False):
+def walk(node, mapper, key=None, in_headers=False, model_class=None,
+         cell_column=None, selection=False, shader_selector=False):
     if isinstance(node, dict):
+        model_class = node.get("class", node.get("modelClass", model_class))
+        cell_column = node.get("column", cell_column)
+        selection = selection or key in ("targetModelSelection", "currentModelSelection")
+        shader_selector = key == "modelSelector" and node.get("column") == 3
         return {
-            k: walk(v, mapper, k, in_headers or k in ("headers", "roleNames"))
+            k: walk(v, mapper, k, in_headers or k in ("headers", "roleNames"),
+                    model_class, cell_column, selection, shader_selector)
             for k, v in node.items()
         }
     if isinstance(node, list):
-        return [walk(v, mapper, key, in_headers) for v in node]
+        return [
+            "0x" + mapper.shader_hash(v)
+            if key == "cells" and selection and index == 3 and isinstance(v, str) and SHADER_HASH.fullmatch(v)
+            else walk(v, mapper, key, in_headers, model_class, cell_column, selection, shader_selector)
+            for index, v in enumerate(node)
+        ]
     if isinstance(node, str):
         # Column headers and role names are Viewer schema vocabulary that the
         # projection asserts on exactly ("Pipe", "Family", "Samples", ...).
         # Renaming them would make a fixture assert the wrong contract.
         if in_headers:
             return node
+        if ((model_class == SHADER_MODEL and cell_column == 3 and key in ("display", "tooltip"))
+                or (shader_selector and key == "value")) and SHADER_HASH.fullmatch(node):
+            return "0x" + mapper.shader_hash(node)
+        if ((model_class == SOURCE_MODEL and cell_column == 3)
+                or (model_class == SHADER_MODEL and cell_column == 5)) and key in ("display", "tooltip"):
+            node = SOURCE_HASH_LABEL.sub(
+                lambda match: match.group(1) + mapper.shader_hash(match.group(2)) + match.group(3), node)
         # "cells" is a bare string array on selection records, so the element
         # inherits its parent key rather than carrying one of its own.
         if key in ("display", "tooltip", "value", "description", "cells"):

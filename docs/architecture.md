@@ -62,13 +62,20 @@ Wrappers are added only after the P0 atom denominator closes. They may:
 - emit bounded deterministic summaries.
 
 The first wrapper slice is exposed by the same JSON CLI with descriptor `layer: wrapper`.
-`inspect-pass` closes all available source pages before emitting complete metrics and a
-coverage-labelled shader Top-N. V1 does not request the independently stateful range Instruction
-Mix model; the nested section is `unavailable` with
-`trace.range_instruction_mix_not_requested` and no `items`/`totalCount`, while the explicit atom
-remains available for callers that need it. `compare-ranges` joins semantic
-identities, retains each side's source ordinal, and pages metric deltas; target-only and
-baseline-only are never coerced to zero.
+`inspect-pass` closes requested source families before returning a bounded metric page and
+coverage-labelled shader Top-N. `compare-ranges` defaults to metrics; callers explicitly select
+`timing`, `metrics`, `shaders`, and/or `instruction-mix` with `--sections`. Timing-only comparisons
+read two exact event rows and activate no metric or shader models. Unrequested families are omitted
+and declared by the `sections` list, not represented as empty or unavailable facts. Every requested
+family must succeed. Instruction Mix uses its independent uncached atom; it cannot fail an
+unrelated metric-only request. Comparisons preserve each side's source ordinal, and target-only
+and baseline-only values never become numeric zero.
+
+`find-metrics` filters complete metric facts by name or exact source ordinal. `find-source-hotspots`
+reads one complete source model, selects an explicit view, orders sampled rows, and reports coverage
+against that view's sample total. `compare-timings` executes only the requested page of explicit
+event pairs. Its statistics keep exact parent/object/thread contexts separate unless a caller supplies
+`sampleGroup`; that label is external metadata, not proof of equivalent workload or configuration.
 
 Wrappers may not invent a metric meaning, choose an optimization priority, infer causality, or turn
 a candidate into a confirmed fact.
@@ -88,7 +95,8 @@ a candidate into a confirmed fact.
 
 ## Identity
 
-Trace identity is the absolute local file snapshot (length,lastWriteTimeUtcTicks) by default, with
+Trace identity includes a hash of the normalized absolute path and the local file snapshot
+(length,lastWriteTimeUtcTicks) by default, with
 optional SHA-256 when a workflow needs cross-machine identity.
 
 EventKey is returned by event enumeration and contains the preorder ordinal, tree path, displayed
@@ -106,17 +114,30 @@ Metrics and exported counters use long form:
 
 Duplicate names are never dictionary keys.
 
+Missing sample cells/vectors are unavailable, explicit empty vectors remain empty, and measured
+zero remains available zero. Shader joins require a unique stage/hash/name/pipeline tuple on each
+side; range-local hash occurrence is preserved as evidence but is not a cross-range join key.
+Metric comparisons expose numeric source and display resolution, including changes in those states
+when the numeric delta is zero. Display resolution is not measurement uncertainty.
+
 The built-in counter export is a local-artifact atom. It retains validated TSV-like `.xls`
 evidence, normalizes duplicate headers with occurrence/index identity, and removes only the exact
 Viewer-created trace copy under that run directory.
 
 ## Atomic invocation
 
+CLI v2 defaults to 20-item pages, Top 5 shaders and JSON without indentation. Brief projections
+omit metric prose and shader instruction vectors; `--detail` restores them within the same page.
+`capabilities` is a short directory; `describe <operation>` returns exact parameters.
+Descriptors include mutually exclusive and dependent options. `doctor` reports static dependency
+checks separately from runtime checks; `version` identifies package content. An absolute `--workspace`
+sets process-local run and session roots so shell clients can share a session from different directories.
+
 Every operation returns:
 
     operation + schemaVersion
       -> success: value + provenance + warnings
-      -> failure: category + stable code + message + bounded detail
+      -> failure: category + stable code + message + bounded detail + recovery action
 
 Stable failure categories include invalidInput, notFound, unsupported, unavailable,
 adapterMismatch, trace, viewer, timeout, and internal.
@@ -161,6 +182,14 @@ establishes that Qt selection, and verifies the final selected index before writ
 with the new request identity. The cache is bounded to four entries / 64 MiB with LRU eviction and
 dies with the Viewer. Unavailable/error responses, truncated models, Instruction Mix, generic model
 requests, shader-source actions, and local-artifact operations are excluded.
+
+Range metric snapshots use a separate adapter cache under the exact session directory, bounded to
+four entries of at most 8 MiB each. Admission requires a complete stable response from that session's
+PID and completed request. Keys bind the trace path/snapshot, selector, process start time, session ID,
+and adapter assembly; stored JSON is hashed. Each hit issues a fresh header-only metric catalog request,
+verifies the current selection and table/header/row-count signature, and closes that proof against the
+same live instance and completed request. Concurrent session changes force a miss. Metric values are
+immutable facts of the unchanged report; Instruction Mix and source action results remain uncached.
 
 ## Repository layout
 

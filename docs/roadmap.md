@@ -134,11 +134,36 @@ Resource contents, pixel history/debugging, post-VS mesh data and render-target 
 outside GPU Trace and are not roadmap candidates. New operations must report dogfood call count,
 bytes and elapsed time as well as semantic closure.
 
-## R6 — Skill and dogfood
+## R6 — Skill and dogfood (ongoing)
 
-Add the Agent Skill only after the atom/wrapper surface can complete real investigations without
-source reads or one-off scripts. Dogfood records missing facts, call count, bytes, elapsed time,
+The packaged Agent Skill routes investigations through the verified atom/wrapper surface without
+requiring product source reads or one-off analysis scripts. Dogfood records missing facts, call count, bytes, elapsed time,
 stale-selection failures, and unsupported claims.
 
 When dogfood exposes a gap, promote only the smallest repeatable objective fact into an atom. Search
 policy and bottleneck judgment remain above the atom layer.
+
+## R5.7 — Concise defaults and focused evidence (CLI v2)
+
+- Default concise JSON, 20-item pages and Top 5 shaders; detailed fields opt in with `--detail`.
+- Short `capabilities` plus `describe <operation>` / operation-level help and structured recovery.
+- Paged `inspect-pass`; section-driven range reads; metric-only comparisons avoid shader and Instruction Mix activation.
+- Shader source resolves stage/hash/occurrence against the verified inventory and checks final semantic identity.
+- Packaged Skill routes by intent and includes evidence and recovery references; no causal judgment enters wrappers.
+
+## R5.8 — Accurate focused retrieval and portable clients (CLI v2.1)
+
+- Missing samples, absent tables, ambiguous shader joins, and numeric source/resolution changes remain explicit.
+- `find-metrics` locates exact metric cells; `find-source-hotspots` ranks a complete explicit source view with coverage.
+- `--sections timing` and `compare-timings` avoid metric/shader work for timing questions. Batch statistics use the
+  current page and exact context, with explicit caller sample groups for repeated measurements.
+- Bounded metric snapshots reuse values only after fresh catalog/scope validation in the exact live session.
+- `doctor`, `version`, machine-readable option constraints, and absolute `--workspace` support shell clients
+  independently of their working directory or Agent brand.
+- The Skill requires configuration/control-variable evidence for causal claims, including SER combined with
+  thread-reordering changes. Timing/counter differences alone cannot identify which configuration changed.
+
+Further product atoms still require a missing objective fact and a real fixture. Automatic matching across
+unrelated traces, causal scoring, and statistical significance are not inferred from these summaries.
+
+Earlier sections record v1 behavior and measurements; current behavior is documented in README and architecture.

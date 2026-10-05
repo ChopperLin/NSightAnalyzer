@@ -8,12 +8,11 @@
 - unavailable: the selected report/build/input cannot provide the fact.
 - out of scope: not a fact of an existing GPU Trace report.
 
-The current 95 percent estimate describes the proven ordinary-analysis data surface, not product
-implementation completeness.
-
-The public catalog additionally labels six deterministic wrapper operations: `find-events`,
-`find-ranges`, `resolve-event`, `inspect-pass`, `compare-ranges`, and `compare-frame-timing`. They
+The public catalog additionally labels nine deterministic wrapper operations: `find-events`,
+`find-ranges`, `resolve-event`, `inspect-pass`, `compare-ranges`, `compare-frame-timing`,
+`find-metrics`, `find-source-hotspots`, and `compare-timings`. They
 compose the verified fact families below and do not add new facts or bottleneck judgments.
+`describe`, `doctor`, and `version` provide operation contracts and local environment/package identity.
 
 | ID | Semantic fact family | Probe evidence | Product status | Acceptance |
 |---|---|---|---|---|

@@ -13,7 +13,7 @@ Generic model discovery is never part of product verification.
 ## Contract test project
 
 `tests/NsightAnalyzer.Tests` runs layers 1 and 2 with `dotnet test`. It needs no GPU, no Nsight
-installation, and no real report; the whole suite completes in well under a second.
+installation, and no real report.
 
 Fixtures under `tests/NsightAnalyzer.Tests/Fixtures` are real bridge output passed through
 `tools/fixtures/sanitize-bridge-output.py`. That script renames only caller-authored
@@ -24,6 +24,10 @@ table/row names, units, and D3D12 call text. Every number, row/column position, 
 source ordinal, and availability state is preserved verbatim, so a fixture still closes the
 same structural oracles as the report it came from — 88 tables, 409 rows, 801 metric values,
 56 instruction categories, and a 100-of-4,951 event page.
+
+Shader hashes are semantic identities: the sanitizer preserves their equality/inequality relations
+and never replaces every hexadecimal hash with a generic pointer. The source-hotspot fixture uses
+`sanitize-source-hotspots.py` to remove source text while preserving row/sample/view identity.
 
 Regenerating a fixture is deliberate: run the script against a run directory under `.local/runs`
 and confirm the oracle counts above still hold.
@@ -80,7 +84,7 @@ The Viewer-process shader cache is tested as a semantic optimization, not call-o
 first exact request must produce a complete/stable/non-truncated model before admission. Repeating
 that request must return the same projected value hash; alternating GBuffer (1773),
 DeferredLighting (3901), then GBuffer again must use distinct keys and restore the original GBuffer
-hash. Every hit also records equal target/current event paths. Metric, Instruction Mix, action,
+hash. Every hit also records equal target/current event paths. Instruction Mix, action,
 timeout, error, and artifact-writing requests remain misses.
 
 Probe 0.50 real timings on the single-frame fixture: a fresh-session GBuffer shader request took
@@ -142,8 +146,11 @@ Every real run verifies:
 - different event names or depths produce objective warnings, not a diagnosis.
 
 The single-frame wrapper closure resolves GBuffer to preorder ordinal 1773 and DeferredLighting to
-3901. Their mechanical comparison closes 801 matched metrics, 676 matched shader identities, and a
-56-versus-52 instruction surface (57 joined identities). This sibling comparison validates the
+3901. Their mechanical comparison closes 801 matched metrics and a
+56-versus-52 instruction surface (57 joined identities). The real 676-row shader inventory contains
+repeated stage/hash/name/pipeline tuples: cross-range shader comparison now explicitly returns
+`wrapper.shader_comparison_ambiguous`, because row occurrence alone cannot prove correspondence.
+This sibling comparison validates the
 wrapper contract only; it is not accepted as causal evidence.
 
 ## Safety
@@ -151,3 +158,66 @@ wrapper contract only; it is not accepted as causal evidence.
 Real traces, shader source, raw model output, Viewer logs, and generated counter exports remain in
 .local/. Verification only removes run directories it created and resolved under that root. It never
 deletes or overwrites the caller's report.
+
+## CLI v2 efficiency and identity checks
+
+`AgentEfficiencyTests` closes brief output against detailed fixture facts, verifies complete metric
+pagination and shader coverage, bounds the short catalog and default inspection response, checks
+section-independent comparisons and actionable overflow errors, and round-trips stage/hash/occurrence
+into shader-source selection. A sorted proxy may have a different row path; semantic identity must
+still match. Duplicate source identities that the pinned bridge cannot distinguish are unavailable.
+
+The published skill includes `references/analysis.md` and `references/recovery.md`. Package smoke
+checks use schema 2 and default concise output. Interactive dogfood records default (no formatting
+flags) discovery, pass inspection, metric-only comparison, shader profile/source round-trip and session
+close: elapsed time, response bytes, selected identities, counts and no retained CrashReporter.
+
+## CLI v2.1 accuracy and efficiency
+
+`AccuracyRegressionTests` checks missing versus empty versus zero samples, explicit table coverage,
+shader join ambiguity and row reordering, and numeric source/resolution changes without a value delta.
+`MetricSnapshotTests` covers trace path/snapshot, session/PID/process instance, adapter identity,
+content integrity, and header-catalog closure. `BatchTimingTests` checks explicit pair validation,
+current-page execution, exact context separation, caller sample groups, and unavailable timing exclusion.
+`FindMetricsTests` and `SourceHotspotsTests` close metric search and source hotspot ordering/coverage to fixtures.
+`CliUsabilityTests` checks machine-readable option constraints, duplicate arguments, read-only doctor,
+version identity and absolute workspace routing.
+
+On 2026-10-04, a single-frame real Viewer run under an isolated workspace verified:
+
+- timing-only comparison: two event calls, no metrics/shaders, 2,573 stdout bytes;
+- first and subsequent metric pages: 801 total, 20 returned, 6.7–6.9 KB stdout; warm calls took
+  1.79–2.02 s, including fresh header-catalog scope validation; the raw bridge export fell from
+  1,902,604 bytes to 511,917 bytes (73% less) on a snapshot hit;
+- GBuffer/Deferred/GBuffer switching retained exact keys, and mixed existing/missing table requests failed;
+- named metric search followed by source-ordinal retrieval returned the same exact cell (1,550 bytes);
+- c709 source hotspots: Top 20 captured 2,416 of 3,592 DXIL samples (67.260579%), 12,217 stdout bytes,
+  in 24.86 s including source readiness; the full underlying view has 480 rows;
+- different client working directories with the same workspace reused the same Viewer PID;
+- session close removed the owned Viewer and CrashReporter; original report SHA-256 was unchanged.
+
+Raw evidence is local at `.local/verification/agent-v21-20261004-073808/`. These are observed costs
+on one report, not general latency guarantees. Metric snapshots primarily reduce repeated body export;
+scope validation still costs a Viewer request. Source actions are not cached.
+Shell smoke checks cover PowerShell, cmd and Python subprocess with Unicode/spaced paths and one JSON
+result. They do not constitute end-to-end evaluations of external Agent models.
+
+After building Release, repeat this workflow against the frozen single-frame report with:
+
+```powershell
+pwsh -NoProfile -File tools/verification/verify-agent-workflow.ps1 -SingleFrameTrace <report.ngfx-gputrace>
+```
+
+The script writes evidence under an isolated `.local/verification/agent-v21-*` workspace, checks both
+batch pages, and closes/reopens Viewer to prove a new session cannot reuse a previous instance's metric
+snapshot. It verifies the caller's original SHA-256 and cleans up the owned Viewer/CrashReporter in `finally`.
+Use `-CacheOnly` for focused cache/session checks, and `-CliPath <exe>` to test a packaged executable.
+Each cache receipt must be newly created by that invocation and close against its adjacent bridge output,
+selected scope, and completed session request. Cleanup checks include additional/replacement CrashReporter
+children using exact parent/process identity.
+
+The full regression at `.local/verification/agent-v21-20261004-074802/` confirmed two timing pages each
+perform exactly two event calls, ambiguous shader joins fail explicitly, and Viewer reopen invalidates old
+metric snapshots. The final packaged CLI passed the strengthened cache/session checks at
+`.local/verification/agent-v21-20261004-075701-bd28fbf9/`; its verified package content fingerprint is
+`0e8e41f51f034fe7c40e1e08cd9684d2c7c7b65e03a96cbfa1741d640f6bb482`.

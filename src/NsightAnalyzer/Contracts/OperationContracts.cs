@@ -5,6 +5,7 @@ namespace NsightAnalyzer.Contracts;
 public sealed record SchemaVersion(int Major, int Minor)
 {
     public static readonly SchemaVersion V1 = new(1, 0);
+    public static readonly SchemaVersion V2 = new(2, 1);
 }
 
 public sealed record OperationEnvelope(
@@ -54,7 +55,14 @@ public sealed record OperationError(
     ErrorCategory Category,
     string Code,
     string Message,
-    string? Detail = null);
+    string? Detail = null,
+    ErrorRecovery? Recovery = null);
+
+public sealed record ErrorRecovery(
+    bool Retryable,
+    string Action,
+    string? Operation = null,
+    string? Parameter = null);
 
 public sealed record OperationWarning(string Code, string Message);
 
@@ -106,13 +114,16 @@ public sealed record OperationDescriptor(
     string Description,
     string Invocation,
     string Layer = "atom",
-    IReadOnlyList<OperationParameter>? Parameters = null);
+    IReadOnlyList<OperationParameter>? Parameters = null,
+    IReadOnlyList<OperationOptionConstraint>? Constraints = null);
 
 public static class ContractLimits
 {
     public const int MaximumResponseBytes = 1024 * 1024;
     public const int MaximumTimeoutMs = 600_000;
     public const int MaximumPageLimit = 500;
+    public const int DefaultPageLimit = 20;
+    public const int DefaultTopShaders = 5;
 
     /// <summary>
     /// Page bound for shader facts. One shader row carries its instruction mix

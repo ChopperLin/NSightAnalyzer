@@ -164,7 +164,9 @@ public sealed record RangeShaderFact(
     string? AverageWarpLatency,
     ShaderCorrelationInfo Correlation,
     IReadOnlyList<ShaderInstructionCategoryFact> InstructionMix,
-    IReadOnlyList<ShaderStallFact> TopStalls);
+    IReadOnlyList<ShaderStallFact> TopStalls,
+    string SampleAvailability = "available",
+    string DependencySampleAvailability = "available");
 
 public sealed record RangeShadersValue(
     EventKey Scope,
@@ -203,7 +205,8 @@ public sealed record ShaderSourceViewFact(
     long AttributedSampleCount,
     long? InstructionCount,
     int AddressRowCount,
-    string OpcodeTextAvailability);
+    string OpcodeTextAvailability,
+    string SampleAvailability = "available");
 
 public sealed record ShaderSourceRowFact(
     int SourceOrdinal,
@@ -222,7 +225,8 @@ public sealed record ShaderSourceRowFact(
     string? Pipe,
     string? Family,
     string? Operation,
-    IReadOnlyList<ShaderStallFact> Stalls);
+    IReadOnlyList<ShaderStallFact> Stalls,
+    string SampleAvailability = "available");
 
 public sealed record ShaderSourceValue(
     EventKey Scope,

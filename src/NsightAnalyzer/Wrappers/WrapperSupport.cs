@@ -197,6 +197,13 @@ internal sealed record CollectedPage<T>(
 
 internal static class WrapperSupport
 {
+    public static Page<T> Page<T>(IReadOnlyList<T> items, int cursor, int limit)
+    {
+        var returned = items.Skip(cursor).Take(limit).ToArray();
+        int? next = (long)cursor + returned.Length < items.Count ? cursor + returned.Length : null;
+        return new(returned, cursor, limit, items.Count, returned.Length, next is not null, next);
+    }
+
     public const int AtomPageLimit = ContractLimits.MaximumPageLimit;
 
     public static readonly OperationWarning ShaderSampleWarning = new(

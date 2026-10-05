@@ -20,8 +20,38 @@ internal sealed record ViewerSessionCloseResult(
 
 internal sealed record ViewerSessionCloseValue(bool HadSession, string Shutdown);
 
+internal sealed record ViewerSessionIdentity(
+    string Directory, string SessionId, int Pid, long ProcessStartUtcTicks);
+
 internal static class ViewerSessionTransport
 {
+    internal static ViewerSessionIdentity? TryGetLiveIdentity(
+        TraceArtifact artifact, string viewerPath, string? completedRequestId = null)
+    {
+        try
+        {
+            var directory = Path.Combine(ResolveSessionRoot(), $"trace-{SessionKey(artifact, viewerPath)[..32]}");
+            var owner = TryReadOwner(Path.Combine(directory, "owner.json"));
+            var manifest = TryReadManifest(Path.Combine(directory, "session.json"));
+            if (owner is null || manifest is null || manifest.Status != "ready" ||
+                completedRequestId is not null &&
+                    (completedRequestId.Length == 0 || manifest.LastRequestId != completedRequestId) ||
+                !ValidateManifest(manifest, owner.SessionId, artifact.ReportId, owner.Pid) ||
+                !TryOpenExpectedProcess(owner, artifact, viewerPath, out var process))
+            {
+                return null;
+            }
+            using (process)
+            {
+                return new(directory, owner.SessionId, owner.Pid, owner.ProcessStartUtcTicks);
+            }
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
+        {
+            return null;
+        }
+    }
+
     private const string OwnerSchema = "NsightAnalyzerViewerSessionOwnerV1";
     private const string ManifestSchema = "NsightSolidProbeSessionV1";
     private const string RequestSchema = "NsightSolidProbeSessionRequestV1";

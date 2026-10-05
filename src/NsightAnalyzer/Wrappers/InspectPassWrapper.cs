@@ -11,7 +11,8 @@ internal sealed record PassInspectionData(
     IReadOnlyList<RangeShaderFact> Shaders,
     IReadOnlyList<RangeInstructionMixFact>? InstructionMix,
     OperationError? InstructionMixError,
-    WrapperContext Context);
+    WrapperContext Context,
+    RangeSections Sections);
 
 internal static class InspectPassWrapper
 {
@@ -21,7 +22,10 @@ internal static class InspectPassWrapper
         int timeoutMs,
         int eventOrdinal,
         IReadOnlyList<string> metricTables,
-        int topShaderCount)
+        int topShaderCount,
+        int metricCursor,
+        int metricLimit,
+        RangeSections sections)
     {
         var deadline = new WrapperDeadline(timeoutMs);
         var inspected = await InspectCoreAsync(
@@ -29,7 +33,7 @@ internal static class InspectPassWrapper
             viewerPath,
             eventOrdinal,
             metricTables,
-            includeInstructionMix: false,
+            sections,
             deadline: deadline);
         if (!inspected.IsSuccess)
         {
@@ -37,14 +41,11 @@ internal static class InspectPassWrapper
         }
 
         var data = inspected.Value!;
-        data.Context.AddWarning(WrapperSupport.ShaderSampleWarning);
-        if (data.InstructionMixError is not null)
+        if (sections.HasFlag(RangeSections.Shaders))
         {
-            data.Context.AddWarning(new(
-                "wrapper.instruction_mix_unavailable",
-                "Instruction Mix is unavailable for this pass; complete metrics and shaders are still returned."));
+            data.Context.AddWarning(WrapperSupport.ShaderSampleWarning);
         }
-        var value = Project(data, topShaderCount);
+        var value = Project(data, topShaderCount, metricCursor, metricLimit);
         return OperationResult.Success(
             value,
             data.Context.Provenance,
@@ -56,7 +57,7 @@ internal static class InspectPassWrapper
         string? viewerPath,
         int eventOrdinal,
         IReadOnlyList<string> metricTables,
-        bool includeInstructionMix,
+        RangeSections sections,
         WrapperDeadline deadline)
     {
         var context = new WrapperContext(deadline);
@@ -71,86 +72,68 @@ internal static class InspectPassWrapper
         }
         var eventFact = eventResult.Value!;
 
-        // Metrics and the shader inventory hang off the same event selection,
-        // so they are read in one Viewer request. inspect-pass/v1 leaves the
-        // independently stateful Instruction Mix model to its explicit atom;
-        // compare-ranges opts into the strict uncached bundle below.
-        var bundleResult = await context.InvokeAtomAsync(
-            remainingMs => RangeBundleReader.ReadAsync(
-                tracePath,
-                viewerPath,
-                remainingMs,
-                eventOrdinal,
-                metricTables,
-                includeInstructionMix));
-        if (!bundleResult.IsSuccess)
+        RangeMetricsValue? metrics = null;
+        RangeShadersValue? shaders = null;
+        IReadOnlyList<RangeInstructionMixFact>? instructions = null;
+        if ((sections & (RangeSections.Metrics | RangeSections.Shaders)) != 0)
         {
-            return WrapperValueResult<PassInspectionData>.Failure(bundleResult.Error!);
-        }
-        if (bundleResult.Value is not RangeBundle bundle)
-        {
-            return WrapperValueResult<PassInspectionData>.Failure(
-                WrapperSupport.InternalError(
-                    "The range bundle returned an unexpected value contract."));
-        }
-
-        foreach (var (scope, family) in new[]
-                 {
-                     (bundle.Metrics.Scope, "trace.range-metrics"),
-                     (bundle.Shaders.Scope, "trace.range-shaders"),
-                 })
-        {
-            if (!WrapperSupport.SameEventKey(eventFact.Key, scope))
+            var bundleResult = await context.InvokeAtomAsync(
+                remainingMs => RangeBundleReader.ReadAsync(
+                    tracePath, viewerPath, remainingMs, eventOrdinal, metricTables, sections));
+            if (!bundleResult.IsSuccess)
+            {
+                return WrapperValueResult<PassInspectionData>.Failure(bundleResult.Error!);
+            }
+            if (bundleResult.Value is not RangeBundle bundle ||
+                (bundle.Metrics is not null) != sections.HasFlag(RangeSections.Metrics) ||
+                (bundle.Shaders is not null) != sections.HasFlag(RangeSections.Shaders))
             {
                 return WrapperValueResult<PassInspectionData>.Failure(
-                    WrapperSupport.InternalError(
-                        $"{family} returned a different exact scope."));
+                    WrapperSupport.InternalError("The range bundle did not match the requested sections."));
             }
+            metrics = bundle.Metrics;
+            shaders = bundle.Shaders;
+            foreach (var scope in new[] { metrics?.Scope, shaders?.Scope }.OfType<EventKey>())
+            {
+                if (!WrapperSupport.SameEventKey(eventFact.Key, scope))
+                {
+                    return WrapperValueResult<PassInspectionData>.Failure(
+                        WrapperSupport.InternalError("A range section returned a different exact scope."));
+                }
+            }
+            if (metrics?.Metrics.Truncated == true || shaders?.Shaders.Truncated == true)
+            {
+                return WrapperValueResult<PassInspectionData>.Failure(
+                    WrapperSupport.InternalError("The range bundle did not return complete source pages."));
+            }
+            context.AddRetrievedFacts((metrics?.Metrics.ReturnedCount ?? 0) + (shaders?.Shaders.ReturnedCount ?? 0));
         }
-
-        var metricsPage = bundle.Metrics.Metrics;
-        var shadersPage = bundle.Shaders.Shaders;
-        var instructionPage = bundle.InstructionMix?.Instructions;
-        if (bundle.InstructionMix is not null &&
-            !WrapperSupport.SameEventKey(eventFact.Key, bundle.InstructionMix.Scope))
+        if (sections.HasFlag(RangeSections.InstructionMix))
         {
-            return WrapperValueResult<PassInspectionData>.Failure(
-                WrapperSupport.InternalError(
-                    "trace.range-instruction-mix returned a different exact scope."));
+            var mix = await WrapperSupport.CollectPagesAsync<RangeInstructionMixValue, RangeInstructionMixFact>(
+                context,
+                (cursor, limit, remainingMs) => TraceRangeInstructionMixOperation.ExecuteAsync(
+                    tracePath, viewerPath, remainingMs, eventOrdinal, null, cursor, limit),
+                value => value.Instructions,
+                value => WrapperSupport.SameEventKey(eventFact.Key, value.Scope)
+                    ? null : WrapperSupport.InternalError("Instruction Mix returned a different exact scope."));
+            if (!mix.IsSuccess)
+            {
+                return WrapperValueResult<PassInspectionData>.Failure(mix.Error!);
+            }
+            instructions = mix.Value!.Items;
         }
-        if ((bundle.InstructionMix is null) == (bundle.InstructionMixError is null))
-        {
-            return WrapperValueResult<PassInspectionData>.Failure(
-                WrapperSupport.InternalError(
-                    "The range bundle returned an invalid Instruction Mix availability state."));
-        }
-        if (metricsPage.Truncated || shadersPage.Truncated ||
-            instructionPage?.Truncated == true)
-        {
-            return WrapperValueResult<PassInspectionData>.Failure(
-                WrapperSupport.InternalError(
-                    "The range bundle did not return complete fact pages."));
-        }
-        context.AddRetrievedFacts(
-            metricsPage.ReturnedCount +
-            shadersPage.ReturnedCount +
-            (instructionPage?.ReturnedCount ?? 0));
-
-        return WrapperValueResult<PassInspectionData>.Success(
-            new(
-                eventFact,
-                bundle.Metrics.TableCount,
-                bundle.Metrics.RowCount,
-                metricsPage.Items,
-                shadersPage.Items,
-                instructionPage?.Items,
-                bundle.InstructionMixError,
-                context));
+        return WrapperValueResult<PassInspectionData>.Success(new(
+            eventFact, metrics?.TableCount ?? 0, metrics?.RowCount ?? 0,
+            metrics?.Metrics.Items ?? [], shaders?.Shaders.Items ?? [],
+            instructions, null, context, sections));
     }
 
     internal static InspectPassValue Project(
         PassInspectionData data,
-        int topShaderCount)
+        int topShaderCount,
+        int metricCursor = 0,
+        int metricLimit = ContractLimits.DefaultPageLimit)
     {
         var orderedShaders = data.Shaders
             .OrderByDescending(shader => shader.SampleCount)
@@ -172,12 +155,12 @@ internal static class InspectPassWrapper
 
         return new(
             data.Event,
-            new(
+            RangeSectionNames.For(data.Sections),
+            data.Sections.HasFlag(RangeSections.Metrics) ? new(
                 data.MetricTableCount,
                 data.MetricRowCount,
-                data.Metrics.Count,
-                data.Metrics),
-            new(
+                WrapperSupport.Page(data.Metrics, metricCursor, metricLimit)) : null,
+            data.Sections.HasFlag(RangeSections.Shaders) ? new(
                 "sampleCountDescThenStableShaderIdentity",
                 data.Shaders.Count,
                 data.Shaders.Count(shader => shader.SampleCount > 0),
@@ -186,8 +169,9 @@ internal static class InspectPassWrapper
                 returnedSamples,
                 coverage,
                 returnedShaders.Length < data.Shaders.Count,
-                returnedShaders),
-            ProjectInstructionMix(data.InstructionMix, data.InstructionMixError),
+                returnedShaders) : null,
+            data.Sections.HasFlag(RangeSections.InstructionMix)
+                ? ProjectInstructionMix(data.InstructionMix, data.InstructionMixError) : null,
             data.Context.Stats(scannedEventCount: 1));
     }
 

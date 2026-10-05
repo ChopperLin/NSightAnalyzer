@@ -68,5 +68,10 @@ internal static class TraceShaderProfileOperation
         {
             return OperationSupport.ProjectionFailure(exception);
         }
+        catch (BridgeFactUnavailableException exception)
+        {
+            return OperationResult.Failure(ErrorCategory.Unavailable,
+                exception.Code, exception.Message, exception.Detail);
+        }
     }
 }

@@ -13,10 +13,10 @@ public sealed class OperationCatalogTests
 {
     private static IReadOnlyList<OperationDescriptor> Descriptors()
     {
-        var value = OperationRegistry.Describe().Value;
+        var value = OperationRegistry.Describe(detail: true).Value;
         var operations = value!.GetType().GetProperty("operations")!.GetValue(value);
-        return (IReadOnlyList<OperationDescriptor>)
-            operations!.GetType().GetProperty("Items")!.GetValue(operations)!;
+        return ((IReadOnlyList<object>)
+            operations!.GetType().GetProperty("Items")!.GetValue(operations)!).Cast<OperationDescriptor>().ToArray();
     }
 
     [Fact]
@@ -165,10 +165,10 @@ public sealed class EventNameModeTests
 {
     private static IReadOnlyList<OperationParameter> ResolveEventParameters()
     {
-        var value = OperationRegistry.Describe().Value;
+        var value = OperationRegistry.Describe(detail: true).Value;
         var operations = value!.GetType().GetProperty("operations")!.GetValue(value);
-        var items = (IReadOnlyList<OperationDescriptor>)
-            operations!.GetType().GetProperty("Items")!.GetValue(operations)!;
+        var items = ((IReadOnlyList<object>)
+            operations!.GetType().GetProperty("Items")!.GetValue(operations)!).Cast<OperationDescriptor>();
         return items.Single(descriptor => descriptor.Id == "resolve-event").Parameters!;
     }
 

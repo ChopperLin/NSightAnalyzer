@@ -20,7 +20,9 @@ internal static class CompareRangesWrapper
         IReadOnlyList<string> metricTables,
         int topShaderCount,
         int metricCursor,
-        int metricLimit)
+        int metricLimit,
+        RangeSections sections,
+        bool includeUnchanged = false)
     {
         var deadline = new WrapperDeadline(timeoutMs);
         var targetResult = await InspectPassWrapper.InspectCoreAsync(
@@ -28,14 +30,14 @@ internal static class CompareRangesWrapper
             viewerPath,
             targetEventOrdinal,
             metricTables,
-            includeInstructionMix: true,
+            sections,
             deadline: deadline);
         if (!targetResult.IsSuccess)
         {
             return OperationResult.Failure(targetResult.Error!);
         }
         var target = targetResult.Value!;
-        if (target.InstructionMix is null)
+        if (sections.HasFlag(RangeSections.InstructionMix) && target.InstructionMix is null)
         {
             return OperationResult.Failure(target.InstructionMixError!);
         }
@@ -45,14 +47,14 @@ internal static class CompareRangesWrapper
             viewerPath,
             baselineEventOrdinal,
             metricTables,
-            includeInstructionMix: true,
+            sections,
             deadline: deadline);
         if (!baselineResult.IsSuccess)
         {
             return OperationResult.Failure(baselineResult.Error!);
         }
         var baseline = baselineResult.Value!;
-        if (baseline.InstructionMix is null)
+        if (sections.HasFlag(RangeSections.InstructionMix) && baseline.InstructionMix is null)
         {
             return OperationResult.Failure(baseline.InstructionMixError!);
         }
@@ -74,33 +76,39 @@ internal static class CompareRangesWrapper
                 "Target and baseline were not decoded by the exact same pinned Viewer source.");
         }
 
-        var metrics = CompareMetrics(
-            target.Metrics,
-            baseline.Metrics,
-            metricCursor,
-            metricLimit);
-        if (!metrics.IsSuccess)
+        return Project(target, baseline, targetTracePath, baselineTracePath,
+            topShaderCount, metricCursor, metricLimit, sections, deadline, includeUnchanged);
+    }
+
+    internal static OperationResult Project(
+        PassInspectionData target, PassInspectionData baseline,
+        string targetTracePath, string baselineTracePath,
+        int topShaderCount, int metricCursor, int metricLimit,
+        RangeSections sections, WrapperDeadline deadline, bool includeUnchanged = false)
+    {
+        var metrics = sections.HasFlag(RangeSections.Metrics)
+            ? CompareMetrics(target.Metrics, baseline.Metrics, metricCursor, metricLimit, includeUnchanged) : null;
+        if (metrics is { IsSuccess: false })
         {
             return OperationResult.Failure(metrics.Error!);
         }
-        var shaders = CompareShaders(target.Shaders, baseline.Shaders, topShaderCount);
-        if (!shaders.IsSuccess)
+        var shaders = sections.HasFlag(RangeSections.Shaders)
+            ? CompareShaders(target.Shaders, baseline.Shaders, topShaderCount) : null;
+        if (shaders is { IsSuccess: false })
         {
             return OperationResult.Failure(shaders.Error!);
         }
-        var instructions = CompareInstructions(
-            target.InstructionMix,
-            baseline.InstructionMix);
-        if (!instructions.IsSuccess)
+        var instructions = sections.HasFlag(RangeSections.InstructionMix)
+            ? CompareInstructions(target.InstructionMix!, baseline.InstructionMix!) : null;
+        if (instructions is { IsSuccess: false })
         {
             return OperationResult.Failure(instructions.Error!);
         }
-
-        var warnings = WrapperSupport.MergeWarnings(
-                target.Context.Warnings,
-                baseline.Context.Warnings,
-                [WrapperSupport.ShaderSampleWarning])
-            .ToList();
+        var warnings = WrapperSupport.MergeWarnings(target.Context.Warnings, baseline.Context.Warnings).ToList();
+        if (sections.HasFlag(RangeSections.Shaders))
+        {
+            warnings.Add(WrapperSupport.ShaderSampleWarning);
+        }
         if (target.Event.Key.Description != baseline.Event.Key.Description)
         {
             warnings.Add(new(
@@ -123,10 +131,12 @@ internal static class CompareRangesWrapper
                 baseline.Context.ArtifactIdentity!,
                 baseline.Event),
             CompareDurations(target.Event, baseline.Event),
-            metrics.Value!,
-            shaders.Value!,
-            instructions.Value!,
-            CompareStalls(target.InstructionMix, baseline.InstructionMix),
+            RangeSectionNames.For(sections),
+            metrics?.Value,
+            shaders?.Value,
+            instructions?.Value,
+            sections.HasFlag(RangeSections.InstructionMix)
+                ? CompareStalls(target.InstructionMix!, baseline.InstructionMix!) : null,
             new(
                 checked(target.Context.AtomCallCount + baseline.Context.AtomCallCount),
                 checked(target.Context.RetrievedFactCount +
@@ -145,7 +155,8 @@ internal static class CompareRangesWrapper
         IReadOnlyList<RangeMetricFact> targetFacts,
         IReadOnlyList<RangeMetricFact> baselineFacts,
         int cursor,
-        int limit)
+        int limit,
+        bool includeUnchanged)
     {
         var target = BuildUniqueDictionary(targetFacts, MetricIdentity);
         if (!target.IsSuccess)
@@ -185,8 +196,8 @@ internal static class CompareRangesWrapper
 
             var targetSide = targetFact is null ? null : MetricSide(targetFact);
             var baselineSide = baselineFact is null ? null : MetricSide(baselineFact);
-            var comparable = targetSide?.NumericState == "exact" &&
-                baselineSide?.NumericState == "exact";
+            var comparable = targetSide?.NumericValue is not null &&
+                baselineSide?.NumericValue is not null;
             decimal? delta = comparable
                 ? targetSide!.NumericValue!.Value - baselineSide!.NumericValue!.Value
                 : null;
@@ -196,7 +207,7 @@ internal static class CompareRangesWrapper
             }
 
             var itemChanged = joinState != "matched" ||
-                comparable && delta != 0m ||
+                comparable && (delta != 0m || !MetricEvidenceEquals(targetSide!, baselineSide!)) ||
                 !comparable && !MetricValueEquals(targetFact!, baselineFact!);
             if (itemChanged)
             {
@@ -232,19 +243,15 @@ internal static class CompareRangesWrapper
                 group.Count(item => item.JoinState == "matched"),
                 group.Count(item => item.JoinState == "targetOnly"),
                 group.Count(item => item.JoinState == "baselineOnly"),
-                group.Count(item => item.Target?.NumericState == "exact" &&
-                    item.Baseline?.NumericState == "exact"),
+                group.Count(item => item.Target?.NumericValue is not null &&
+                    item.Baseline?.NumericValue is not null),
                 group.Count(item => item.Changed)))
             .ToArray();
-        var pageItems = cursor >= items.Count
-            ? []
-            : items.Skip(cursor).Take(limit).ToArray();
-        int? nextCursor = cursor + pageItems.Length < items.Count
-            ? cursor + pageItems.Length
-            : null;
+        var selected = items.Where(item => includeUnchanged || item.Changed).ToArray();
         return WrapperValueResult<RangeMetricComparison>.Success(
             new(
                 "targetMinusBaseline",
+                includeUnchanged ? "all" : "changed",
                 items.Count,
                 matched,
                 targetOnly,
@@ -252,14 +259,7 @@ internal static class CompareRangesWrapper
                 numericComparable,
                 changed,
                 tableSummaries,
-                new(
-                    pageItems,
-                    cursor,
-                    limit,
-                    items.Count,
-                    pageItems.Length,
-                    nextCursor is not null,
-                    nextCursor)));
+                WrapperSupport.Page(selected, cursor, limit)));
     }
 
     private static WrapperValueResult<RangeShaderComparison> CompareShaders(
@@ -267,12 +267,12 @@ internal static class CompareRangesWrapper
         IReadOnlyList<RangeShaderFact> baselineFacts,
         int topShaderCount)
     {
-        var target = BuildUniqueDictionary(targetFacts, ShaderIdentity);
+        var target = BuildShaderDictionary(targetFacts);
         if (!target.IsSuccess)
         {
             return WrapperValueResult<RangeShaderComparison>.Failure(target.Error!);
         }
-        var baseline = BuildUniqueDictionary(baselineFacts, ShaderIdentity);
+        var baseline = BuildShaderDictionary(baselineFacts);
         if (!baseline.IsSuccess)
         {
             return WrapperValueResult<RangeShaderComparison>.Failure(baseline.Error!);
@@ -338,7 +338,6 @@ internal static class CompareRangesWrapper
                 item.Baseline?.SampleCount ?? 0L))
             .ThenBy(item => item.Identity.Stage, StringComparer.Ordinal)
             .ThenBy(item => item.Identity.Hash, StringComparer.Ordinal)
-            .ThenBy(item => item.Identity.HashOccurrence)
             .ThenBy(item => item.Identity.Name, StringComparer.Ordinal)
             .ThenBy(item => item.Identity.Pipeline, StringComparer.Ordinal)
             .ToArray();
@@ -546,21 +545,23 @@ internal static class CompareRangesWrapper
             fact.Key.Stage,
             fact.Key.Name,
             fact.Key.Hash,
-            fact.Key.HashOccurrence,
             fact.Key.Pipeline);
 
     private static RangeMetricComparisonSide MetricSide(RangeMetricFact fact)
     {
         var numeric = MetricNumericValue(fact);
-        var hasPrecise = fact.PreciseValue is not null;
+        var source = numeric.Source ?? (fact.PreciseValue is not null ? "preciseValue" : "displayValue");
+        var value = source == "preciseValue" ? fact.PreciseValue : fact.DisplayValue;
         return new(
             fact.SourceOrdinal,
-            hasPrecise ? fact.PreciseValue : fact.DisplayValue,
-            hasPrecise ? "preciseValue" : "displayValue",
-            SafeValueKind(hasPrecise ? fact.PreciseValue : fact.DisplayValue),
+            value,
+            source,
+            SafeValueKind(value),
             fact.Availability,
             numeric.Value,
-            numeric.State);
+            numeric.State,
+            numeric.Source,
+            numeric.Resolution);
     }
 
     private static RangeShaderComparisonSide ShaderSide(RangeShaderFact fact) =>
@@ -575,60 +576,67 @@ internal static class CompareRangesWrapper
             fact.StaticInstructionCount,
             fact.DependencyAttributedSampleCount,
             fact.AverageWarpLatency,
-            fact.Correlation);
+            fact.Correlation,
+            fact.SampleAvailability,
+            fact.DependencySampleAvailability);
 
-    private static (decimal? Value, string State, string? Source) MetricNumericValue(
+    private static (decimal? Value, string State, string? Source, decimal? Resolution) MetricNumericValue(
         RangeMetricFact fact)
     {
         if (fact.Availability != "available")
         {
-            return (null, fact.Availability, null);
+            return (null, fact.Availability, null, null);
         }
         var precise = ParseMetricNumber(fact.PreciseValue, fact.Unit);
-        if (precise.State == "exact")
+        if (precise.Value is not null)
         {
-            return (precise.Value, precise.State, "preciseValue");
+            return (precise.Value, precise.State == "parsed" ? "parsedPrecise" : precise.State,
+                "preciseValue", precise.Resolution);
         }
         var display = ParseMetricNumber(fact.DisplayValue, fact.Unit);
-        if (display.State == "exact")
+        // A bound is evidence of uncertainty even if another display can be parsed.
+        if (precise.State == "bounded" || display.State == "bounded")
         {
-            return (display.Value, display.State, "displayValue");
+            return (null, "bounded", null, null);
         }
-        return precise.State == "bounded" || display.State == "bounded"
-            ? (null, "bounded", null)
-            : (null, "notNumeric", null);
+        if (display.Value is not null)
+        {
+            return (display.Value, display.State == "parsed" ? "parsedDisplay" : display.State,
+                "displayValue", display.Resolution);
+        }
+        return (null, precise.State == "absent" && display.State == "absent" ? "absent" : "notNumeric", null, null);
     }
 
-    private static (decimal? Value, string State) ParseMetricNumber(
+    private static (decimal? Value, string State, decimal? Resolution) ParseMetricNumber(
         object? raw,
         string? unit)
     {
         if (raw is null)
         {
-            return (null, "absent");
+            return (null, "absent", null);
         }
         try
         {
             if (raw is byte or sbyte or short or ushort or int or uint or long or ulong or
                 float or double or decimal)
             {
-                return (Convert.ToDecimal(raw, CultureInfo.InvariantCulture), "exact");
+                return (Convert.ToDecimal(raw, CultureInfo.InvariantCulture), "exact", null);
             }
         }
         catch (Exception exception) when (
             exception is FormatException or InvalidCastException or OverflowException)
         {
-            return (null, "notNumeric");
+            return (null, "notNumeric", null);
         }
         if (raw is not string text)
         {
-            return (null, "notNumeric");
+            return (null, "notNumeric", null);
         }
 
         var normalized = text.Trim().Replace("\u00a0", string.Empty, StringComparison.Ordinal);
         if (normalized.StartsWith('<') || normalized.StartsWith('>'))
         {
-            return (null, "bounded");
+            return (null, "bounded", null);
         }
         if (!string.IsNullOrWhiteSpace(unit) &&
             normalized.EndsWith(unit, StringComparison.OrdinalIgnoreCase))
@@ -644,8 +652,50 @@ internal static class CompareRangesWrapper
             NumberStyles.Float | NumberStyles.AllowThousands,
             CultureInfo.InvariantCulture,
             out var value)
-            ? (value, "exact")
-            : (null, "notNumeric");
+            ? (value, "parsed", TextNumericResolution(normalized))
+            : (null, "notNumeric", null);
+    }
+
+    private static decimal? TextNumericResolution(string text)
+    {
+        var exponentIndex = text.IndexOfAny(['e', 'E']);
+        var mantissa = exponentIndex < 0 ? text : text[..exponentIndex];
+        var exponent = exponentIndex < 0 ? 0 : int.Parse(text[(exponentIndex + 1)..], CultureInfo.InvariantCulture);
+        var point = mantissa.IndexOf('.');
+        var power = exponent - (point < 0 ? 0 : mantissa.Length - point - 1);
+        if (power is < -28 or > 28)
+        {
+            return null;
+        }
+        var resolution = 1m;
+        for (var index = 0; index < Math.Abs(power); index++)
+        {
+            resolution = power < 0 ? resolution / 10m : resolution * 10m;
+        }
+        return resolution;
+    }
+
+    private static bool MetricEvidenceEquals(RangeMetricComparisonSide target, RangeMetricComparisonSide baseline) =>
+        target.Availability == baseline.Availability &&
+        target.NumericState == baseline.NumericState &&
+        target.NumericSource == baseline.NumericSource &&
+        target.NumericResolution == baseline.NumericResolution &&
+        target.ValueKind == baseline.ValueKind;
+
+    private static WrapperValueResult<Dictionary<RangeShaderComparisonIdentity, RangeShaderFact>> BuildShaderDictionary(
+        IReadOnlyList<RangeShaderFact> facts)
+    {
+        var result = new Dictionary<RangeShaderComparisonIdentity, RangeShaderFact>();
+        foreach (var fact in facts)
+        {
+            if (!result.TryAdd(ShaderIdentity(fact), fact))
+            {
+                return WrapperValueResult<Dictionary<RangeShaderComparisonIdentity, RangeShaderFact>>.Failure(
+                    new(ErrorCategory.Unavailable, "wrapper.shader_comparison_ambiguous",
+                        "Repeated shaders have the same stage, hash, name and pipeline; their range-local occurrences cannot establish a cross-range pairing."));
+            }
+        }
+        return WrapperValueResult<Dictionary<RangeShaderComparisonIdentity, RangeShaderFact>>.Success(result);
     }
 
     private static bool MetricValueEquals(
@@ -661,6 +711,8 @@ internal static class CompareRangesWrapper
         RangeShaderFact target,
         RangeShaderFact baseline) =>
         target.SampleCount == baseline.SampleCount &&
+        target.SampleAvailability == baseline.SampleAvailability &&
+        target.DependencySampleAvailability == baseline.DependencySampleAvailability &&
         target.MaximumTheoreticalWarps == baseline.MaximumTheoreticalWarps &&
         target.StaticRegisters == baseline.StaticRegisters &&
         target.SharedMemory == baseline.SharedMemory &&

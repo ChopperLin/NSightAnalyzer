@@ -9,18 +9,32 @@ internal static class JsonRenderer
     private static readonly JsonSerializerOptions PrettyOptions = CreateOptions(false);
     private static readonly JsonSerializerOptions CompactOptions = CreateOptions(true);
 
-    public static bool Write(OperationEnvelope envelope, bool compact)
+    public static bool Write(OperationEnvelope envelope, bool compact = true)
     {
+        var rendered = Render(envelope, compact);
+        Console.Out.WriteLine(rendered.Json);
+        return rendered.WithinBound;
+    }
+
+    internal static (string Json, bool WithinBound) Render(
+        OperationEnvelope envelope, bool compact = true)
+    {
+        if (envelope.Result.Error is { } error)
+        {
+            envelope = envelope with
+            {
+                Result = envelope.Result with
+                {
+                    Error = error with { Recovery = error.Recovery ?? ErrorRecoveryPolicy.For(envelope.Operation, error) },
+                },
+            };
+        }
         var options = compact ? CompactOptions : PrettyOptions;
         var json = JsonSerializer.Serialize(envelope, options);
-        var boundRepresentation = compact
-            ? JsonSerializer.Serialize(envelope, PrettyOptions)
-            : json;
-        if (System.Text.Encoding.UTF8.GetByteCount(boundRepresentation) <=
+        if (System.Text.Encoding.UTF8.GetByteCount(json) <=
             ContractLimits.MaximumResponseBytes)
         {
-            Console.Out.WriteLine(json);
-            return true;
+            return (json, true);
         }
 
         var boundedFailure = new OperationEnvelope(
@@ -30,9 +44,9 @@ internal static class JsonRenderer
                 ErrorCategory.Internal,
                 "runtime.response_limit_exceeded",
                 "The serialized response exceeded the hard output bound.",
-                $"maximumBytes={ContractLimits.MaximumResponseBytes}; retry with a smaller page"));
-        Console.Out.WriteLine(JsonSerializer.Serialize(boundedFailure, options));
-        return false;
+                $"maximumBytes={ContractLimits.MaximumResponseBytes}"));
+        var renderedFailure = Render(boundedFailure, compact);
+        return (renderedFailure.Json, false);
     }
 
     private static JsonSerializerOptions CreateOptions(bool compact)

@@ -15,28 +15,28 @@ but it is not causal proof.
 
 ## Evidence path
 
-    trace.info
+    find-ranges / find-events (only when exact keys are not known)
         |
-    trace.events / trace.analysis
+    exact target and baseline EventKeys at comparable granularity
         |
-    resolve-event -> exact target and baseline EventKeys
+    compare-ranges (metrics; add shaders or instruction-mix for a named evidence gap)
         |
-    compare-frame-timing -> exact frame/Present interval decomposition
-        |
-    inspect-pass(target) + inspect-pass(baseline)
-        |
-    compare-ranges -> exact target-minus-baseline facts
-        |
-    trace.shader-source for one returned ShaderKey, only when needed
+    trace.shader-profile / trace.shader-source for one returned ShaderKey if needed
         |
     counter catalog/export only for a named missing fact
 
-`inspect-pass` closes range metrics and range shaders. Shader output is a deterministic
-sample-count Top-N with total and returned sample counts, coverage percentage, and explicit
-truncation. V1 does not activate the independently stateful range Instruction Mix model; its nested
-section says `trace.range_instruction_mix_not_requested`, and the explicit
-`trace.range-instruction-mix` atom is the opt-in path. Samples remain PC-sampling attribution
-candidates, not precise shader GPU time.
+Use `trace.outline` only for missing hierarchy context. Use `compare-frame-timing` only for
+explicit frame/Present interval questions, with the required seed and queue identities.
+`trace.info` is for decoder/trace identity checks, not a mandatory warm-up before each task.
+
+`inspect-pass` reads metrics and shaders, returning a bounded metric page and a sample-count
+Top-N with total/returned sample counts, coverage percentage and explicit truncation. CLI v2
+defaults to 20 metrics and five shaders. `--detail` includes descriptions and instruction vectors
+without disabling paging. Samples remain PC-sampling attribution, not precise shader GPU time.
+
+`compare-ranges` reads metrics by default. Use `--sections metrics,shaders` for shader attribution,
+or explicitly request `instruction-mix` for range instruction/stall deltas. Every requested family
+must succeed. An unavailable Instruction Mix does not prevent a metric-only comparison.
 
 `compare-ranges` joins metric identity by exact table/row/column name and occurrence. Each side
 retains its own source ordinal. Missing on one side remains target-only or baseline-only; it never
@@ -57,7 +57,7 @@ Resolve an exact occurrence, preferably within an already resolved frame or pare
 ```powershell
 nsight-analyzer resolve-event trace.ngfx-gputrace `
   --event-name GBufferPass --event-occurrence 0 `
-  --within-event-ordinal 1234 --compact
+  --within-event-ordinal 1234
 ```
 
 When `--within-event-ordinal` is present, the wrapper starts the paged Event List scan at that
@@ -69,7 +69,7 @@ Inspect the returned preorder ordinal:
 
 ```powershell
 nsight-analyzer inspect-pass trace.ngfx-gputrace `
-  --event-ordinal 1773 --top-shaders 10 --compact
+  --event-ordinal 1773 --top-shaders 10
 ```
 
 Compare two ranges in one trace:
@@ -77,7 +77,7 @@ Compare two ranges in one trace:
 ```powershell
 nsight-analyzer compare-ranges trace.ngfx-gputrace `
   --event-ordinal 1773 --baseline-event-ordinal 3901 `
-  --cursor 0 --limit 100 --top-shaders 10 --compact
+  --sections metrics,shaders --cursor 0 --limit 20 --top-shaders 5
 ```
 
 For before/after traces, add `--baseline-trace before.ngfx-gputrace`. Use repeated exact `--table`
@@ -90,7 +90,7 @@ nsight-analyzer compare-frame-timing trace.ngfx-gputrace `
   --event-ordinal 131987 --target-frame-index 13 `
   --baseline-event-ordinal 295573 --baseline-frame-index 29 `
   --analysis-seed-event-ordinal 136633 `
-  --present-queue-event-ordinal 306395 --compact
+  --present-queue-event-ordinal 306395
 ```
 
 Frame index zero is intentionally unavailable in this first contract because there is no preceding
@@ -110,6 +110,16 @@ branches:
   the CPU or synchronization cause.
 
 Confidence is lower without a same-pass control. No single percentage is sufficient by itself.
+
+For timing questions, start with `compare-ranges --sections timing`. Use `compare-timings` for
+explicitly paired samples; its summaries cover only the current page and keep exact contexts
+separate unless the caller declares a `sampleGroup`. Use `find-metrics` for a specific metric and
+`find-source-hotspots` for ranked sampled rows in one explicit source view.
+
+Record configuration changes separately from trace observations. For example, an SER toggle coupled
+with a thread-reordering toggle changes two variables; timing and counter deltas cannot by themselves
+attribute the regression to SER. Seek build/configuration evidence and matched controls before
+assigning causality. The wrappers expose no inferred feature-toggle state.
 
 ## Scope rules
 

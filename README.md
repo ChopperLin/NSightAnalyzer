@@ -28,25 +28,52 @@ The committed probing implementation under tools/probes/qt-model-bridge is the l
 The atom layer exposes 14 operations: capability/identity, outline, events, event parameters,
 range-metric catalog/values, range instruction mix, range shader inventory, exact shader profile,
 shader source, Trace Analysis, and raw-counter catalog/value retrieval. The deterministic wrapper
-slice adds `find-events`, `find-ranges`, `resolve-event`, `inspect-pass`, `compare-ranges`, and the
-same-trace `compare-frame-timing` timeline decomposition. Agent diagnosis remains intentionally
+slice adds `find-events`, `find-ranges`, `resolve-event`, `inspect-pass`, `compare-ranges`,
+`compare-frame-timing`, `find-metrics`, `find-source-hotspots`, and `compare-timings`. Agent diagnosis remains intentionally
 above those wrappers.
 
-`inspect-pass/v1` returns complete metrics and its coverage-labelled shader Top-N without coupling
-the summary to the Viewer's independently stateful range Instruction Mix model. Its nested
-`instructionMix` section is explicitly `unavailable` /
-`trace.range_instruction_mix_not_requested`; callers that need that family use the separate
-`trace.range-instruction-mix` atom. It is never represented as a successful empty list.
+CLI v2 returns concise JSON by default. Pages default to 20 items, shader Top-N to five;
+all counts, scope, units, provenance and truncation remain explicit. `--detail` adds metric
+descriptions and shader instruction vectors without disabling paging. `--pretty` only indents
+JSON; the old `--compact` remains accepted but is unnecessary.
 
-Start an investigation with `trace.outline`: it returns the range-grain skeleton - every pass,
-marker and command-list range with its timing - in one call, instead of paging the full event tree.
-Its preorder ordinals are the same EventKeys the scoped atoms take, so a returned ordinal can be
-passed straight to `inspect-pass` or `trace.range-metrics`.
+Start a targeted investigation with `find-ranges` (marker grain by default) or `find-events`.
+Reuse exact returned keys. Use `trace.outline` when the tree context is needed, rather than
+paging it before every question. `inspect-pass` returns paged metrics and shader Top-N;
+`compare-ranges` defaults to metrics only; `--sections timing` reads just the exact event timings.
+`--sections metrics,shaders,instruction-mix`
+explicitly requests additional families, all of which must succeed. Unrequested families are
+omitted and the selected families are recorded in `sections`. Instruction Mix remains uncached.
 
-`--help`, or no arguments at all, returns the same catalog as `capabilities`, including a
-machine-readable parameter definition for every operation: value kind, required or optional,
-defaults, bounds, allowed values, and mutually exclusive selector groups. Occurrence arguments are
-zero-based.
+Comparison metric pages default to changed/unmatched facts, with `deltaFilter` and their own
+page total. Overall matched/comparable counts still cover all selected metrics. Use
+`--include-unchanged` only when unchanged deltas are needed; `--detail` controls descriptive fields.
+
+`capabilities`, `--help`, or no arguments returns a short operation directory.
+`describe inspect-pass` and `inspect-pass --help` return that operation's complete parameter
+contract. `capabilities --detail` returns the full catalog when needed. Errors include a stable
+code and a bounded structured recovery action. Occurrence arguments are zero-based.
+
+Use `find-metrics --event-ordinal N --name-contains register` to find metric identities, then
+`--source-ordinal N` to retrieve one exact cell. `find-source-hotspots --view dxil` ranks sampled
+rows from one complete source view and reports sample coverage. `compare-timings --pairs-file
+pairs.json` compares caller-specified EventKey pairs, with statistics over the current page only.
+An optional caller `sampleGroup` explicitly groups repeated measurements; equal marker names alone
+never establish equivalent context or causality.
+
+`doctor` checks local dependencies without starting Viewer; `version` returns the CLI build and
+package content fingerprint. Pass the same absolute `--workspace` to every client to share run/session
+roots across working directories. PowerShell, cmd and Python subprocess invocations use the same
+JSON protocol; the Skill has no Codex-only tool dependency.
+
+Shader source requests now require stage, hash and occurrence, matching the returned ShaderKey.
+The adapter resolves the exact row from a verified inventory and verifies its stage, hash,
+name and pipeline again after source selection; a sorted proxy row is not an identity.
+Source duplicates that this bridge cannot distinguish are explicitly unavailable. Cross-range shader
+comparison uses unique stage/hash/name/pipeline tuples and rejects ambiguous matches. Missing sample
+data never becomes zero, missing requested metric tables fail, and metric comparisons retain numeric
+source and Viewer display resolution. Public envelopes use schema 2.1;
+the pinned Viewer and `probe-0.51` bridge are unchanged.
 
 Product atoms reuse one normally launched Viewer process per exact trace snapshot. The normal
 CrashReporter pipe guardian is recorded as session baseline rather than treated as a crash; Viewer
@@ -56,10 +83,14 @@ bounded memory cache. A hit still resolves and establishes the requested EventKe
 the recorded model; failures, timeouts, incomplete exports, Instruction Mix, and artifact-writing
 operations are never cached.
 
+Metric paging and search also reuse bounded, verified snapshots within the exact live Viewer session.
+Every hit makes a fresh header-only catalog request to establish scope and verify table structure;
+trace identity, process instance, completed request, and snapshot integrity must still match.
+
 ```powershell
 dotnet build .\NSightAnalyzer.slnx -c Release
 dotnet .\src\NsightAnalyzer\bin\Release\net9.0-windows\nsight-analyzer.dll `
-  capabilities --compact
+  capabilities
 ```
 
 Build the Agent Skill package and publish it to the sibling `lx6-hub\skills\nsight-analyzer`:
@@ -68,7 +99,7 @@ Build the Agent Skill package and publish it to the sibling `lx6-hub\skills\nsig
 pwsh -NoProfile -File .\scripts\build-package.ps1
 ```
 
-The package contains the framework-dependent CLI host, `SKILL.md`, and a hash manifest. Use
+The package contains the framework-dependent CLI host, `SKILL.md`, its analysis/recovery references, and a hash manifest. Use
 `-SkipHubPublish` for an independent package build or `-HubPath <path>` for a non-sibling hub.
 The package does not contain NVIDIA Viewer files or install the version-pinned SolidProbe bridge.
 

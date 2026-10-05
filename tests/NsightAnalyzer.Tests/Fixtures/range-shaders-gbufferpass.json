@@ -46554,7 +46554,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0xda3d8e0092f5875c",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -46877,7 +46877,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0xe47e0661152c15e2",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -47211,7 +47211,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0xe66affa466c3d8b3",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -47552,7 +47552,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0xadbeedc67e0a1653",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -47895,7 +47895,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x4b562dc765a3d394",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -48243,7 +48243,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x784b39eb99f65838",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -48607,7 +48607,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x9e82a07fdf3600f2",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -48981,7 +48981,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0xa1cd7f717950201d",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -49328,7 +49328,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x3161d213383252d5",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -49653,7 +49653,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0xeb8778f6b901905c",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -50009,7 +50009,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x04ea2432b8aa7c03",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -50359,7 +50359,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x7b031c84a4702c13",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -50707,7 +50707,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0xe9af7cba933f91dd",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -50716,7 +50716,7 @@
         "column": 4,
         "display": "DXIL",
         "displayType": "QString",
-        "tooltip": "<table style=\"white-space:nowrap\"><tr>    <td><img src=\":/NV_UI/error.ico\"></td>  <td style=\"vertical-align: middle\">Could not find debug symbols: dfdd6a22161165d84786d84beba25b09.pdb. PDB search paths can be set in: \"Tools -> Options... -> Search Paths -> Separate Shader Debug Information\"</td></tr><tr>    <td><img src=\":/NV_UI/info.ico\"></td>  <td style=\"vertical-align: middle\">Successfully got SASS debug info from driver</td></tr><tr>    <td><img src=\":/NV_UI/info.ico\"></td>  <td style=\"vertical-align: middle\">Successfully got SASS to IL line table from driver</td></tr></table>",
+        "tooltip": "<table style=\"white-space:nowrap\"><tr>    <td><img src=\":/NV_UI/error.ico\"></td>  <td style=\"vertical-align: middle\">Could not find debug symbols: source01.pdb. PDB search paths can be set in: \"Tools -> Options... -> Search Paths -> Separate Shader Debug Information\"</td></tr><tr>    <td><img src=\":/NV_UI/info.ico\"></td>  <td style=\"vertical-align: middle\">Successfully got SASS debug info from driver</td></tr><tr>    <td><img src=\":/NV_UI/info.ico\"></td>  <td style=\"vertical-align: middle\">Successfully got SASS to IL line table from driver</td></tr></table>",
         "tooltipType": "QString"
        },
        {
@@ -51075,7 +51075,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x6d4798900b37fc32",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -51435,7 +51435,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x1a6e56e9d6af2afb",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -51774,7 +51774,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0xeba9038da97db1ba",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -52117,7 +52117,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x6063db451bb87b0e",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -52483,7 +52483,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x77758910f7b8b091",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -52658,7 +52658,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x3c225bfd0fdd9976",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -52965,7 +52965,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x1b7cb3718259d6a8",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -53114,7 +53114,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x06c6e380d718cb69",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -53426,7 +53426,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0xea9c29b10ae3ffc9",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -53757,7 +53757,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0xd02a40b121352b71",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -54080,7 +54080,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x992579dc79f09f77",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -54407,7 +54407,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x0d342dfb96e2c265",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -54752,7 +54752,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x09498a48d4be0d2f",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -55083,7 +55083,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x0d7c5e6f44b23b77",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -55402,7 +55402,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0xe9f5d4e0302d8b42",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -55735,7 +55735,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0xafcf08917fab61cd",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -56069,7 +56069,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0xdbf9e1606a0235d1",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -56390,7 +56390,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x62bd43ee62f76f1d",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -56711,7 +56711,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x7d56de5351df2538",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -57047,7 +57047,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x4e1241769543c216",
         "displayType": "QString",
         "tooltip": "Combined u-code hash: 0x0000000000000000",
         "tooltipType": "QString"
@@ -57185,7 +57185,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0xa866a58b3753b104",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -57506,7 +57506,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0xc4b2397d5c5181e7",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -57795,7 +57795,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x6aa288e72cc5ea42",
         "displayType": "QString",
         "tooltip": "Combined u-code hash: 0x0000000000000000",
         "tooltipType": "QString"
@@ -58084,7 +58084,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x03c883928cc9d7a6",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -58379,7 +58379,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0xece09caad90f5a7b",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -58674,7 +58674,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x3a36983885dc5564",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -58984,7 +58984,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x82d9616d7c10f138",
         "displayType": "QString",
         "tooltip": "Combined u-code hash: 0x0000000000000000",
         "tooltipType": "QString"
@@ -59121,7 +59121,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x09c281615c6ddf02",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -59130,7 +59130,7 @@
         "column": 4,
         "display": "DXIL",
         "displayType": "QString",
-        "tooltip": "<table style=\"white-space:nowrap\"><tr>    <td><img src=\":/NV_UI/error.ico\"></td>  <td style=\"vertical-align: middle\">Could not find debug symbols: b0edee208729173b79e6f6894ea8b79f.pdb. PDB search paths can be set in: \"Tools -> Options... -> Search Paths -> Separate Shader Debug Information\"</td></tr><tr>    <td><img src=\":/NV_UI/info.ico\"></td>  <td style=\"vertical-align: middle\">Successfully got SASS debug info from driver</td></tr><tr>    <td><img src=\":/NV_UI/info.ico\"></td>  <td style=\"vertical-align: middle\">Successfully got SASS to IL line table from driver</td></tr></table>",
+        "tooltip": "<table style=\"white-space:nowrap\"><tr>    <td><img src=\":/NV_UI/error.ico\"></td>  <td style=\"vertical-align: middle\">Could not find debug symbols: source02.pdb. PDB search paths can be set in: \"Tools -> Options... -> Search Paths -> Separate Shader Debug Information\"</td></tr><tr>    <td><img src=\":/NV_UI/info.ico\"></td>  <td style=\"vertical-align: middle\">Successfully got SASS debug info from driver</td></tr><tr>    <td><img src=\":/NV_UI/info.ico\"></td>  <td style=\"vertical-align: middle\">Successfully got SASS to IL line table from driver</td></tr></table>",
         "tooltipType": "QString"
        },
        {
@@ -59460,7 +59460,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x4f1ea05f7456ed73",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -59613,7 +59613,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x8739dd74ed8af2d8",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -59944,7 +59944,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0xd1a9bc58dd90b3b4",
         "displayType": "QString",
         "tooltip": "Combined u-code hash: 0x0000000000000000",
         "tooltipType": "QString"
@@ -60100,7 +60100,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x64a0cbc2d1233b38",
         "displayType": "QString",
         "tooltip": "Combined u-code hash: 0x0000000000000000",
         "tooltipType": "QString"
@@ -60417,7 +60417,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0xd1a9bc58dd90b3b4",
         "displayType": "QString",
         "tooltip": "Combined u-code hash: 0x0000000000000000",
         "tooltipType": "QString"
@@ -60573,7 +60573,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x4c7812feae0d7848",
         "displayType": "QString",
         "tooltip": "Combined u-code hash: 0x0000000000000000",
         "tooltipType": "QString"
@@ -60889,7 +60889,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x01b50cd36e6f980b",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -60898,7 +60898,7 @@
         "column": 4,
         "display": "DXIL",
         "displayType": "QString",
-        "tooltip": "<table style=\"white-space:nowrap\"><tr>    <td><img src=\":/NV_UI/error.ico\"></td>  <td style=\"vertical-align: middle\">Could not find debug symbols: 54994f6df50c7a84c0ebb492cbfdf643.pdb. PDB search paths can be set in: \"Tools -> Options... -> Search Paths -> Separate Shader Debug Information\"</td></tr><tr>    <td><img src=\":/NV_UI/info.ico\"></td>  <td style=\"vertical-align: middle\">Successfully got SASS debug info from driver</td></tr><tr>    <td><img src=\":/NV_UI/info.ico\"></td>  <td style=\"vertical-align: middle\">Successfully got SASS to IL line table from driver</td></tr></table>",
+        "tooltip": "<table style=\"white-space:nowrap\"><tr>    <td><img src=\":/NV_UI/error.ico\"></td>  <td style=\"vertical-align: middle\">Could not find debug symbols: source03.pdb. PDB search paths can be set in: \"Tools -> Options... -> Search Paths -> Separate Shader Debug Information\"</td></tr><tr>    <td><img src=\":/NV_UI/info.ico\"></td>  <td style=\"vertical-align: middle\">Successfully got SASS debug info from driver</td></tr><tr>    <td><img src=\":/NV_UI/info.ico\"></td>  <td style=\"vertical-align: middle\">Successfully got SASS to IL line table from driver</td></tr></table>",
         "tooltipType": "QString"
        },
        {
@@ -61208,7 +61208,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x7fe99e4ae322100c",
         "displayType": "QString",
         "tooltip": "Combined u-code hash: 0x0000000000000000",
         "tooltipType": "QString"
@@ -61528,7 +61528,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x2aa6767c39fe7b53",
         "displayType": "QString",
         "tooltip": "Combined u-code hash: 0x0000000000000000",
         "tooltipType": "QString"
@@ -61850,7 +61850,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x2cd6d54479c91333",
         "displayType": "QString",
         "tooltip": "Combined u-code hash: 0x0000000000000000",
         "tooltipType": "QString"
@@ -62172,7 +62172,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x5051b795c393a0f0",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -62181,7 +62181,7 @@
         "column": 4,
         "display": "DXIL",
         "displayType": "QString",
-        "tooltip": "<table style=\"white-space:nowrap\"><tr>    <td><img src=\":/NV_UI/error.ico\"></td>  <td style=\"vertical-align: middle\">Could not find debug symbols: 8567afa3015e09ec80fb8bb3f5c82587.pdb. PDB search paths can be set in: \"Tools -> Options... -> Search Paths -> Separate Shader Debug Information\"</td></tr><tr>    <td><img src=\":/NV_UI/info.ico\"></td>  <td style=\"vertical-align: middle\">Successfully got SASS debug info from driver</td></tr><tr>    <td><img src=\":/NV_UI/info.ico\"></td>  <td style=\"vertical-align: middle\">Successfully got SASS to IL line table from driver</td></tr></table>",
+        "tooltip": "<table style=\"white-space:nowrap\"><tr>    <td><img src=\":/NV_UI/error.ico\"></td>  <td style=\"vertical-align: middle\">Could not find debug symbols: source04.pdb. PDB search paths can be set in: \"Tools -> Options... -> Search Paths -> Separate Shader Debug Information\"</td></tr><tr>    <td><img src=\":/NV_UI/info.ico\"></td>  <td style=\"vertical-align: middle\">Successfully got SASS debug info from driver</td></tr><tr>    <td><img src=\":/NV_UI/info.ico\"></td>  <td style=\"vertical-align: middle\">Successfully got SASS to IL line table from driver</td></tr></table>",
         "tooltipType": "QString"
        },
        {
@@ -62493,7 +62493,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x6888d07653ab006c",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -62502,7 +62502,7 @@
         "column": 4,
         "display": "DXIL",
         "displayType": "QString",
-        "tooltip": "<table style=\"white-space:nowrap\"><tr>    <td><img src=\":/NV_UI/error.ico\"></td>  <td style=\"vertical-align: middle\">Could not find debug symbols: 384aa0b90ec952cc5b90dc6ab3764a46.pdb. PDB search paths can be set in: \"Tools -> Options... -> Search Paths -> Separate Shader Debug Information\"</td></tr><tr>    <td><img src=\":/NV_UI/info.ico\"></td>  <td style=\"vertical-align: middle\">Successfully got SASS debug info from driver</td></tr><tr>    <td><img src=\":/NV_UI/info.ico\"></td>  <td style=\"vertical-align: middle\">Successfully got SASS to IL line table from driver</td></tr></table>",
+        "tooltip": "<table style=\"white-space:nowrap\"><tr>    <td><img src=\":/NV_UI/error.ico\"></td>  <td style=\"vertical-align: middle\">Could not find debug symbols: source05.pdb. PDB search paths can be set in: \"Tools -> Options... -> Search Paths -> Separate Shader Debug Information\"</td></tr><tr>    <td><img src=\":/NV_UI/info.ico\"></td>  <td style=\"vertical-align: middle\">Successfully got SASS debug info from driver</td></tr><tr>    <td><img src=\":/NV_UI/info.ico\"></td>  <td style=\"vertical-align: middle\">Successfully got SASS to IL line table from driver</td></tr></table>",
         "tooltipType": "QString"
        },
        {
@@ -62821,7 +62821,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x7df4c36a653a951a",
         "displayType": "QString",
         "tooltip": "Combined u-code hash: 0x0000000000000000",
         "tooltipType": "QString"
@@ -63158,7 +63158,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0xb61fc6886861d37a",
         "displayType": "QString",
         "tooltip": "Combined u-code hash: 0x0000000000000000",
         "tooltipType": "QString"
@@ -63507,7 +63507,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0xd30267dc57ec9242",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -63516,7 +63516,7 @@
         "column": 4,
         "display": "DXIL",
         "displayType": "QString",
-        "tooltip": "<table style=\"white-space:nowrap\"><tr>    <td><img src=\":/NV_UI/error.ico\"></td>  <td style=\"vertical-align: middle\">Could not find debug symbols: 47f99f2a6bcbcb4de7043b6c27b6a976.pdb. PDB search paths can be set in: \"Tools -> Options... -> Search Paths -> Separate Shader Debug Information\"</td></tr><tr>    <td><img src=\":/NV_UI/info.ico\"></td>  <td style=\"vertical-align: middle\">Successfully got SASS debug info from driver</td></tr><tr>    <td><img src=\":/NV_UI/info.ico\"></td>  <td style=\"vertical-align: middle\">Successfully got SASS to IL line table from driver</td></tr></table>",
+        "tooltip": "<table style=\"white-space:nowrap\"><tr>    <td><img src=\":/NV_UI/error.ico\"></td>  <td style=\"vertical-align: middle\">Could not find debug symbols: source06.pdb. PDB search paths can be set in: \"Tools -> Options... -> Search Paths -> Separate Shader Debug Information\"</td></tr><tr>    <td><img src=\":/NV_UI/info.ico\"></td>  <td style=\"vertical-align: middle\">Successfully got SASS debug info from driver</td></tr><tr>    <td><img src=\":/NV_UI/info.ico\"></td>  <td style=\"vertical-align: middle\">Successfully got SASS to IL line table from driver</td></tr></table>",
         "tooltipType": "QString"
        },
        {
@@ -63675,7 +63675,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0xbc7ec8857452954f",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -63684,7 +63684,7 @@
         "column": 4,
         "display": "DXIL",
         "displayType": "QString",
-        "tooltip": "<table style=\"white-space:nowrap\"><tr>    <td><img src=\":/NV_UI/error.ico\"></td>  <td style=\"vertical-align: middle\">Could not find debug symbols: caf4612b84ae6cf31a24ac3aaca91825.pdb. PDB search paths can be set in: \"Tools -> Options... -> Search Paths -> Separate Shader Debug Information\"</td></tr><tr>    <td><img src=\":/NV_UI/info.ico\"></td>  <td style=\"vertical-align: middle\">Successfully got SASS debug info from driver</td></tr><tr>    <td><img src=\":/NV_UI/info.ico\"></td>  <td style=\"vertical-align: middle\">Successfully got SASS to IL line table from driver</td></tr></table>",
+        "tooltip": "<table style=\"white-space:nowrap\"><tr>    <td><img src=\":/NV_UI/error.ico\"></td>  <td style=\"vertical-align: middle\">Could not find debug symbols: source07.pdb. PDB search paths can be set in: \"Tools -> Options... -> Search Paths -> Separate Shader Debug Information\"</td></tr><tr>    <td><img src=\":/NV_UI/info.ico\"></td>  <td style=\"vertical-align: middle\">Successfully got SASS debug info from driver</td></tr><tr>    <td><img src=\":/NV_UI/info.ico\"></td>  <td style=\"vertical-align: middle\">Successfully got SASS to IL line table from driver</td></tr></table>",
         "tooltipType": "QString"
        },
        {
@@ -63994,7 +63994,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x44c3a0eb51b131fa",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -64304,7 +64304,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x74c595a711b1f671",
         "displayType": "QString",
         "tooltip": "Combined u-code hash: 0x0000000000000000",
         "tooltipType": "QString"
@@ -64463,7 +64463,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x0dcea84d3bcaef38",
         "displayType": "QString",
         "tooltip": "Combined u-code hash: 0x0000000000000000",
         "tooltipType": "QString"
@@ -64790,7 +64790,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x785c8538c836fbf6",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -64947,7 +64947,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x80ac32c8f59621f1",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -65266,7 +65266,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x3d40c23ab60b2edc",
         "displayType": "QString",
         "tooltip": "Combined u-code hash: 0x0000000000000000",
         "tooltipType": "QString"
@@ -65413,7 +65413,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x5cfc888962988784",
         "displayType": "QString",
         "tooltip": "Combined u-code hash: 0x0000000000000000",
         "tooltipType": "QString"
@@ -65735,7 +65735,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0xb74439aeb94a120c",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -65744,7 +65744,7 @@
         "column": 4,
         "display": "DXIL",
         "displayType": "QString",
-        "tooltip": "<table style=\"white-space:nowrap\"><tr>    <td><img src=\":/NV_UI/error.ico\"></td>  <td style=\"vertical-align: middle\">Could not find debug symbols: a8668f10b4167264b22eafd0db3e9007.pdb. PDB search paths can be set in: \"Tools -> Options... -> Search Paths -> Separate Shader Debug Information\"</td></tr><tr>    <td><img src=\":/NV_UI/info.ico\"></td>  <td style=\"vertical-align: middle\">Successfully got SASS debug info from driver</td></tr><tr>    <td><img src=\":/NV_UI/info.ico\"></td>  <td style=\"vertical-align: middle\">Successfully got SASS to IL line table from driver</td></tr></table>",
+        "tooltip": "<table style=\"white-space:nowrap\"><tr>    <td><img src=\":/NV_UI/error.ico\"></td>  <td style=\"vertical-align: middle\">Could not find debug symbols: source08.pdb. PDB search paths can be set in: \"Tools -> Options... -> Search Paths -> Separate Shader Debug Information\"</td></tr><tr>    <td><img src=\":/NV_UI/info.ico\"></td>  <td style=\"vertical-align: middle\">Successfully got SASS debug info from driver</td></tr><tr>    <td><img src=\":/NV_UI/info.ico\"></td>  <td style=\"vertical-align: middle\">Successfully got SASS to IL line table from driver</td></tr></table>",
         "tooltipType": "QString"
        },
        {
@@ -66069,7 +66069,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x82d9616d7c10f138",
         "displayType": "QString",
         "tooltip": "Combined u-code hash: 0x0000000000000000",
         "tooltipType": "QString"
@@ -66206,7 +66206,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x81e4238d8ae82356",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -66215,7 +66215,7 @@
         "column": 4,
         "display": "DXIL",
         "displayType": "QString",
-        "tooltip": "<table style=\"white-space:nowrap\"><tr>    <td><img src=\":/NV_UI/error.ico\"></td>  <td style=\"vertical-align: middle\">Could not find debug symbols: 6b2783ef3b2d4eef1e4f484fcd90bead.pdb. PDB search paths can be set in: \"Tools -> Options... -> Search Paths -> Separate Shader Debug Information\"</td></tr><tr>    <td><img src=\":/NV_UI/info.ico\"></td>  <td style=\"vertical-align: middle\">Successfully got SASS debug info from driver</td></tr><tr>    <td><img src=\":/NV_UI/info.ico\"></td>  <td style=\"vertical-align: middle\">Successfully got SASS to IL line table from driver</td></tr></table>",
+        "tooltip": "<table style=\"white-space:nowrap\"><tr>    <td><img src=\":/NV_UI/error.ico\"></td>  <td style=\"vertical-align: middle\">Could not find debug symbols: source09.pdb. PDB search paths can be set in: \"Tools -> Options... -> Search Paths -> Separate Shader Debug Information\"</td></tr><tr>    <td><img src=\":/NV_UI/info.ico\"></td>  <td style=\"vertical-align: middle\">Successfully got SASS debug info from driver</td></tr><tr>    <td><img src=\":/NV_UI/info.ico\"></td>  <td style=\"vertical-align: middle\">Successfully got SASS to IL line table from driver</td></tr></table>",
         "tooltipType": "QString"
        },
        {
@@ -66528,7 +66528,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x1941b228865be2f0",
         "displayType": "QString",
         "tooltip": "Combined u-code hash: 0x0000000000000000",
         "tooltipType": "QString"
@@ -66845,7 +66845,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x88b7d8b8f08063a7",
         "displayType": "QString",
         "tooltip": "Combined u-code hash: 0x0000000000000000",
         "tooltipType": "QString"
@@ -67171,7 +67171,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x8bfced93491ef063",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -67511,7 +67511,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x215aa78b0c70a9c4",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -67669,7 +67669,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x3bd95ab537612ab1",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -67987,7 +67987,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0xc96831a3af0c3596",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -68312,7 +68312,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x4f1ea05f7456ed73",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -68465,7 +68465,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0xca6ac90d2584b271",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -68788,7 +68788,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x1faccc33e9402ed5",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -68937,7 +68937,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0xb716513d036ec60b",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -69246,7 +69246,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x071893422cf2364a",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -69395,7 +69395,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0xc7574e4d64d5edda",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -69702,7 +69702,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0xf9944b2482ef44e7",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -69851,7 +69851,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0xf4cf87cdac514609",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -70158,7 +70158,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0xb61e909d1f85771c",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -70307,7 +70307,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0xac0d0de2cc8869e2",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -70615,7 +70615,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0xd63f619dd3691bd7",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -70764,7 +70764,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x79ad3a0b1d6d800d",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -71086,7 +71086,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x07ec555fa3b6e909",
         "displayType": "QString",
         "tooltip": "Combined u-code hash: 0x0000000000000000",
         "tooltipType": "QString"
@@ -71243,7 +71243,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x2e34ac9424b8fceb",
         "displayType": "QString",
         "tooltip": "Combined u-code hash: 0x0000000000000000",
         "tooltipType": "QString"
@@ -71573,7 +71573,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x07ec555fa3b6e909",
         "displayType": "QString",
         "tooltip": "Combined u-code hash: 0x0000000000000000",
         "tooltipType": "QString"
@@ -71730,7 +71730,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x8dcfbe7bdb945c71",
         "displayType": "QString",
         "tooltip": "Combined u-code hash: 0x0000000000000000",
         "tooltipType": "QString"
@@ -72082,7 +72082,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x0ffb5b06372a61ac",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -72462,7 +72462,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x1d24385118fa0edd",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -72822,7 +72822,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0xb22a01e7f0f43ea2",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -73155,7 +73155,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x3ef6a29cd062dbbb",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -73481,7 +73481,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0xae0cdc27f5519b46",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -73825,7 +73825,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0xd40228c949a3394b",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -74173,7 +74173,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x476a709816f42e51",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -74508,7 +74508,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0xf06cd374d7e916c7",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -74861,7 +74861,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x7341f3e5e9d1460b",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -74870,12 +74870,12 @@
         "column": 4,
         "display": "DXIL",
         "displayType": "QString",
-        "tooltip": "<table style=\"white-space:nowrap\"><tr>    <td><img src=\":/NV_UI/error.ico\"></td>  <td style=\"vertical-align: middle\">Could not find debug symbols: a20651a4fd7e9710dfaaa90fdfd2aed0.pdb. PDB search paths can be set in: \"Tools -> Options... -> Search Paths -> Separate Shader Debug Information\"</td></tr><tr>    <td><img src=\":/NV_UI/info.ico\"></td>  <td style=\"vertical-align: middle\">Successfully got SASS debug info from driver</td></tr><tr>    <td><img src=\":/NV_UI/info.ico\"></td>  <td style=\"vertical-align: middle\">Successfully got SASS to IL line table from driver</td></tr></table>",
+        "tooltip": "<table style=\"white-space:nowrap\"><tr>    <td><img src=\":/NV_UI/error.ico\"></td>  <td style=\"vertical-align: middle\">Could not find debug symbols: source10.pdb. PDB search paths can be set in: \"Tools -> Options... -> Search Paths -> Separate Shader Debug Information\"</td></tr><tr>    <td><img src=\":/NV_UI/info.ico\"></td>  <td style=\"vertical-align: middle\">Successfully got SASS debug info from driver</td></tr><tr>    <td><img src=\":/NV_UI/info.ico\"></td>  <td style=\"vertical-align: middle\">Successfully got SASS to IL line table from driver</td></tr></table>",
         "tooltipType": "QString"
        },
        {
         "column": 5,
-        "display": "dxil (c7096045a5804ec3)",
+        "display": "dxil (7341f3e5e9d1460b)",
         "displayType": "QString"
        },
        {
@@ -75039,7 +75039,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x7b186f61bcc2e95e",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -75048,7 +75048,7 @@
         "column": 4,
         "display": "DXIL",
         "displayType": "QString",
-        "tooltip": "<table style=\"white-space:nowrap\"><tr>    <td><img src=\":/NV_UI/error.ico\"></td>  <td style=\"vertical-align: middle\">Could not find debug symbols: 5ea783a0504908af89bf9f69ea2018a0.pdb. PDB search paths can be set in: \"Tools -> Options... -> Search Paths -> Separate Shader Debug Information\"</td></tr><tr>    <td><img src=\":/NV_UI/info.ico\"></td>  <td style=\"vertical-align: middle\">Successfully got SASS debug info from driver</td></tr><tr>    <td><img src=\":/NV_UI/info.ico\"></td>  <td style=\"vertical-align: middle\">Successfully got SASS to IL line table from driver</td></tr></table>",
+        "tooltip": "<table style=\"white-space:nowrap\"><tr>    <td><img src=\":/NV_UI/error.ico\"></td>  <td style=\"vertical-align: middle\">Could not find debug symbols: source11.pdb. PDB search paths can be set in: \"Tools -> Options... -> Search Paths -> Separate Shader Debug Information\"</td></tr><tr>    <td><img src=\":/NV_UI/info.ico\"></td>  <td style=\"vertical-align: middle\">Successfully got SASS debug info from driver</td></tr><tr>    <td><img src=\":/NV_UI/info.ico\"></td>  <td style=\"vertical-align: middle\">Successfully got SASS to IL line table from driver</td></tr></table>",
         "tooltipType": "QString"
        },
        {
@@ -75405,7 +75405,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x2269701ba1a52afb",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -75589,7 +75589,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x88ef5035ed1798b4",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -75931,7 +75931,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0xcf1245d7e28bf4da",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -76114,7 +76114,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x8d03a9908680574d",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -76458,7 +76458,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x81a6453ff9bb62cc",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -76643,7 +76643,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x8d03a9908680574d",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -76982,7 +76982,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x6ee1fcf8800b2a15",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -77165,7 +77165,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x00c30d3e72525835",
         "displayType": "QString",
         "tooltip": "Combined u-code hash: 0x0000000000000000",
         "tooltipType": "QString"
@@ -77491,7 +77491,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x96901979121af82f",
         "displayType": "QString",
         "tooltip": "Combined u-code hash: 0x0000000000000000",
         "tooltipType": "QString"
@@ -77654,7 +77654,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x0c20539f77dee52c",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -78004,7 +78004,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0xaaea558cb23f4ce2",
         "displayType": "QString",
         "tooltip": "Combined u-code hash: 0x0000000000000000",
         "tooltipType": "QString"
@@ -78169,7 +78169,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0xc38bb0309abfe791",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -78517,7 +78517,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x38f53d152168acd3",
         "displayType": "QString",
         "tooltip": "Combined u-code hash: 0x0000000000000000",
         "tooltipType": "QString"
@@ -78678,7 +78678,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x8ccfc48629c41a35",
         "displayType": "QString",
         "tooltip": "Shader module hashes: 0x0000000000000000",
         "tooltipType": "QString"
@@ -79017,7 +79017,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0xaa2e745d9c89f962",
         "displayType": "QString",
         "tooltip": "Combined u-code hash: 0x0000000000000000",
         "tooltipType": "QString"
@@ -79186,7 +79186,7 @@
        },
        {
         "column": 3,
-        "display": "0x0000000000000000",
+        "display": "0x7cd9e1223309f10a",
         "displayType": "QString",
         "tooltip": "Combined u-code hash: 0x0000000000000000",
         "tooltipType": "QString"

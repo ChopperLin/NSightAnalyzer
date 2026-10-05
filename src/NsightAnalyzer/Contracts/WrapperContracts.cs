@@ -62,11 +62,10 @@ public sealed record FindEventsValue(
     Page<EventFact> Events,
     WrapperExecutionStats Execution);
 
-public sealed record CompleteRangeMetrics(
+public sealed record InspectedRangeMetrics(
     int TableCount,
     int RowCount,
-    int TotalCount,
-    IReadOnlyList<RangeMetricFact> Items);
+    Page<RangeMetricFact> Values);
 
 public sealed record RankedRangeShaders(
     string Order,
@@ -87,9 +86,10 @@ public sealed record CompleteRangeInstructionMix(
 
 public sealed record InspectPassValue(
     EventFact Event,
-    CompleteRangeMetrics Metrics,
-    RankedRangeShaders Shaders,
-    CompleteRangeInstructionMix InstructionMix,
+    IReadOnlyList<string> Sections,
+    InspectedRangeMetrics? Metrics,
+    RankedRangeShaders? Shaders,
+    CompleteRangeInstructionMix? InstructionMix,
     WrapperExecutionStats Execution);
 
 public sealed record ComparedRangeEndpoint(
@@ -126,7 +126,9 @@ public sealed record RangeMetricComparisonSide(
     string ValueKind,
     string Availability,
     decimal? NumericValue,
-    string NumericState);
+    string NumericState,
+    string? NumericSource,
+    decimal? NumericResolution);
 
 public sealed record RangeMetricDeltaFact(
     RangeMetricComparisonIdentity Identity,
@@ -151,6 +153,7 @@ public sealed record RangeMetricTableComparisonFact(
 
 public sealed record RangeMetricComparison(
     string DeltaDirection,
+    string DeltaFilter,
     int TotalCount,
     int MatchedCount,
     int TargetOnlyCount,
@@ -164,7 +167,6 @@ public sealed record RangeShaderComparisonIdentity(
     string Stage,
     string Name,
     string? Hash,
-    int HashOccurrence,
     string? Pipeline);
 
 public sealed record RangeShaderComparisonSide(
@@ -178,7 +180,9 @@ public sealed record RangeShaderComparisonSide(
     int? StaticInstructionCount,
     long DependencyAttributedSampleCount,
     string? AverageWarpLatency,
-    ShaderCorrelationInfo Correlation);
+    ShaderCorrelationInfo Correlation,
+    string SampleAvailability,
+    string DependencySampleAvailability);
 
 public sealed record RangeShaderDeltaFact(
     RangeShaderComparisonIdentity Identity,
@@ -262,10 +266,11 @@ public sealed record CompareRangesValue(
     ComparedRangeEndpoint Target,
     ComparedRangeEndpoint Baseline,
     IReadOnlyList<DurationComparisonFact> Durations,
-    RangeMetricComparison Metrics,
-    RangeShaderComparison Shaders,
-    RangeInstructionComparison InstructionMix,
-    SummedStallComparison Stalls,
+    IReadOnlyList<string> Sections,
+    RangeMetricComparison? Metrics,
+    RangeShaderComparison? Shaders,
+    RangeInstructionComparison? InstructionMix,
+    SummedStallComparison? Stalls,
     WrapperExecutionStats Execution);
 
 public sealed record CompareFrameTimingQuery(

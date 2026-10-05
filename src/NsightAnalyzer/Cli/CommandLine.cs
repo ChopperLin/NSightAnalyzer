@@ -32,7 +32,16 @@ internal sealed record ParsedCommand(
     int TopShaderCount,
     string Grain,
     string? RangeNameContains,
-    string? ShaderStage);
+    string? ShaderStage,
+    bool Detail,
+    RangeSections Sections,
+    string? DescribedOperation,
+    bool IncludeUnchanged,
+    string? Workspace,
+    string? SourceView,
+    int SourceViewOccurrence,
+    int? MetricSourceOrdinal,
+    string? PairsFile);
 
 internal sealed record CommandLineParseResult(ParsedCommand? Command, string? Error)
 {
@@ -57,18 +66,30 @@ internal static class CommandLine
                 $"Unknown operation '{operation}'. Run '--help' for the callable catalog.");
         }
 
-        var compact = false;
+        var compact = true;
+        var detail = false;
+        var includeUnchanged = false;
+        string? describedOperation = null;
+        var sections = operation == "inspect-pass"
+            ? RangeSections.Metrics | RangeSections.Shaders
+            : RangeSections.Metrics;
+        var sectionsSpecified = false;
         string? tracePath = null;
         string? viewerPath = null;
+        string? workspace = null;
+        string? sourceView = null;
+        var sourceViewOccurrence = 0;
+        int? metricSourceOrdinal = null;
+        string? pairsFile = null;
         var timeoutMs = DefaultTimeoutMs;
         var timeoutSpecified = false;
         var identityMode = "localWeak";
         var identityModeSpecified = false;
-        var grain = EventGrain.All;
+        var grain = operation == "find-ranges" ? EventGrain.Marker : EventGrain.All;
         var grainSpecified = false;
         var cursor = 0;
         var cursorSpecified = false;
-        var limit = 100;
+        var limit = ContractLimits.DefaultPageLimit;
         var limitSpecified = false;
         int? eventOrdinal = null;
         string? eventPath = null;
@@ -88,23 +109,105 @@ internal static class CommandLine
         int? baselineFrameIndex = null;
         int? analysisSeedEventOrdinal = null;
         int? presentQueueEventOrdinal = null;
-        var topShaderCount = 32;
+        var topShaderCount = ContractLimits.DefaultTopShaders;
         var topShaderCountSpecified = false;
         string? rangeNameContains = null;
+        var seenOptions = new HashSet<string>(StringComparer.Ordinal);
 
         for (var index = 1; index < args.Length; index++)
         {
             var token = args[index];
+            if (token.StartsWith('-'))
+            {
+                var parameter = OperationRegistry.ParameterFor(operation, token);
+                if (parameter is null)
+                {
+                    return Fail($"Unknown option '{token}' for {operation}. Use 'describe {operation}'.");
+                }
+                if (!seenOptions.Add(token) && !parameter.Repeatable)
+                {
+                    return Fail($"{token} cannot be repeated; pass exactly one value.");
+                }
+                if (seenOptions.Contains("--pretty") && seenOptions.Contains("--compact"))
+                {
+                    return Fail("--pretty and --compact are mutually exclusive; concise JSON is the default.");
+                }
+            }
             switch (token)
             {
                 case "--compact":
                     compact = true;
+                    break;
+                case "--pretty":
+                    compact = false;
+                    break;
+                case "--detail":
+                    detail = true;
+                    break;
+                case "--include-unchanged":
+                    includeUnchanged = true;
+                    break;
+                case "--sections":
+                    if (!TryTakeValue(args, ref index, out var sectionsText) ||
+                        !RangeSectionNames.TryParse(sectionsText!, out sections))
+                    {
+                        return Fail("--sections requires comma-separated timing, metrics, shaders, or instruction-mix without duplicates.");
+                    }
+                    sectionsSpecified = true;
                     break;
                 case "--viewer":
                     if (!TryTakeValue(args, ref index, out viewerPath))
                     {
                         return Fail("--viewer requires the exact ngfx-ui.exe path.");
                     }
+                    break;
+                case "--workspace":
+                    if (!TryTakeValue(args, ref index, out var workspaceText) ||
+                        string.IsNullOrWhiteSpace(workspaceText) ||
+                        !Path.IsPathFullyQualified(workspaceText))
+                    {
+                        return Fail("--workspace requires an absolute directory path.");
+                    }
+                    try
+                    {
+                        workspace = Path.GetFullPath(workspaceText);
+                    }
+                    catch (Exception exception) when (exception is ArgumentException or NotSupportedException or PathTooLongException)
+                    {
+                        return Fail("--workspace requires a valid absolute directory path.");
+                    }
+                    if (File.Exists(workspace))
+                    {
+                        return Fail("--workspace must name a directory, not an existing file.");
+                    }
+                    break;
+                case "--pairs-file":
+                    if (!TryTakeValue(args, ref index, out pairsFile) || string.IsNullOrWhiteSpace(pairsFile))
+                    {
+                        return Fail("--pairs-file requires a local JSON file of explicit target/baseline EventKey pairs.");
+                    }
+                    break;
+                case "--view":
+                    if (!TryTakeValue(args, ref index, out sourceView) ||
+                        sourceView is not ("dxil" or "sass" or "hlsl" or "source"))
+                    {
+                        return Fail("--view must be dxil, sass, hlsl, or source.");
+                    }
+                    break;
+                case "--view-occurrence":
+                    if (!TryTakeValue(args, ref index, out var viewOccurrenceText) ||
+                        !int.TryParse(viewOccurrenceText, out sourceViewOccurrence) || sourceViewOccurrence < 0)
+                    {
+                        return Fail("--view-occurrence must be a non-negative integer.");
+                    }
+                    break;
+                case "--source-ordinal":
+                    if (!TryTakeValue(args, ref index, out var sourceOrdinalText) ||
+                        !int.TryParse(sourceOrdinalText, out var sourceOrdinal) || sourceOrdinal < 0)
+                    {
+                        return Fail("--source-ordinal must be a non-negative integer.");
+                    }
+                    metricSourceOrdinal = sourceOrdinal;
                     break;
                 case "--timeout-ms":
                     if (!TryTakeValue(args, ref index, out var timeoutText) ||
@@ -339,9 +442,18 @@ internal static class CommandLine
                     {
                         return Fail($"Unknown option '{token}'.");
                     }
-                    if (operation == "capabilities")
+                    if (operation is "capabilities" or "doctor" or "version")
                     {
-                        return Fail("capabilities does not accept a trace path.");
+                        return Fail($"{operation} does not accept a trace path.");
+                    }
+                    if (operation == "describe")
+                    {
+                        if (describedOperation is not null)
+                        {
+                            return Fail("describe accepts exactly one operation name.");
+                        }
+                        describedOperation = token;
+                        break;
                     }
                     if (tracePath is not null)
                     {
@@ -353,16 +465,33 @@ internal static class CommandLine
         }
 
         var isTraceOperation = operation.StartsWith("trace.", StringComparison.Ordinal);
+        if (operation == "describe" && describedOperation is null)
+        {
+            return Fail("describe requires an operation name.");
+        }
+        if (detail && operation is not ("capabilities" or "trace.range-metrics" or
+                "trace.range-shaders" or "inspect-pass" or "compare-ranges" or "find-metrics"))
+        {
+            return Fail($"{operation} already returns its requested detail and does not accept --detail.");
+        }
+        if (sectionsSpecified && operation is not ("inspect-pass" or "compare-ranges"))
+        {
+            return Fail($"{operation} does not accept --sections.");
+        }
+        if (includeUnchanged && (operation != "compare-ranges" || !sections.HasFlag(RangeSections.Metrics)))
+        {
+            return Fail("--include-unchanged requires the compare-ranges metrics section.");
+        }
         var isWrapperOperation = operation is
             "resolve-event" or "find-events" or "find-ranges" or "inspect-pass" or "compare-ranges" or
-            "compare-frame-timing";
+            "compare-frame-timing" or "compare-timings" or "find-metrics" or "find-source-hotspots";
         var requiresTrace = isTraceOperation || isWrapperOperation ||
             operation == "viewer-session.close";
         if (requiresTrace && string.IsNullOrWhiteSpace(tracePath))
         {
             return Fail($"{operation} requires a .ngfx-gputrace path.");
         }
-        if (!requiresTrace && (viewerPath is not null || timeoutSpecified))
+        if (!requiresTrace && operation != "doctor" && (viewerPath is not null || timeoutSpecified))
         {
             return Fail($"{operation} does not accept Viewer options.");
         }
@@ -390,7 +519,8 @@ internal static class CommandLine
                 "trace.range-shaders" or "trace.shader-source" or
                 "trace.analysis" or "trace.counter-catalog" or
                 "trace.range-counters" or "trace.range-instruction-mix" or
-                "find-events" or "find-ranges" or "compare-ranges"))
+                "find-events" or "find-ranges" or "inspect-pass" or "compare-ranges" or
+                "find-metrics" or "find-source-hotspots" or "compare-timings"))
         {
             return Fail($"{operation} does not accept paging options.");
         }
@@ -400,15 +530,15 @@ internal static class CommandLine
             "trace.range-metric-catalog" or "trace.range-shaders" or
             "trace.shader-profile" or "trace.shader-source" or
             "trace.analysis" or "trace.counter-catalog" or
-            "trace.range-counters" or "trace.range-instruction-mix";
+            "trace.range-counters" or "trace.range-instruction-mix" or "find-source-hotspots";
         if (isAtomicScoped && (eventOrdinal is null) == (eventPath is null))
         {
             return Fail($"{operation} requires exactly one of --event-ordinal or --event-path.");
         }
-        if (operation == "inspect-pass" &&
+        if ((operation is "inspect-pass" or "find-metrics") &&
             (eventOrdinal is null || eventPath is not null))
         {
-            return Fail("inspect-pass requires --event-ordinal and does not accept --event-path.");
+            return Fail($"{operation} requires --event-ordinal and does not accept --event-path.");
         }
         if (operation == "compare-ranges" &&
             (eventOrdinal is null || eventPath is not null || baselineEventOrdinal is null))
@@ -429,25 +559,37 @@ internal static class CommandLine
                 "it does not accept --event-path.");
         }
         var acceptsEventSelector = isAtomicScoped ||
-            operation is "inspect-pass" or "compare-ranges" or "compare-frame-timing";
+            operation is "inspect-pass" or "compare-ranges" or "compare-frame-timing" or "find-metrics";
         if (!acceptsEventSelector && (eventOrdinal is not null || eventPath is not null))
         {
             return Fail($"{operation} does not accept an event selector.");
         }
         if (metricTables.Count > 0 &&
-            operation is not ("trace.range-metrics" or "inspect-pass" or "compare-ranges"))
+            operation is not ("trace.range-metrics" or "inspect-pass" or "compare-ranges" or "find-metrics"))
         {
             return Fail($"{operation} does not accept --table.");
         }
+        if (operation is "inspect-pass" or "compare-ranges")
+        {
+            if (!sections.HasFlag(RangeSections.Metrics) &&
+                (metricTables.Count > 0 || cursorSpecified || limitSpecified))
+            {
+                return Fail("--table, --cursor and --limit require the metrics section; shader output uses --top-shaders.");
+            }
+            if (topShaderCountSpecified && !sections.HasFlag(RangeSections.Shaders))
+            {
+                return Fail("--top-shaders requires the shaders section.");
+            }
+        }
         if (shaderHash is not null &&
             operation is not ("trace.range-shaders" or "trace.shader-profile" or
-                "trace.shader-source"))
+                "trace.shader-source" or "find-source-hotspots"))
         {
             return Fail($"{operation} does not accept --shader-hash.");
         }
         if (shaderOccurrence is not null &&
             operation is not ("trace.range-shaders" or "trace.shader-profile" or
-                "trace.shader-source"))
+                "trace.shader-source" or "find-source-hotspots"))
         {
             return Fail($"{operation} does not accept --shader-occurrence.");
         }
@@ -455,16 +597,16 @@ internal static class CommandLine
         {
             return Fail("--shader-occurrence requires --shader-hash.");
         }
-        if (operation == "trace.shader-source" && shaderHash is null)
+        if ((operation is "trace.shader-source" or "find-source-hotspots") && (shaderHash is null || shaderStage is null))
         {
-            return Fail("trace.shader-source requires --shader-hash.");
+            return Fail($"{operation} requires --shader-stage and --shader-hash.");
         }
         if (operation == "trace.shader-profile" &&
             (shaderHash is null || shaderStage is null))
         {
             return Fail("trace.shader-profile requires --shader-stage and --shader-hash.");
         }
-        if (operation != "trace.shader-profile" && shaderStage is not null)
+        if (operation is not ("trace.shader-profile" or "trace.shader-source" or "find-source-hotspots") && shaderStage is not null)
         {
             return Fail($"{operation} does not accept --shader-stage.");
         }
@@ -503,12 +645,24 @@ internal static class CommandLine
         {
             return Fail("find-events requires --name-contains.");
         }
+        if (operation == "find-metrics" && (rangeNameContains is null) == (metricSourceOrdinal is null))
+        {
+            return Fail("find-metrics requires exactly one of --name-contains or --source-ordinal.");
+        }
+        if (operation == "find-source-hotspots" && sourceView is null)
+        {
+            return Fail("find-source-hotspots requires --view.");
+        }
+        if (operation == "compare-timings" && pairsFile is null)
+        {
+            return Fail("compare-timings requires --pairs-file.");
+        }
         if (rangeNameContains is not null &&
-            operation is not ("find-events" or "find-ranges"))
+            operation is not ("find-events" or "find-ranges" or "find-metrics"))
         {
             return Fail($"{operation} does not accept --name-contains.");
         }
-        if (operation is not ("compare-ranges" or "compare-frame-timing") &&
+        if (operation is not ("compare-ranges" or "compare-frame-timing" or "compare-timings") &&
             (baselineTracePath is not null || baselineEventOrdinal is not null))
         {
             return Fail($"{operation} does not accept baseline options.");
@@ -558,7 +712,16 @@ internal static class CommandLine
             topShaderCount,
             grain,
             rangeNameContains,
-            shaderStage), null);
+            shaderStage,
+            detail,
+            sections,
+            describedOperation,
+            includeUnchanged,
+            workspace,
+            sourceView,
+            sourceViewOccurrence,
+            metricSourceOrdinal,
+            pairsFile), null);
     }
 
     private static bool TryTakeValue(string[] args, ref int index, out string? value)

@@ -12,19 +12,8 @@ internal static class EntryPoint
 
     public static async Task<int> RunAsync(string[] args)
     {
-        var compact = args.Contains("--compact", StringComparer.Ordinal);
-        var positional = args
-            .Where(argument => !argument.StartsWith("--", StringComparison.Ordinal))
-            .ToArray();
-        if (positional.Length == 0 ||
-            HelpTokens.Contains(args[0], StringComparer.OrdinalIgnoreCase))
-        {
-            var catalog = OperationRegistry.Describe();
-            return JsonRenderer.Write(
-                new("capabilities", SchemaVersion.V1, catalog), compact)
-                ? ExitCodes.Success
-                : ExitCodes.Internal;
-        }
+        args = NormalizeHelp(args);
+        var compact = !args.Contains("--pretty", StringComparer.Ordinal);
 
         var parseResult = CommandLine.Parse(args);
         if (!parseResult.IsSuccess)
@@ -34,7 +23,7 @@ internal static class EntryPoint
                 ErrorCategory.InvalidInput,
                 "cli.arguments_invalid",
                 parseResult.Error ?? "The command line is invalid.");
-            return JsonRenderer.Write(new(operation, SchemaVersion.V1, failure), compact)
+            return JsonRenderer.Write(new(operation, SchemaVersion.V2, failure), compact)
                 ? ExitCodes.InvalidInput
                 : ExitCodes.Internal;
         }
@@ -42,9 +31,11 @@ internal static class EntryPoint
         var command = parseResult.Command!;
         try
         {
+            using var workspace = WorkspaceEnvironment.Apply(command.Workspace);
             var result = await OperationRegistry.ExecuteAsync(command);
             var withinBound = JsonRenderer.Write(
-                new(command.Operation, SchemaVersion.V1, result), command.Compact);
+                new(command.Operation, SchemaVersion.V2,
+                    AgentResponseProjection.Apply(result, command.Detail)), command.Compact);
             return !withinBound
                 ? ExitCodes.Internal
                 : result.IsSuccess ? ExitCodes.Success : ExitCodes.From(result.Error!.Category);
@@ -56,9 +47,46 @@ internal static class EntryPoint
                 "internal.unhandled",
                 "The operation failed unexpectedly.",
                 exception.GetType().Name);
-            return JsonRenderer.Write(new(command.Operation, SchemaVersion.V1, result), command.Compact)
+            return JsonRenderer.Write(new(command.Operation, SchemaVersion.V2, result), command.Compact)
                 ? ExitCodes.Internal
                 : ExitCodes.Internal;
+        }
+    }
+
+    internal static string[] NormalizeHelp(string[] args)
+    {
+        if (args.Length > 0 && args[0] == "--version")
+        {
+            return ["version", .. args.Skip(1)];
+        }
+        if (args.Length == 0 || args.All(item => item is "--compact" or "--pretty"))
+        {
+            return ["capabilities", .. args];
+        }
+        if (HelpTokens.Contains(args[0], StringComparer.OrdinalIgnoreCase))
+        {
+            var remaining = args.Skip(1).ToArray();
+            return remaining.Length > 0 && !remaining[0].StartsWith('-')
+                ? ["describe", .. remaining]
+                : ["capabilities", .. remaining];
+        }
+        if (OperationRegistry.IsKnown(args[0]) &&
+            args.Skip(1).Any(item => HelpTokens.Contains(item, StringComparer.OrdinalIgnoreCase)))
+        {
+            return ["describe", args[0], .. HelpOptions(args.Skip(1).ToArray())];
+        }
+        return args;
+    }
+
+    private static IEnumerable<string> HelpOptions(string[] args)
+    {
+        for (var index = 0; index < args.Length; index++)
+        {
+            if (args[index] is "--pretty" or "--compact") yield return args[index];
+            if (args[index] != "--workspace") continue;
+            yield return args[index];
+            if (index + 1 < args.Length && !args[index + 1].StartsWith('-'))
+                yield return args[++index];
         }
     }
 }

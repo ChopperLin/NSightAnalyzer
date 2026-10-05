@@ -36,7 +36,7 @@ function Invoke-JsonCli {
         throw "Verification failed: '$($Arguments -join ' ')' did not return one JSON document."
     }
     Assert-True ($null -ne $document.operation) 'Response has no operation.'
-    Assert-True ($document.schemaVersion.major -eq 1) `
+    Assert-True ($document.schemaVersion.major -eq 2) `
         'Unexpected response schema major version.'
     return [pscustomobject]@{ Raw = $raw; Document = $document }
 }
@@ -73,16 +73,19 @@ Assert-True ($LASTEXITCODE -eq 0) 'dotnet build failed.'
 Assert-True (Test-Path -LiteralPath $cliPath -PathType Leaf) `
     'CLI executable was not produced.'
 
-$capabilities = Invoke-JsonCli -Arguments @('capabilities', '--compact') -ExpectedExitCode 0
+$capabilities = Invoke-JsonCli -Arguments @('capabilities', '--detail') -ExpectedExitCode 0
 Assert-True $capabilities.Document.result.isSuccess 'capabilities failed.'
-Assert-True ($capabilities.Document.result.value.operations.totalCount -eq 20) `
+Assert-True ($capabilities.Document.result.value.operations.totalCount -eq 26) `
     'Unexpected operation count.'
 Assert-True (@($capabilities.Document.result.value.operations.items |
         Where-Object layer -eq 'atom').Count -eq 14) `
     'Unexpected atom count.'
 Assert-True (@($capabilities.Document.result.value.operations.items |
-        Where-Object layer -eq 'wrapper').Count -eq 6) `
+        Where-Object layer -eq 'wrapper').Count -eq 9) `
     'Unexpected wrapper count.'
+Assert-True (@($capabilities.Document.result.value.operations.items |
+        Where-Object layer -eq 'discovery').Count -eq 3) `
+    'Unexpected discovery count.'
 Assert-True ($capabilities.Document.result.value.decoder.bridgeVersion -eq 'probe-0.51') `
     'Unexpected bridge version.'
 Assert-True (@($capabilities.Document.result.value.operations.items |
@@ -451,28 +454,23 @@ if ($SingleFrameTrace) {
             '--top-shaders', '1', '--compact')
         Add-ViewerArgument $inspectArgs
         $inspection = Invoke-JsonCli -Arguments $inspectArgs -ExpectedExitCode 0
-        Assert-True ($inspection.Document.result.value.metrics.totalCount -eq 8) `
+        Assert-True ($inspection.Document.result.value.metrics.values.totalCount -eq 8) `
             'inspect-pass focused metric closure changed.'
         Assert-True ($inspection.Document.result.value.shaders.totalCount -eq 676) `
             'inspect-pass shader inventory closure changed.'
-        $inspectionMix = $inspection.Document.result.value.instructionMix
-        Assert-True ($inspectionMix.availability -eq 'unavailable') `
-            'inspect-pass unexpectedly coupled v1 to Instruction Mix state.'
-        Assert-True `
-            ($inspectionMix.error.code -eq `
-                'trace.range_instruction_mix_not_requested') `
-            'inspect-pass returned an unexpected Instruction Mix availability reason.'
-        Assert-True `
-            ($null -eq $inspectionMix.totalCount -and $null -eq $inspectionMix.items) `
-            'inspect-pass disguised an unrequested Instruction Mix as successful empty data.'
+        Assert-True ($null -eq $inspection.Document.result.value.instructionMix) `
+            'inspect-pass returned an unrequested Instruction Mix section.'
+        Assert-True (-not ($inspection.Document.result.value.sections -contains 'instruction-mix')) `
+            'inspect-pass incorrectly marked Instruction Mix as requested.'
 
         $compareArgs = [Collections.ArrayList]@(
             'compare-ranges', $single,
             '--event-ordinal', '1773',
             '--baseline-event-ordinal', '3901',
-            '--top-shaders', '1', '--limit', '100', '--compact')
+            '--sections', 'metrics', '--include-unchanged',
+            '--limit', '100', '--compact')
         Add-ViewerArgument $compareArgs
-        $comparison = Invoke-JsonCli -Arguments $compareArgs -ExpectedExitCode @(0, 5)
+        $comparison = Invoke-JsonCli -Arguments $compareArgs -ExpectedExitCode 0
         if ($comparison.Document.result.isSuccess) {
             Assert-True ($comparison.Document.result.value.metrics.totalCount -eq 801) `
                 'compare-ranges metric identity closure changed.'
@@ -480,16 +478,17 @@ if ($SingleFrameTrace) {
                 'compare-ranges failed to join stable metric identities.'
             Assert-True ($comparison.Document.result.value.metrics.deltas.nextCursor -eq 100) `
                 'compare-ranges metric delta paging changed.'
-            Assert-True ($comparison.Document.result.value.shaders.matchedCount -eq 676) `
-                'compare-ranges shader identity closure changed.'
         }
-        else {
-            Assert-True `
-                ($comparison.Document.result.error.code -eq `
-                    'trace.range_instruction_mix_not_loaded') `
-                'compare-ranges did not preserve its current complete-comparison requirement.'
-        }
-
+        # This report has repeated complete shader identities. Range-local occurrence cannot
+        # establish cross-range correspondence; refuse ambiguity instead of guessing 676 joins.
+        $shaderCompareArgs = [Collections.ArrayList]@(
+            'compare-ranges', $single,
+            '--event-ordinal', '1773', '--baseline-event-ordinal', '3901',
+            '--sections', 'shaders')
+        Add-ViewerArgument $shaderCompareArgs
+        $shaderComparison = Invoke-JsonCli -Arguments $shaderCompareArgs -ExpectedExitCode 5
+        Assert-True ($shaderComparison.Document.result.error.code -eq
+            'wrapper.shader_comparison_ambiguous') 'Shader comparison guessed ambiguous correspondence.'
         $instructionArgs = [Collections.ArrayList]@(
             'trace.range-instruction-mix', $single,
             '--event-path', '0.2.12.71.0', '--limit', '100', '--compact')
@@ -514,6 +513,7 @@ if ($SingleFrameTrace) {
 
         $sourceArgs = [Collections.ArrayList]@(
             'trace.shader-source', $single,
+            '--shader-stage', $shaderFact.key.stage,
             '--event-path', '0.2.12.71.0',
             '--shader-hash', '0xc7096045a5804ec3',
             '--shader-occurrence', '0', '--limit', '1', '--compact')

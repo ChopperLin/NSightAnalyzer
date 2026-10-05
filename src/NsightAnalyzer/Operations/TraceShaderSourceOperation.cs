@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Diagnostics;
 using NsightAnalyzer.Adapters.NsightViewer2026_2;
 using NsightAnalyzer.Contracts;
 
@@ -6,17 +7,33 @@ namespace NsightAnalyzer.Operations;
 
 internal static class TraceShaderSourceOperation
 {
+    // Internal composition keeps one bounded Viewer read for filtering and ordering.
+    // The public atom retains its original source-order cursor/limit contract.
+    internal static Task<OperationResult> ReadCompleteAsync(
+        string tracePath,
+        string? viewerPath,
+        int timeoutMs,
+        int? eventOrdinal,
+        string? eventPath,
+        string shaderStage,
+        string shaderHash,
+        int shaderOccurrence) =>
+        ExecuteAsync(tracePath, viewerPath, timeoutMs, eventOrdinal, eventPath,
+            shaderStage, shaderHash, shaderOccurrence, 0, int.MaxValue);
+
     public static async Task<OperationResult> ExecuteAsync(
         string tracePath,
         string? viewerPath,
         int timeoutMs,
         int? eventOrdinal,
         string? eventPath,
+        string shaderStage,
         string shaderHash,
         int shaderOccurrence,
         int cursor,
         int limit)
     {
+        var elapsed = Stopwatch.StartNew();
         var opened = await TraceArtifactReader.OpenAsync(
             tracePath, "localWeak", timeoutMs);
         if (!opened.IsSuccess)
@@ -24,6 +41,50 @@ internal static class TraceShaderSourceOperation
             return OperationResult.Failure(opened.Error!);
         }
         var artifact = opened.Artifact!;
+        var inventoryProbe = await ViewerProbeRunner.RunAsync(
+            artifact, ViewerProbeMode.SelectionMetricsExport,
+            "NsightSolidProbeSelectionMetricsV1",
+            TraceRangeShadersOperation.BridgeSettings(eventOrdinal, eventPath),
+            viewerPath, timeoutMs, ViewerProbeCachePolicy.RangeShadersV1);
+        if (!inventoryProbe.IsSuccess)
+        {
+            return OperationResult.Failure(inventoryProbe.Error!);
+        }
+        ShaderSourceSelection selection;
+        FactProvenance inventoryProvenance;
+        using (var inventoryRun = inventoryProbe.Run!)
+        {
+            try
+            {
+                selection = BridgeProjection.ResolveShaderSourceSelection(
+                    inventoryRun.Document.RootElement, eventOrdinal, eventPath,
+                    shaderStage, shaderHash, shaderOccurrence);
+                inventoryProvenance = ViewerProbeRunner.CreateProvenance(
+                    inventoryRun, artifact, "trace.range-shaders/v1");
+            }
+            catch (BridgeScopeUnsupportedException exception)
+            {
+                return OperationSupport.ScopeUnsupportedFailure(exception);
+            }
+            catch (BridgeFactNotFoundException exception)
+            {
+                return OperationResult.Failure(ErrorCategory.NotFound, exception.Code, exception.Message);
+            }
+            catch (BridgeFactUnavailableException exception)
+            {
+                return OperationResult.Failure(ErrorCategory.Unavailable, exception.Code, exception.Message, exception.Detail);
+            }
+            catch (BridgeSchemaException exception)
+            {
+                return OperationSupport.ProjectionFailure(exception);
+            }
+        }
+        var remainingMs = timeoutMs - (int)Math.Min(int.MaxValue, elapsed.ElapsedMilliseconds);
+        if (remainingMs <= 0)
+        {
+            return OperationResult.Failure(ErrorCategory.Timeout, "trace.shader_source_timeout",
+                "Resolving the shader exhausted the source request deadline.");
+        }
         var settings = TraceEventParametersOperation.ScopedSettings(
             eventOrdinal, eventPath);
         settings["MODEL_CLASS_MATCH"] =
@@ -37,7 +98,7 @@ internal static class TraceShaderSourceOperation
         settings["MODEL_SELECT_COLUMN"] = "3";
         settings["MODEL_SELECT_MATCH_MODE"] = "exact";
         settings["MODEL_SELECT_OCCURRENCE"] =
-            shaderOccurrence.ToString(CultureInfo.InvariantCulture);
+            selection.HashMatchOccurrence.ToString(CultureInfo.InvariantCulture);
         settings["MODEL_SELECT_PREPARE_PANEL"] =
             "FlatTabPanel_Shader Pipelines";
         settings["MODEL_SELECT_PREPARE_PANEL_SETTLE_MIN_POLLS"] = "4";
@@ -62,7 +123,7 @@ internal static class TraceShaderSourceOperation
             "NsightSolidProbeSelectionMetricsV1",
             settings,
             viewerPath,
-            timeoutMs);
+            remainingMs);
         if (!probe.IsSuccess)
         {
             return OperationResult.Failure(probe.Error!);
@@ -75,17 +136,21 @@ internal static class TraceShaderSourceOperation
                 run.Document.RootElement,
                 eventOrdinal,
                 eventPath,
-                shaderHash,
-                shaderOccurrence,
+                selection,
                 cursor,
                 limit);
             return OperationResult.Success(
                 value,
                 [
+                    inventoryProvenance,
                     ViewerProbeRunner.CreateProvenance(
-                        run, artifact, "trace.shader-source/v1"),
+                        run, artifact, "trace.shader-source/v2"),
                 ],
                 OperationSupport.ViewerWarnings);
+        }
+        catch (BridgeScopeUnsupportedException exception)
+        {
+            return OperationSupport.ScopeUnsupportedFailure(exception);
         }
         catch (BridgeFactNotFoundException exception)
         {
@@ -93,6 +158,14 @@ internal static class TraceShaderSourceOperation
                 ErrorCategory.NotFound,
                 exception.Code,
                 exception.Message);
+        }
+        catch (BridgeFactUnavailableException exception)
+        {
+            return OperationResult.Failure(
+                ErrorCategory.Unavailable,
+                exception.Code,
+                exception.Message,
+                exception.Detail);
         }
         catch (BridgeSchemaException exception)
         {

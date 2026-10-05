@@ -76,24 +76,29 @@ public sealed class ShaderProfileProjectionTests
     public void ProfileReturnsOneExactStageHashOccurrence()
     {
         using var bridge = FixtureBridge.Load("range-shaders-gbufferpass.json");
+        var key = BridgeProjection.ProjectRangeShaders(bridge.RootElement,
+            null, "0.2.12.71.0", null, null, 0, int.MaxValue).Shaders.Items
+            .First(shader => shader.Key.Stage == "Compute").Key;
 
         var value = BridgeProjection.ProjectShaderProfile(
             bridge.RootElement,
             null,
             "0.2.12.71.0",
             "Compute",
-            "0x0000000000000000",
-            0);
+            key.Hash!,
+            key.HashOccurrence);
 
         Assert.Equal("Compute", value.Shader.Key.Stage);
-        Assert.Equal("0x0000000000000000", value.Shader.Key.Hash);
-        Assert.Equal(0, value.Shader.Key.HashOccurrence);
+        Assert.Equal(key.Hash, value.Shader.Key.Hash);
+        Assert.Equal(key.HashOccurrence, value.Shader.Key.HashOccurrence);
     }
 
     [Fact]
     public void ProfileDoesNotAcceptAnotherStageWithTheSameHash()
     {
         using var bridge = FixtureBridge.Load("range-shaders-gbufferpass.json");
+        var key = BridgeProjection.ProjectRangeShaders(bridge.RootElement,
+            null, "0.2.12.71.0", null, null, 0, int.MaxValue).Shaders.Items[0].Key;
 
         Assert.Throws<BridgeFactNotFoundException>(() =>
             BridgeProjection.ProjectShaderProfile(
@@ -101,7 +106,7 @@ public sealed class ShaderProfileProjectionTests
                 null,
                 "0.2.12.71.0",
                 "NotAStage",
-                "0x0000000000000000",
-                0));
+                key.Hash!,
+                key.HashOccurrence));
     }
 }

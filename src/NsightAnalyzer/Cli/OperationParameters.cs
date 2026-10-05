@@ -24,11 +24,34 @@ internal static class OperationParameters
         "Exact ngfx-ui.exe of the pinned Viewer build.",
         Default: "the installed Nsight Graphics 2026.2 Viewer");
 
+    public static OperationParameter Workspace { get; } = new(
+        "--workspace", "path", false,
+        "Absolute task workspace. Anchors run artifacts and reusable Viewer sessions under its .local directory across working directories; use the same value when closing the session.",
+        Default: "existing NSIGHT_ANALYZER_RUN_ROOT/SESSION_ROOT overrides, otherwise the current working directory");
+
     public static OperationParameter Compact { get; } = new(
-        "--compact",
+        "--compact", "flag", false,
+        "Legacy alias for the default concise JSON formatting; mutually exclusive with --pretty.");
+
+    public static OperationParameter Pretty { get; } = new(
+        "--pretty",
         "flag",
         false,
-        "Emit the single JSON result without indentation.");
+        "Indent JSON for human reading. Default output is already concise JSON.");
+
+    public static OperationParameter Detail { get; } = new(
+        "--detail", "flag", false,
+        "Include metric descriptions, comparison table summaries and shader instruction vectors; paging still applies. For capabilities, include all parameter definitions.");
+
+    public static OperationParameter Sections { get; } = new(
+        "--sections", "string", false,
+        "Comma-separated fact families. Only requested families are read; all requested families must succeed. Timing is always returned. Use timing alone to avoid metrics and shader loading.",
+        Default: "metrics", AllowedValues: ["timing", "metrics", "shaders", "instruction-mix"]);
+
+    public static OperationParameter InspectSections { get; } = Sections with
+    {
+        Default = "metrics,shaders",
+    };
 
     public static OperationParameter TimeoutMs { get; } = new(
         "--timeout-ms",
@@ -53,7 +76,7 @@ internal static class OperationParameters
         "integer",
         false,
         "Maximum items to return in one page.",
-        Default: "100",
+        Default: "20",
         Minimum: 1,
         Maximum: ContractLimits.MaximumPageLimit);
 
@@ -68,7 +91,7 @@ internal static class OperationParameters
         false,
         "Maximum shader rows to return in one page. Lower than other families " +
         "because one shader row carries its instruction mix and stall reasons.",
-        Default: "100",
+        Default: "20",
         Minimum: 1,
         Maximum: ContractLimits.MaximumShaderPageLimit);
 
@@ -158,7 +181,27 @@ internal static class OperationParameters
         "integer",
         false,
         "Maximum shaders to return, ordered by sample count. The result reports " +
-        "sample coverage and explicit truncation.",
-        Default: "32",
-        Minimum: 1);
+        "sample coverage and explicit truncation. Requires shaders in --sections (explicitly add --sections shaders or metrics,shaders for compare-ranges).",
+        Default: "5",
+        Minimum: 1,
+        Maximum: 100);
+
+    public static OperationParameter SourceView { get; } = new(
+        "--view", "string", true,
+        "One source view to rank. Coverage and sample totals apply only to this view, never across correlated views.",
+        AllowedValues: ["dxil", "sass", "hlsl", "source"]);
+
+    public static OperationParameter SourceViewOccurrence { get; } = new(
+        "--view-occurrence", "integer", false,
+        "Zero-based occurrence of the requested source view.", Default: "0", Minimum: 0);
+
+    public static OperationParameter MetricNameContains { get; } = new(
+        "--name-contains", "string", false,
+        "Case-insensitive metric name substring. Exactly one of --name-contains or --source-ordinal is required.",
+        ExclusiveGroup: "metricSelector");
+
+    public static OperationParameter MetricSourceOrdinal { get; } = new(
+        "--source-ordinal", "integer", false,
+        "Exact source ordinal returned for this scope's metric. Exactly one of --name-contains or --source-ordinal is required.",
+        Minimum: 0, ExclusiveGroup: "metricSelector");
 }

@@ -704,11 +704,16 @@ internal static class BridgeProjection
             : rawTables.Where(table => requestedTables.Any(requested =>
                     requested.Equals(table.Name, StringComparison.OrdinalIgnoreCase)))
                 .ToList();
-        if (requestedTables.Count > 0 && selectedTables.Count == 0)
+        var missingTables = requestedTables
+            .Where(requested => !rawTables.Any(table =>
+                requested.Equals(table.Name, StringComparison.OrdinalIgnoreCase)))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        if (missingTables.Length > 0)
         {
             throw new BridgeFactNotFoundException(
                 "trace.metric_table_not_found",
-                "None of the exact metric table filters exist in the selected range.");
+                $"Requested metric tables are absent in the selected range: {string.Join(", ", missingTables)}.");
         }
 
         var metrics = new List<RangeMetricFact>();
@@ -972,18 +977,20 @@ internal static class BridgeProjection
                     hash,
                     hashOccurrence,
                     pipeline),
-                SumIntegerArray(CellValue(node, 6, "display")),
+                RequiredSampleCount(CellValue(node, 6, "display"), "shader samples"),
                 ToInt32(CellValue(node, 7, "display")),
                 ToInt32(CellValue(node, 8, "display")),
                 EmptyToNull(CellText(node, 9)),
                 EmptyToNull(CellText(node, 10)),
                 ToInt32(CellValue(node, 11, "display")),
                 StaticInstructionCount(instructionTooltip),
-                SumIntegerArray(CellValue(node, 13, "display")),
+                RequiredSampleCount(CellValue(node, 13, "display"), "shader dependency-attributed samples"),
                 AverageWarpLatency(CellTooltipText(node, 38)),
                 correlation,
                 ParseInstructionMix(instructionTooltip),
-                stalls));
+                stalls,
+                SampleCountAvailability(CellValue(node, 6, "display")),
+                SampleCountAvailability(CellValue(node, 13, "display"))));
         }
 
         if (requestedHash is not null && shaders.Count == 0)
@@ -1144,16 +1151,61 @@ internal static class BridgeProjection
                 nextCursor));
     }
 
+    internal static ShaderSourceSelection ResolveShaderSourceSelection(
+        JsonElement root,
+        int? requestedOrdinal,
+        string? requestedPath,
+        string stage,
+        string hash,
+        int occurrence)
+    {
+        var inventory = ProjectRangeShaders(root, requestedOrdinal, requestedPath,
+            hash, null, 0, int.MaxValue);
+        var matches = inventory.Shaders.Items.Select((item, index) => (item, index))
+            .Where(candidate => candidate.item.Key.Stage.Equals(stage, StringComparison.OrdinalIgnoreCase) &&
+                candidate.item.Key.HashOccurrence == occurrence).ToArray();
+        if (matches.Length == 0)
+        {
+            throw new BridgeFactNotFoundException("trace.shader_not_found",
+                "The exact shader stage/hash/occurrence was not found in the selected range.");
+        }
+        if (matches.Length != 1)
+        {
+            throw new BridgeSchemaException("The requested ShaderKey is not unique.");
+        }
+        var selected = matches[0].item.Key;
+        if (inventory.Shaders.Items.Count(item =>
+                item.Key.Stage == selected.Stage && item.Key.Name == selected.Name &&
+                item.Key.Pipeline == selected.Pipeline) != 1)
+        {
+            throw new BridgeFactUnavailableException(
+                "trace.shader_source_identity_ambiguous",
+                "The pinned source selector cannot distinguish repeated shaders with the same stage, hash, name and pipeline.",
+                "The inventory occurrence remains valid; source attribution for this duplicate is unavailable.");
+        }
+        // The legacy bridge counts matches across stages. Its proxy may reorder
+        // rows, so the final semantic identity must also match this unique key.
+        return new(inventory.Scope, matches[0].item.Key, matches[0].index);
+    }
+
     public static ShaderSourceValue ProjectShaderSource(
         JsonElement root,
         int? requestedOrdinal,
         string? requestedPath,
-        string requestedHash,
-        int requestedHashOccurrence,
+        ShaderSourceSelection selection,
         int cursor,
         int limit)
     {
         var scope = ProjectVerifiedScope(root, requestedOrdinal, requestedPath);
+        RequireRangeGrainScope(scope, "Shader source");
+        var requestedHash = selection.Shader.Hash!;
+        var requestedHashOccurrence = selection.Shader.HashOccurrence;
+        if (!scope.TreePath.SequenceEqual(selection.Scope.TreePath) ||
+            scope.EventRange != selection.Scope.EventRange ||
+            scope.Description != selection.Scope.Description)
+        {
+            throw new BridgeSchemaException("Shader inventory and source returned different range identities.");
+        }
         if (!RequiredBoolean(root, "modelSelectionMatchesTarget") ||
             !RequiredBoolean(root, "comboSelectionMatchesTarget") ||
             !RequiredBoolean(root, "modelSelectionTargetProviderReady"))
@@ -1171,9 +1223,8 @@ internal static class BridgeProjection
         var shaderName = ArrayText(targetCells, 2) ?? string.Empty;
         var pipeline = ArrayText(parentCells, 2) ?? string.Empty;
         if (!requestedHash.Equals(targetHash, StringComparison.OrdinalIgnoreCase) ||
-            string.IsNullOrWhiteSpace(stage) ||
-            string.IsNullOrWhiteSpace(shaderName) ||
-            string.IsNullOrWhiteSpace(pipeline))
+            !stage.Equals(selection.Shader.Stage, StringComparison.OrdinalIgnoreCase) ||
+            shaderName != selection.Shader.Name || pipeline != selection.Shader.Pipeline)
         {
             throw new BridgeSchemaException(
                 "The selected shader identity is incomplete or differs from the request.");
@@ -1182,7 +1233,7 @@ internal static class BridgeProjection
         var selector = RequiredObject(root, "modelSelector");
         if (RequiredString(selector, "kind") != "match" ||
             RequiredInt32(selector, "column") != 3 ||
-            RequiredInt32(selector, "occurrence") != requestedHashOccurrence ||
+            RequiredInt32(selector, "occurrence") != selection.HashMatchOccurrence ||
             !requestedHash.Equals(
                 RequiredString(selector, "value"),
                 StringComparison.OrdinalIgnoreCase))
@@ -1272,13 +1323,15 @@ internal static class BridgeProjection
         foreach (var view in targetViews)
         {
             long attributedSamples = 0;
+            var hasSampleValues = false;
             long instructionCount = 0;
             var hasInstructionCount = false;
             var addressRows = 0;
             foreach (var node in RequiredArray(view.Export, "nodes").EnumerateArray())
             {
-                attributedSamples = checked(
-                    attributedSamples + SumIntegerArray(CellValue(node, 4, "display")));
+                var samples = SourceSamples(node);
+                attributedSamples = checked(attributedSamples + samples.Count);
+                hasSampleValues |= samples.Availability == "available";
                 if (view.Headers.TryGetValue(26, out var instructionHeader) &&
                     instructionHeader == "Instruction Mix" &&
                     TrySumIntegerArray(
@@ -1308,7 +1361,8 @@ internal static class BridgeProjection
                 attributedSamples,
                 hasInstructionCount ? instructionCount : null,
                 addressRows,
-                opcodeAvailable));
+                opcodeAvailable,
+                hasSampleValues ? "available" : "empty"));
         }
 
         var total = targetViews.Sum(view => RequiredInt32(view.Export, "totalCount"));
@@ -1333,7 +1387,9 @@ internal static class BridgeProjection
         return new(
             scope,
             new(
-                RequiredInt32Array(target, "path"),
+                // Source selection uses a sorted proxy. Preserve the verified
+                // inventory identity, not its unrelated visual row coordinate.
+                selection.Shader.TreePath,
                 stage,
                 shaderName,
                 targetHash!,
@@ -1485,7 +1541,8 @@ internal static class BridgeProjection
             view.Kind, CellText(node, 0), CellText(node, 2), address);
         var rowKind = SourceRowKind(
             view.Kind, rowOrdinal, sourceText, address, lineNumber);
-        var stalls = ProjectStalls(CellValue(node, 4, "display"));
+        var samples = SourceSamples(node);
+        var stalls = samples.Stalls;
 
         long? instructionCount = null;
         if (view.Headers.TryGetValue(26, out var column26) &&
@@ -1519,7 +1576,7 @@ internal static class BridgeProjection
             lineNumber,
             address,
             sourceText,
-            stalls.Sum(stall => stall.SampleCount),
+            samples.Count,
             instructionCount,
             dependencySamples,
             liveRegistersColumn is null
@@ -1528,7 +1585,32 @@ internal static class BridgeProjection
             HeaderValue(view, node, "Pipe"),
             HeaderValue(view, node, "Family"),
             HeaderValue(view, node, "Operation"),
-            stalls);
+            stalls,
+            samples.Availability);
+    }
+
+    private static (long Count, string Availability, IReadOnlyList<ShaderStallFact> Stalls) SourceSamples(
+        JsonElement node)
+    {
+        var value = CellValue(node, 4, "display");
+        // The proven source model has one structural header and explicit empty
+        // display strings on rows without sample attribution. Neither is a
+        // missing sample vector on a fact-bearing row.
+        if (RequiredInt32(node, "ordinal") == 0 &&
+            value.ValueKind is JsonValueKind.Undefined or JsonValueKind.Null)
+        {
+            return (0, "notApplicable", []);
+        }
+        if (value.ValueKind == JsonValueKind.String && value.GetString() == string.Empty)
+        {
+            return (0, "empty", []);
+        }
+        if (value.ValueKind == JsonValueKind.Array && value.GetArrayLength() == 0)
+        {
+            return (0, "empty", []);
+        }
+        var stalls = ProjectStalls(value);
+        return (stalls.Sum(stall => stall.SampleCount), "available", stalls);
     }
 
     private static readonly string[] StallReasons =
@@ -1555,6 +1637,7 @@ internal static class BridgeProjection
     private static IReadOnlyList<ShaderStallFact> ProjectStalls(
         JsonElement element)
     {
+        RequiredSampleCount(element, "sample attribution");
         var values = new List<(int Index, long Count)>();
         if (element.ValueKind == JsonValueKind.Array)
         {
@@ -1943,7 +2026,8 @@ internal static class BridgeProjection
             "with no matching class.");
     }
 
-    private static void ValidateCompleteModel(JsonElement export, string name)    {
+    private static void ValidateCompleteModel(JsonElement export, string name)
+    {
         if (!RequiredBoolean(export, "totalCountExact"))
         {
             throw new BridgeSchemaException($"{name} totalCount is not exact.");
@@ -2043,19 +2127,47 @@ internal static class BridgeProjection
             ? value.ToLowerInvariant()
             : null;
 
-    private static long SumIntegerArray(JsonElement element)
+    private static long RequiredSampleCount(JsonElement element, string field)
     {
-        if (element.ValueKind != JsonValueKind.Array)
+        if (element.ValueKind is JsonValueKind.Undefined or JsonValueKind.Null)
         {
-            return ToInt64(element) ?? 0;
+            throw new BridgeFactUnavailableException("trace.shader_samples_absent",
+                $"The Viewer did not expose {field}; no zero sample count can be inferred.", field);
         }
-        long total = 0;
-        foreach (var item in element.EnumerateArray())
+        if (element.ValueKind == JsonValueKind.String)
         {
-            total = checked(total + (ToInt64(item) ?? 0));
+            var text = element.GetString();
+            if (string.IsNullOrWhiteSpace(text) || text is "--" or "N/A")
+            {
+                throw new BridgeFactUnavailableException(
+                    string.IsNullOrWhiteSpace(text) ? "trace.shader_samples_empty" : "trace.shader_samples_unavailable",
+                    $"The Viewer exposed no numeric {field}; no zero sample count can be inferred.", field);
+            }
         }
-        return total;
+        try
+        {
+            var values = element.ValueKind == JsonValueKind.Array
+                ? element.EnumerateArray().ToArray() : [element];
+            long total = 0;
+            foreach (var item in values)
+            {
+                var count = ToInt64(item);
+                if (count is null or < 0)
+                {
+                    throw new BridgeSchemaException($"The Viewer exposed invalid {field}; expected non-negative integers.");
+                }
+                total = checked(total + count.Value);
+            }
+            return total;
+        }
+        catch (OverflowException)
+        {
+            throw new BridgeSchemaException($"The Viewer {field} exceed the supported integer range.");
+        }
     }
+
+    private static string SampleCountAvailability(JsonElement element) =>
+        element.ValueKind == JsonValueKind.Array && element.GetArrayLength() == 0 ? "empty" : "available";
 
     private static int? ToInt32(JsonElement element)
     {

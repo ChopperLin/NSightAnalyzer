@@ -38,11 +38,11 @@ groups operations by user intent and does not create a second operation registry
 | Inspect one API command | `get_action`, `get_draw_call_details` | `trace.event-parameters` | current | Keep structured command parameters; do not pretend they are full pipeline state. |
 | Rank expensive passes/actions | `get_pass_timing`, `get_action_timings` | `find-ranges`, `trace.outline`, `trace.analysis` | current | `find-ranges` returns bounded Viewer-duration-ranked candidates. |
 | Discover available metrics | no consistent dedicated operation | `trace.range-metric-catalog` | current | Returns table/column identity and units without metric values. |
-| Read pass metrics | timing/performance helpers | `trace.range-metrics` | current | Keep exact table filters, long-form values, occurrences and precise tooltips. |
+| Read pass metrics | timing/performance helpers | `trace.range-metrics`, `find-metrics` | current | Exact table/name/source-ordinal filters retain occurrences and precise tooltips; subsequent pages reuse verified snapshots. |
 | List range shaders | shaders embedded in draw/pipeline results | `trace.range-shaders` | current | Keep the complete paged inventory. |
 | Inspect one exact shader | `get_shader_info` | `trace.shader-profile` | current | Singular result keyed by range EventKey plus exact stage/hash/occurrence. |
 | Read shader source/disassembly | `disassemble_shader`, `get_shader_source` | `trace.shader-source` | current | Keep explicit PDB, SASS-debug and SKU availability states. |
-| Read per-line PC hotspots | no direct equivalent | `trace.shader-source` | current | Keep samples, stalls, dependency samples and live registers as a GPU Trace strength. |
+| Read per-line PC hotspots | no direct equivalent | `find-source-hotspots`, `trace.shader-source` | current | Rank one complete explicit source view and retain sample coverage, stalls, dependency samples and live registers. |
 | Read shader/range instruction mix | no direct PC-sampling equivalent | `trace.range-shaders`, `trace.range-instruction-mix` | current | Keep shader and range attribution as distinct fact families. |
 | Read Viewer analysis findings | performance-analysis helpers | `trace.analysis` | current | Return Viewer facts only; diagnosis remains in the Skill. |
 | Read raw GPU counters | timing/counter helpers | `trace.counter-catalog`, `trace.range-counters` | current | Keep exact seed scope and validated local export evidence. |
@@ -50,12 +50,12 @@ groups operations by user intent and does not create a second operation registry
 | Inspect shader/resource bindings | `get_shader_bindings`, shader reflection | no decoded binding model | unavailable | D3D12 and Vulkan descriptor fixtures expose command handles only; do not reconstruct bindings from pointer-like text. |
 | Browse resource metadata | `list_textures`, `list_buffers`, `list_resources`, `get_texture_info` | no decoded resource model | unavailable | Resource/descriptor/current-target actions are disabled in both tested GPU Trace documents. |
 | Trace resource read/write usage | `get_resource_usage` | barriers without stable resource identity | unavailable | Barrier parameters alone cannot establish report-wide resource identity or usage. |
-| Compare two performance scopes | timing/performance parts of `diff_draw_calls` | `compare-ranges`, `compare-frame-timing` | current | Keep exact metric, shader-attribution, instruction and timeline deltas; full state diff is unavailable with EXE-001. |
+| Compare two performance scopes | timing/performance parts of `diff_draw_calls` | `compare-ranges`, `compare-frame-timing`, `compare-timings` | current | Timing-only and explicit pair batches avoid unrelated models; caller grouping is metadata, not causal proof. |
 | Retrieve texture/buffer contents | `get_texture_data`, `get_buffer_data`, texture export | none | excluded | Requires Graphics Capture replayable resource contents. |
 | Pixel inspection/history/debug | `pick_pixel`, `pixel_history`, `debug_shader_at_pixel` | none | excluded | Requires replay and is outside GPU Trace. |
 | Mesh and post-VS data | `get_post_vs_data`, `export_mesh` | none | excluded | Requires Graphics Capture replay. |
 | Render-target snapshots and pixel diagnostics | `save_render_target`, region sampling, NaN scans | none | excluded | Do not add screenshot scraping or Graphics Capture to the product path. |
-| Automatic bottleneck diagnosis | `analyze_overdraw`, `analyze_bandwidth`, diagnostic tools | objective facts plus future Agent Skill | intentionally separate | Causality, priority, confidence and recommendations stay in the Skill. |
+| Automatic bottleneck diagnosis | `analyze_overdraw`, `analyze_bandwidth`, diagnostic tools | objective facts plus packaged Agent Skill | intentionally separate | Causality, priority, confidence and recommendations stay in the Skill. |
 
 ## Closed in `probe-0.51`
 

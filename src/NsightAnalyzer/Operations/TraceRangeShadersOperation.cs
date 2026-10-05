@@ -72,6 +72,11 @@ internal static class TraceRangeShadersOperation
         {
             return OperationSupport.ProjectionFailure(exception);
         }
+        catch (BridgeFactUnavailableException exception)
+        {
+            return OperationResult.Failure(ErrorCategory.Unavailable,
+                exception.Code, exception.Message, exception.Detail);
+        }
     }
 
     internal static Dictionary<string, string> BridgeSettings(
