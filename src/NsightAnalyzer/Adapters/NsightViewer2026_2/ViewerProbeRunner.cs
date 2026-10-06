@@ -23,18 +23,21 @@ internal sealed class ViewerProbeRun : IDisposable
         JsonDocument document,
         string outputPath,
         TimeSpan duration,
-        string mode)
+        string mode,
+        ViewerHostTarget target)
     {
         Document = document;
         OutputPath = outputPath;
         Duration = duration;
         Mode = mode;
+        Target = target;
     }
 
     public JsonDocument Document { get; }
     public string OutputPath { get; }
     public TimeSpan Duration { get; }
     public string Mode { get; }
+    public ViewerHostTarget Target { get; }
 
     public void Dispose() => Document.Dispose();
 }
@@ -48,15 +51,8 @@ internal sealed record ViewerProbeRunResult(
 
 internal static class ViewerProbeRunner
 {
-    public const string AdapterName = "NsightViewer2026_2";
     public const string SupportLevel = "unsupportedVersionPinned";
-    public const string ExpectedProductVersion = "2026.2.0.0";
-    public const string ExpectedProductBuild = "37991608";
-    public const string ExpectedProductSku = "public-release";
-    public const string ExpectedQtVersion = "6.8.1";
-    public const string ExpectedBridgeVersion = "probe-0.51";
-    public const string DefaultViewerPath =
-        @"C:\Program Files\NVIDIA Corporation\Nsight Graphics 2026.2.0\host\windows-desktop-nomad-x64\ngfx-ui.exe";
+    public const string ExpectedBridgeVersion = "probe-0.52";
 
     private const long MaximumRawOutputBytes = 128L * 1024 * 1024;
     private static readonly HashSet<string> ProductSettingNames =
@@ -146,9 +142,7 @@ internal static class ViewerProbeRunner
         int timeoutMs,
         ViewerProbeCachePolicy cachePolicy = ViewerProbeCachePolicy.None)
     {
-        var viewerPath = string.IsNullOrWhiteSpace(viewerPathOverride)
-            ? DefaultViewerPath
-            : Path.GetFullPath(viewerPathOverride);
+        var viewerPath = ViewerHostTargets.ResolveViewerPath(viewerPathOverride);
         if (!File.Exists(viewerPath))
         {
             return Fail(
@@ -170,12 +164,13 @@ internal static class ViewerProbeRunner
                 "The Viewer file version could not be read.",
                 exception.GetType().Name);
         }
-        if (!string.Equals(fileVersion.ProductVersion, "2026.2", StringComparison.Ordinal))
+        var candidates = ViewerHostTargets.FromFileVersion(fileVersion);
+        if (candidates.Count == 0)
         {
             return Fail(
                 ErrorCategory.AdapterMismatch,
                 "viewer.version_mismatch",
-                "The adapter only supports Nsight Graphics Viewer 2026.2 build 37991608.",
+                "The adapter only supports explicitly verified Nsight Graphics Viewer builds.",
                 $"observedProductVersion={fileVersion.ProductVersion ?? "unknown"}");
         }
 
@@ -245,7 +240,8 @@ internal static class ViewerProbeRunner
             outputPath,
             requestId,
             timeoutMs,
-            CachePolicyName(cachePolicy));
+            CachePolicyName(cachePolicy),
+            candidates);
         stopwatch.Stop();
         if (!invoked.IsSuccess)
         {
@@ -306,7 +302,9 @@ internal static class ViewerProbeRunner
             document.RootElement,
             artifact,
             requestId,
-            expectedSchema);
+            expectedSchema,
+            candidates,
+            out var target);
         if (validationError is not null)
         {
             document.Dispose();
@@ -314,7 +312,7 @@ internal static class ViewerProbeRunner
         }
 
         return new(
-            new ViewerProbeRun(document, outputPath, stopwatch.Elapsed, ModeName(mode)),
+            new ViewerProbeRun(document, outputPath, stopwatch.Elapsed, ModeName(mode), target!),
             null);
     }
 
@@ -328,9 +326,9 @@ internal static class ViewerProbeRunner
         return new(
             source,
             SupportLevel,
-            ExpectedProductVersion,
-            ExpectedProductBuild,
-            ExpectedProductSku,
+            run.Target.ProductVersion,
+            run.Target.ProductBuild,
+            run.Target.ProductSku,
             RequiredString(root, "qtRuntimeVersion"),
             RequiredString(root, "pluginVersion"),
             artifact.ArtifactIdentity,
@@ -343,8 +341,11 @@ internal static class ViewerProbeRunner
         JsonElement root,
         TraceArtifact artifact,
         string requestId,
-        string expectedSchema)
+        string expectedSchema,
+        IReadOnlyList<ViewerHostTarget> candidates,
+        out ViewerHostTarget? target)
     {
+        target = null;
         if (root.ValueKind != JsonValueKind.Object)
         {
             return Error(
@@ -376,27 +377,36 @@ internal static class ViewerProbeRunner
                 "The bridge output schema does not match the pinned adapter.",
                 $"expected={expectedSchema}; observed={schema ?? "missing"}");
         }
-        if (!TryString(root, "applicationVersion", out var applicationVersion) ||
-            applicationVersion is null ||
-            !applicationVersion.Contains(ExpectedProductVersion, StringComparison.Ordinal) ||
-            !applicationVersion.Contains(
-                $"build {ExpectedProductBuild}", StringComparison.Ordinal) ||
-            !applicationVersion.Contains(ExpectedProductSku, StringComparison.Ordinal))
+        var applicationVersion = TryString(root, "applicationVersion", out var observedApplication)
+            ? observedApplication : null;
+        var qtVersion = TryString(root, "qtRuntimeVersion", out var observedQt)
+            ? observedQt : null;
+        var qtCompileVersion = TryString(root, "qtCompileVersion", out var observedCompileQt)
+            ? observedCompileQt : null;
+        var applicationCandidates = candidates.Where(candidate => string.Equals(
+            applicationVersion, candidate.ApplicationVersion, StringComparison.Ordinal)).ToArray();
+        if (applicationCandidates.Length == 0)
         {
             return Error(
                 ErrorCategory.AdapterMismatch,
                 "viewer.build_mismatch",
-                "The decoding Viewer version/build/SKU does not match the pinned adapter.",
+                "The decoding Viewer version/build/SKU does not match the exact compatibility entry.",
+                $"expected={string.Join(" | ", candidates.Select(candidate => candidate.ApplicationVersion))}; " +
                 $"observed={applicationVersion ?? "missing"}");
         }
-        if (!TryString(root, "qtRuntimeVersion", out var qtVersion) ||
-            qtVersion != ExpectedQtVersion)
+        var runtimeTarget = applicationCandidates.SingleOrDefault(candidate =>
+            ViewerHostTargets.MatchesRuntime(
+                candidate, applicationVersion, qtVersion, qtCompileVersion));
+        if (runtimeTarget is null)
         {
             return Error(
                 ErrorCategory.AdapterMismatch,
                 "viewer.qt_mismatch",
-                "The decoding Viewer Qt version does not match the pinned adapter.",
-                $"observed={qtVersion ?? "missing"}");
+                "The decoding Viewer runtime/bridge Qt pairing does not match the exact compatibility entry.",
+                $"runtimeExpected={string.Join(" | ", applicationCandidates.Select(candidate => candidate.QtRuntimeVersion))}; " +
+                $"runtimeObserved={qtVersion ?? "missing"}; compileExpected=" +
+                $"{string.Join(" | ", applicationCandidates.Select(candidate => candidate.QtCompileVersion))}; " +
+                $"compileObserved={qtCompileVersion ?? "missing"}");
         }
         if (!TryString(root, "pluginVersion", out var bridgeVersion) ||
             bridgeVersion != ExpectedBridgeVersion)
@@ -410,15 +420,18 @@ internal static class ViewerProbeRunner
         if (!root.TryGetProperty("verifiedHostTarget", out var verified) ||
             verified.ValueKind != JsonValueKind.Object ||
             !TryString(verified, "nsightVersion", out var verifiedVersion) ||
-            verifiedVersion != "2026.2.0" ||
+            verifiedVersion != runtimeTarget.NsightVersion ||
             !TryString(verified, "nsightBuild", out var verifiedBuild) ||
-            verifiedBuild != ExpectedProductBuild)
+            verifiedBuild != runtimeTarget.ProductBuild ||
+            !TryString(verified, "compatibilityProfile", out var verifiedProfile) ||
+            verifiedProfile != runtimeTarget.CompatibilityProfile)
         {
             return Error(
                 ErrorCategory.AdapterMismatch,
                 "viewer.host_unverified",
                 "The bridge did not verify the expected Viewer host.");
         }
+        target = runtimeTarget;
         if (!TryString(root, "status", out var status))
         {
             return Error(

@@ -29,7 +29,7 @@ internal static class RangeMetricSnapshotReader
     {
         var timer = Stopwatch.StartNew();
         if (!TryRemaining(timer, timeoutMs, out _)) return TimedOut();
-        var viewer = Path.GetFullPath(viewerPathOverride ?? ViewerProbeRunner.DefaultViewerPath);
+        var viewer = ViewerHostTargets.ResolveViewerPath(viewerPathOverride);
         var selector = eventOrdinal is not null ? $"ordinal:{eventOrdinal}" : $"path:{eventPath}";
         var session = ViewerSessionTransport.TryGetLiveIdentity(artifact, viewer);
         var snapshot = session is null ? null : TryLoad(session, artifact.ArtifactIdentity, selector);

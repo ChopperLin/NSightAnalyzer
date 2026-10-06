@@ -20,9 +20,7 @@ internal static class ViewerSessionCloseOperation
         string viewerPath;
         try
         {
-            viewerPath = string.IsNullOrWhiteSpace(viewerPathOverride)
-                ? ViewerProbeRunner.DefaultViewerPath
-                : Path.GetFullPath(viewerPathOverride);
+            viewerPath = ViewerHostTargets.ResolveViewerPath(viewerPathOverride);
         }
         catch (Exception exception) when (
             exception is ArgumentException or NotSupportedException or PathTooLongException)

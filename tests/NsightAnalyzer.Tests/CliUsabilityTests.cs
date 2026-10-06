@@ -1,3 +1,4 @@
+using System.Text.Json;
 using NsightAnalyzer.Adapters.NsightViewer2026_2;
 using NsightAnalyzer.Cli;
 using NsightAnalyzer.Contracts;
@@ -183,11 +184,71 @@ public sealed class CliUsabilityTests
         Assert.False(value.LocalPrerequisitesPresent);
         Assert.Equal("notChecked", value.RuntimeValidation);
         Assert.Contains(value.Checks, item => item.Component == "viewerExecutable" && item.State == "missing" &&
-            item.Path == viewer && item.Expected == "2026.2");
+            item.Path == viewer && item.Expected == "2026.2.0.0 or 2026.3.1.0");
         Assert.Contains(value.Checks, item => item.Component == "viewerRuntime" && item.State == "notChecked" &&
             item.Expected.Contains("37991608"));
         Assert.Equal(Path.Combine(workspace, ".local", "sessions"), value.SessionRoot);
         Assert.False(Directory.Exists(workspace));
+    }
+
+    [Fact]
+    public void ViewerCompatibilityTableContainsOnlyExactVerifiedHosts()
+    {
+        var viewer2026_2 = Assert.Single(ViewerHostTargets.All,
+            target => target.ProductBuild == "37991608");
+        var viewer2026_3 = Assert.Single(ViewerHostTargets.All,
+            target => target.ProductBuild == "38722833");
+        Assert.Equal("2026.2.0.0 (build 37991608) (public-release)", viewer2026_2.ApplicationVersion);
+        Assert.Equal("6.8.1", viewer2026_2.QtRuntimeVersion);
+        Assert.Equal("2026.3.1.0 (build 38722833) (public-release)", viewer2026_3.ApplicationVersion);
+        Assert.Equal("6.10.2", viewer2026_3.QtRuntimeVersion);
+        Assert.All(ViewerHostTargets.All, target =>
+        {
+            Assert.Equal("6.8.1", target.QtCompileVersion);
+            Assert.Equal("NsightViewerGpuTraceSemanticV1", target.CompatibilityProfile);
+            Assert.DoesNotContain('*', target.ApplicationVersion);
+        });
+        Assert.Equal(ViewerHostTargets.All.Count,
+            ViewerHostTargets.All.Select(target => target.ApplicationVersion).Distinct().Count());
+        foreach (var target in ViewerHostTargets.All)
+        {
+            Assert.True(ViewerHostTargets.MatchesRuntime(
+                target, target.ApplicationVersion, target.QtRuntimeVersion, target.QtCompileVersion));
+            Assert.False(ViewerHostTargets.MatchesRuntime(
+                target, target.ApplicationVersion.Replace(target.ProductBuild, "other-build"),
+                target.QtRuntimeVersion, target.QtCompileVersion));
+            Assert.False(ViewerHostTargets.MatchesRuntime(
+                target, target.ApplicationVersion, "other-qt", target.QtCompileVersion));
+        }
+    }
+
+    [Fact]
+    public void OneSemanticProfileCanSelectMultipleExactPatchBuildsAtRuntime()
+    {
+        var existing = ViewerHostTargets.All.Single(
+            target => target.ProductBuild == "38722833");
+        var patch = existing with
+        {
+            ProductVersion = "2026.3.1.1",
+            ProductBuild = "future-tested-build",
+            NsightVersion = "2026.3.1.1",
+            DefaultViewerPath = @"C:\verified\2026.3.1.1\ngfx-ui.exe",
+        };
+        ViewerHostTarget[] candidates = [existing, patch];
+
+        var selected = ViewerHostTargets.MatchVerifiedRuntime(
+            candidates,
+            patch.ApplicationVersion,
+            patch.QtRuntimeVersion,
+            patch.QtCompileVersion,
+            patch.NsightVersion,
+            patch.ProductBuild,
+            patch.CompatibilityProfile);
+        using var bridgeTargets = JsonDocument.Parse(
+            ViewerHostTargets.BridgeVerificationJson(candidates));
+
+        Assert.Same(patch, selected);
+        Assert.Equal(2, bridgeTargets.RootElement.GetArrayLength());
     }
 
     [Fact]

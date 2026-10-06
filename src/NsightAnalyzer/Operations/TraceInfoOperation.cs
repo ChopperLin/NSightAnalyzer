@@ -32,14 +32,15 @@ internal static class TraceInfoOperation
 
         using var run = probe.Run!;
         var root = run.Document.RootElement;
+        var target = run.Target;
         var value = new TraceInfoValue(
             artifact.ToContract(),
             new(
-                ViewerProbeRunner.AdapterName,
+                target.AdapterName,
                 ViewerProbeRunner.SupportLevel,
-                ViewerProbeRunner.ExpectedProductVersion,
-                ViewerProbeRunner.ExpectedProductBuild,
-                ViewerProbeRunner.ExpectedProductSku,
+                target.ProductVersion,
+                target.ProductBuild,
+                target.ProductSku,
                 root.GetProperty("qtRuntimeVersion").GetString()!,
                 root.GetProperty("pluginVersion").GetString()!,
                 root.GetProperty("schema").GetString()!),

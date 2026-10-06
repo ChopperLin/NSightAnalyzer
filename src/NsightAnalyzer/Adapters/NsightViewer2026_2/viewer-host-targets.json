@@ -1,0 +1,26 @@
+[
+  {
+    "adapterName": "NsightViewer2026_2",
+    "compatibilityProfile": "NsightViewerGpuTraceSemanticV1",
+    "fileProductVersion": "2026.2",
+    "productVersion": "2026.2.0.0",
+    "productBuild": "37991608",
+    "productSku": "public-release",
+    "nsightVersion": "2026.2.0",
+    "qtRuntimeVersion": "6.8.1",
+    "qtCompileVersion": "6.8.1",
+    "defaultViewerPath": "C:\\Program Files\\NVIDIA Corporation\\Nsight Graphics 2026.2.0\\host\\windows-desktop-nomad-x64\\ngfx-ui.exe"
+  },
+  {
+    "adapterName": "NsightViewer2026_3",
+    "compatibilityProfile": "NsightViewerGpuTraceSemanticV1",
+    "fileProductVersion": "2026.3",
+    "productVersion": "2026.3.1.0",
+    "productBuild": "38722833",
+    "productSku": "public-release",
+    "nsightVersion": "2026.3.1",
+    "qtRuntimeVersion": "6.10.2",
+    "qtCompileVersion": "6.8.1",
+    "defaultViewerPath": "C:\\Program Files\\NVIDIA Corporation\\Nsight Graphics 2026.3.1\\host\\windows-desktop-nomad-x64\\ngfx-ui.exe"
+  }
+]

@@ -908,6 +908,10 @@ internal static class BridgeProjection
             var stage = CellText(node, 0) ?? string.Empty;
             var name = CellText(node, 2) ?? string.Empty;
             var hash = NormalizeShaderHash(CellText(node, 3));
+            if (IsUnattributedSampleSummary(node, stage, name, hash))
+            {
+                continue;
+            }
             if (childCount > 0 && hash is null)
             {
                 continue;
@@ -2126,6 +2130,18 @@ internal static class BridgeProjection
         value.StartsWith("0x", StringComparison.OrdinalIgnoreCase)
             ? value.ToLowerInvariant()
             : null;
+
+    private static bool IsUnattributedSampleSummary(
+        JsonElement node,
+        string stage,
+        string name,
+        string? hash) =>
+        hash is null &&
+        stage == "Unattributed" &&
+        name == "Samples" &&
+        (CellTooltipText(node, 0)?.Contains(
+            "Samples not associated with any known shader",
+            StringComparison.Ordinal) ?? false);
 
     private static long RequiredSampleCount(JsonElement element, string field)
     {

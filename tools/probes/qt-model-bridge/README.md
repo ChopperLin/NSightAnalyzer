@@ -18,8 +18,11 @@ pwsh -File tools/probes/qt-model-bridge/build-and-install.ps1
 
 The script resolves CMake (from `PATH` or a Visual Studio 2022 installation)
 and Qt 6.8.1, builds `solidprobe.dll`, backs up the currently installed plugin
-under `.local/bridge-backups/`, installs into the pinned Viewer's
+under a Viewer-specific `.local/bridge-backups/` directory, installs into the selected exact Viewer's
 `plugins/generic/`, and verifies the installed file hash.
+It reads the same `viewer-host-targets.json` embedded by the CLI. If future exact releases share the
+same file-level product version and a nonstandard install path, pass `-TargetProductVersion` to select
+the certified row explicitly.
 
 It refuses to install when `kPluginVersion` in `solid_probe_plugin.cpp` differs
 from `ViewerProbeRunner.ExpectedBridgeVersion`, because that mismatch is
@@ -30,14 +33,18 @@ script checks first and says so rather than failing part way through. Use
 `-SkipInstall` to build only, `-WhatIf` to preview, and `-Rollback` to restore
 the most recent backup.
 
-## Verified host
+## Verified hosts
 
-- Nsight Graphics 2026.2.0, build 37991608
-- Viewer application version:
-  `2026.2.0.0 (build 37991608) (public-release)`
-- Qt 6.8.1, MSVC 2022 x64
-- Probe schema implementation: `probe-0.51`; committed Probe 0.44 outputs remain the frozen
-  semantic oracle
+| Viewer application | Build/SKU | Qt runtime |
+|---|---|---|
+| 2026.2.0.0 | 37991608, public-release | 6.8.1 |
+| 2026.3.1.0 | 38722833, public-release | 6.10.2 |
+
+The plugin is compiled with Qt 6.8.1 and MSVC 2022 x64. Qt's
+[plugin deployment rules](https://doc.qt.io/qt-6/deployment-plugins.html) permit a plugin built with
+an older Qt 6 minor to load in a newer Qt 6 runtime; the exact 6.8.1-to-6.10.2 pairing is additionally
+closed by the real Viewer tests. Probe schema implementation is `probe-0.52`; committed Probe 0.44
+outputs remain the frozen semantic oracle.
 
 The downloaded Qt Core, Gui, and Widgets release DLLs were byte-identical to
 the DLLs shipped by this Nsight installation. The Qt plugin entry point and
@@ -150,11 +157,11 @@ cmake --build .local/build/qt-model-bridge --config Release --parallel
 Generated binaries and report-derived JSON stay under `.local/` or a
 caller-provided local artifact directory.
 
-Nsight 2026.2 resets Qt library paths to its own `Plugins` directory. This
+The admitted Viewers reset Qt library paths to their own `Plugins` directory. This
 machine-local experiment exposes the build's `out/generic` directory under the
 Viewer installation's `Plugins/generic` path. Do not commit or redistribute
 that installation hook. The harness verifies that `solidprobe.dll` is present
-and refuses a different Viewer version/build; it does not install the hook.
+and accepts only the two exact Viewer compatibility entries; it does not install the hook.
 
 ## Repeatable harness
 

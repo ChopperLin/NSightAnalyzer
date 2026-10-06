@@ -27,8 +27,8 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$verifiedVersion = '2026.2.0.0'
-$verifiedBuild = '37991608'
+$verifiedVersion = 'unresolved'
+$verifiedBuild = 'unresolved'
 $runStarted = Get-Date
 $timer = [System.Diagnostics.Stopwatch]::StartNew()
 $requestId = [Guid]::NewGuid().ToString('N')
@@ -37,6 +37,9 @@ $viewerExitCode = $null
 $probeDocument = $null
 $reportIdentity = $null
 $resolvedOutput = $null
+$viewerHostTable = Join-Path $PSScriptRoot `
+    '..\..\..\src\NsightAnalyzer\Adapters\NsightViewer2026_2\viewer-host-targets.json'
+$verifiedTargets = @(Get-Content -LiteralPath $viewerHostTable -Raw | ConvertFrom-Json)
 
 function Write-RunResult {
     param(
@@ -77,8 +80,11 @@ try {
 
     $viewer = Get-Item -LiteralPath $ViewerPath
     $viewerVersion = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($viewer.FullName)
-    if ($viewerVersion.ProductVersion -notmatch '^2026\.2(?:\.|$)') {
-        throw "The probe is pinned to Nsight Graphics $verifiedVersion build $verifiedBuild."
+    $candidateTargets = @($verifiedTargets | Where-Object {
+            $_.fileProductVersion -ceq $viewerVersion.ProductVersion
+        })
+    if ($candidateTargets.Count -eq 0) {
+        throw "The probe has no verified entry for Viewer product version '$($viewerVersion.ProductVersion)'."
     }
 
     $pluginPath = Join-Path $viewer.DirectoryName 'Plugins\generic\solidprobe.dll'
@@ -107,6 +113,7 @@ try {
 
     $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
     $startInfo.FileName = $viewer.FullName
+    $startInfo.WorkingDirectory = $viewer.DirectoryName
     $startInfo.UseShellExecute = $false
     $startInfo.ArgumentList.Add($report.FullName)
     $startInfo.ArgumentList.Add('-plugin')
@@ -115,6 +122,18 @@ try {
     $startInfo.Environment['NSIGHT_SOLID_PROBE_MODE'] = $Mode
     $startInfo.Environment['NSIGHT_SOLID_PROBE_REQUEST_ID'] = $requestId
     $startInfo.Environment['NSIGHT_SOLID_PROBE_REPORT_ID'] = $reportIdentity
+    $bridgeTargets = @($candidateTargets | ForEach-Object {
+        [ordered]@{
+            applicationVersion = $_.productVersion + ' (build ' + $_.productBuild + ') (' + $_.productSku + ')'
+            qtRuntimeVersion = $_.qtRuntimeVersion
+            qtCompileVersion = $_.qtCompileVersion
+            nsightVersion = $_.nsightVersion
+            nsightBuild = $_.productBuild
+            compatibilityProfile = $_.compatibilityProfile
+        }
+    })
+    $startInfo.Environment['NSIGHT_SOLID_PROBE_VERIFIED_HOST_TARGETS'] =
+        ($bridgeTargets | ConvertTo-Json -Compress -AsArray)
     if ($Mode -eq 'heartbeat') {
         $startInfo.Environment['NSIGHT_SOLID_PROBE_QUIT_AFTER_HEARTBEAT'] = '1'
     } else {
@@ -185,10 +204,20 @@ try {
     if ([string]::IsNullOrWhiteSpace($probeDocument.schema)) {
         throw 'The probe output has no schema.'
     }
-    if ($probeDocument.applicationVersion -notmatch [Regex]::Escape($verifiedVersion) -or
-        $probeDocument.applicationVersion -notmatch "build $verifiedBuild") {
+    $verifiedTarget = $candidateTargets | Where-Object {
+        ($_.productVersion + ' (build ' + $_.productBuild + ') (' + $_.productSku + ')') -ceq
+            $probeDocument.applicationVersion -and
+        $_.qtRuntimeVersion -ceq $probeDocument.qtRuntimeVersion -and
+        $_.qtCompileVersion -ceq $probeDocument.qtCompileVersion -and
+        $_.nsightVersion -ceq $probeDocument.verifiedHostTarget.nsightVersion -and
+        $_.productBuild -ceq $probeDocument.verifiedHostTarget.nsightBuild -and
+        $_.compatibilityProfile -ceq $probeDocument.verifiedHostTarget.compatibilityProfile
+    } | Select-Object -First 1
+    if (-not $verifiedTarget) {
         throw 'The decoding Viewer version/build does not match the probe target.'
     }
+    $verifiedVersion = $verifiedTarget.productVersion
+    $verifiedBuild = $verifiedTarget.productBuild
     if ($probeDocument.status -in @('error', 'timeout')) {
         Write-RunResult -Status 'error' -ErrorCode "probe.$($probeDocument.stage)" `
             -Message 'The probe returned a structured error.'

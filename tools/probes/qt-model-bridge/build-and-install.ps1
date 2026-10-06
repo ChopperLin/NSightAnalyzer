@@ -4,8 +4,8 @@ Builds the version-pinned SolidProbe Viewer plugin and installs it into the
 matching Nsight Graphics installation.
 
 .DESCRIPTION
-The adapter loads this plugin into Nsight Graphics 2026.2 build 37991608 and
-reads the decoded Qt item models. Installing writes into the Nsight
+The adapter loads this plugin into an explicitly verified Nsight Graphics
+Viewer build and reads the decoded Qt item models. Installing writes into the Nsight
 installation directory, so the previously installed DLL is always backed up
 under .local/bridge-backups first and can be restored with -Rollback.
 
@@ -25,7 +25,9 @@ Restores the most recent backup.
 param(
     [string] $Qt6Dir,
 
-    [string] $ViewerPath = 'C:\Program Files\NVIDIA Corporation\Nsight Graphics 2026.2.0\host\windows-desktop-nomad-x64\ngfx-ui.exe',
+    [string] $ViewerPath,
+
+    [string] $TargetProductVersion,
 
     [ValidateSet('Release', 'Debug', 'RelWithDebInfo')]
     [string] $Configuration = 'Release',
@@ -41,10 +43,16 @@ $PSNativeCommandUseErrorActionPreference = $false
 $repositoryRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..')).Path
 $sourceDirectory = $PSScriptRoot
 $buildDirectory = Join-Path $repositoryRoot '.local\build\qt-model-bridge'
-$backupDirectory = Join-Path $repositoryRoot '.local\bridge-backups'
+$backupRoot = Join-Path $repositoryRoot '.local\bridge-backups'
 $pluginSource = Join-Path $sourceDirectory 'solid_probe_plugin.cpp'
 $expectedVersionSource = Join-Path `
     $repositoryRoot 'src\NsightAnalyzer\Adapters\NsightViewer2026_2\ViewerProbeRunner.cs'
+$viewerHostTable = Join-Path `
+    $repositoryRoot 'src\NsightAnalyzer\Adapters\NsightViewer2026_2\viewer-host-targets.json'
+$viewerHostTargets = @(Get-Content -LiteralPath $viewerHostTable -Raw | ConvertFrom-Json)
+if ($viewerHostTargets.Count -eq 0) {
+    throw 'The Viewer host target table is empty.'
+}
 
 function Get-PluginVersion {
     # constexpr auto kPluginVersion = "probe-0.45";
@@ -66,16 +74,96 @@ function Get-ExpectedBridgeVersion {
     return $match.Matches[0].Groups[1].Value
 }
 
-function Resolve-InstallPath {
-    if (-not (Test-Path -LiteralPath $ViewerPath -PathType Leaf)) {
-        throw "The pinned Viewer was not found at '$ViewerPath'."
+function Resolve-ViewerTarget {
+    $targets = $viewerHostTargets
+    $discoveryTargets = @($targets | Where-Object {
+            [string]::IsNullOrWhiteSpace($TargetProductVersion) -or
+            $_.productVersion -ceq $TargetProductVersion
+        })
+    if ($discoveryTargets.Count -eq 0) {
+        throw "No verified compatibility entry has product version '$TargetProductVersion'."
     }
-    $viewerDirectory = Split-Path -Parent (Resolve-Path -LiteralPath $ViewerPath).Path
-    return Join-Path $viewerDirectory 'plugins\generic\solidprobe.dll'
+    $candidate = $ViewerPath
+    if ([string]::IsNullOrWhiteSpace($candidate)) {
+        $candidate = ($discoveryTargets | Where-Object {
+                Test-Path -LiteralPath $_.defaultViewerPath -PathType Leaf
+            } | Select-Object -First 1).defaultViewerPath
+        if ([string]::IsNullOrWhiteSpace($candidate)) {
+            $candidate = $discoveryTargets[0].defaultViewerPath
+        }
+    }
+    if (-not (Test-Path -LiteralPath $candidate -PathType Leaf)) {
+        throw "No explicitly supported Viewer was found at '$candidate'."
+    }
+    $resolved = (Resolve-Path -LiteralPath $candidate).Path
+    $version = [Diagnostics.FileVersionInfo]::GetVersionInfo($resolved)
+    $candidates = @($targets | Where-Object {
+        $_.fileProductVersion -ceq $version.ProductVersion
+    })
+    if (-not [string]::IsNullOrWhiteSpace($TargetProductVersion)) {
+        $candidates = @($candidates | Where-Object {
+                $_.productVersion -ceq $TargetProductVersion
+            })
+    }
+    if ($candidates.Count -eq 0) {
+        throw "Viewer product version '$($version.ProductVersion)' has no verified compatibility entry."
+    }
+    $viewerDirectory = Split-Path -Parent $resolved
+    $qtPath = Join-Path $viewerDirectory 'Qt6Core.dll'
+    if (-not (Test-Path -LiteralPath $qtPath -PathType Leaf)) {
+        throw "The selected Viewer has no Qt6Core.dll at '$qtPath'."
+    }
+    $qt = [Diagnostics.FileVersionInfo]::GetVersionInfo($qtPath)
+    $observedQt = '{0}.{1}.{2}' -f $qt.FileMajorPart, $qt.FileMinorPart, $qt.FileBuildPart
+    $candidates = @($candidates | Where-Object { $_.qtRuntimeVersion -ceq $observedQt })
+    if ($candidates.Count -eq 0) {
+        throw "Viewer Qt '$observedQt' has no verified compatibility entry for this product version."
+    }
+    $pathMatches = @($candidates | Where-Object {
+            [string]::Equals([IO.Path]::GetFullPath($_.defaultViewerPath), $resolved,
+                [StringComparison]::OrdinalIgnoreCase)
+        })
+    $target = if ($pathMatches.Count -eq 1) {
+        $pathMatches[0]
+    }
+    elseif ($candidates.Count -eq 1) {
+        $candidates[0]
+    }
+    else {
+        $null
+    }
+    if (-not $target) {
+        $versions = ($candidates | ForEach-Object productVersion) -join ', '
+        throw ("Viewer target is ambiguous after file-version and Qt checks. " +
+            "Pass -TargetProductVersion with one of: $versions")
+    }
+    return [pscustomobject]@{
+        viewerPath = $resolved
+        viewerDirectory = $viewerDirectory
+        fileProductVersion = $target.fileProductVersion
+        productVersion = $target.productVersion
+        build = $target.productBuild
+        qtRuntime = $target.qtRuntimeVersion
+        compatibilityProfile = $target.compatibilityProfile
+    }
+}
+
+function Resolve-InstallPath {
+    $target = Resolve-ViewerTarget
+    return Join-Path $target.viewerDirectory 'plugins\generic\solidprobe.dll'
+}
+
+function Resolve-BackupDirectory {
+    $target = Resolve-ViewerTarget
+    $material = $target.viewerPath.ToUpperInvariant()
+    $hash = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData(
+            [Text.Encoding]::UTF8.GetBytes($material))).Substring(0, 16)
+    return Join-Path $backupRoot ("viewer-{0}-{1}" -f $target.fileProductVersion.Replace('.', '_'), $hash)
 }
 
 function Invoke-Rollback {
     $installPath = Resolve-InstallPath
+    $backupDirectory = Resolve-BackupDirectory
     if (-not (Test-Path -LiteralPath $backupDirectory)) {
         throw "No backup directory at '$backupDirectory'."
     }
@@ -186,6 +274,8 @@ if ($SkipInstall) {
 }
 
 $installPath = Resolve-InstallPath
+$viewerTarget = Resolve-ViewerTarget
+$backupDirectory = Resolve-BackupDirectory
 $installDirectory = Split-Path -Parent $installPath
 if (-not (Test-Path -LiteralPath $installDirectory -PathType Container)) {
     throw "The Viewer plugin directory '$installDirectory' does not exist."
@@ -227,6 +317,8 @@ if ($PSCmdlet.ShouldProcess($installPath, 'install solidprobe.dll')) {
         throw 'The installed plugin does not match the build output.'
     }
     Write-Host "Installed: $installPath"
+    Write-Host ("Viewer:    {0} build {1}; Qt runtime {2}" -f `
+        $viewerTarget.productVersion, $viewerTarget.build, $viewerTarget.qtRuntime)
     Write-Host "SHA-256:   $installedHash"
     Write-Host ''
     Write-Host 'Verify with: dotnet test; pwsh tools/verification/verify-cli.ps1'

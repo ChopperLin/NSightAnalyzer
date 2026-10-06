@@ -22,7 +22,7 @@ internal static class OperationParameters
         "path",
         false,
         "Exact ngfx-ui.exe of the pinned Viewer build.",
-        Default: "the installed Nsight Graphics 2026.2 Viewer");
+        Default: "an installed verified Viewer (2026.2 preferred, then 2026.3.1)");
 
     public static OperationParameter Workspace { get; } = new(
         "--workspace", "path", false,

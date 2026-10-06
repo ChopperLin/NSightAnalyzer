@@ -10,18 +10,30 @@ internal static class CapabilitiesOperation
         bool detail = false)
     {
         var ordered = descriptors.OrderBy(item => item.Id, StringComparer.Ordinal).ToArray();
+        var preferred = ViewerHostTargets.Preferred;
         return OperationResult.Success(new
         {
             tool = VersionOperation.Describe(),
             sourcePolicy = "unsupportedVersionPinnedViewer",
             decoder = new
             {
-                adapter = "NsightViewer2026_2",
-                productVersion = "2026.2.0.0",
-                productBuild = "37991608",
-                productSku = "public-release",
-                qtVersion = "6.8.1",
+                adapter = preferred.AdapterName,
+                productVersion = preferred.ProductVersion,
+                productBuild = preferred.ProductBuild,
+                productSku = preferred.ProductSku,
+                qtVersion = preferred.QtRuntimeVersion,
                 bridgeVersion = ViewerProbeRunner.ExpectedBridgeVersion,
+                selectionPolicy = "firstInstalledTargetInTableOrder",
+                targets = ViewerHostTargets.All.Select(target => new
+                {
+                    adapter = target.AdapterName,
+                    compatibilityProfile = target.CompatibilityProfile,
+                    productVersion = target.ProductVersion,
+                    productBuild = target.ProductBuild,
+                    productSku = target.ProductSku,
+                    qtRuntimeVersion = target.QtRuntimeVersion,
+                    qtCompileVersion = target.QtCompileVersion,
+                }).ToArray(),
             },
             help = "describe <operation>",
             operations = new Page<object>(

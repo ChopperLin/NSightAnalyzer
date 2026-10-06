@@ -9,4 +9,8 @@
     <RootNamespace>NsightAnalyzer</RootNamespace>
     <InvariantGlobalization>true</InvariantGlobalization>
   </PropertyGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Adapters\NsightViewer2026_2\viewer-host-targets.json"
+                      LogicalName="NsightAnalyzer.ViewerHostTargets.json" />
+  </ItemGroup>
 </Project>

@@ -161,6 +161,38 @@ public sealed class AccuracyRegressionTests
     }
 
     [Fact]
+    public void Viewer2026_3UnattributedSummaryIsNotProjectedAsAShader()
+    {
+        using var original = FixtureBridge.Load("range-shaders-gbufferpass.json");
+        var expected = Shaders(original).Shaders.Items;
+        var root = JsonNode.Parse(original.RootElement.GetRawText())!;
+        var model = root["models"]!.AsArray().Single(item =>
+            item!["class"]!.GetValue<string>().EndsWith("SampleItemTreeModel"));
+        var export = model!["export"]!.AsObject();
+        var nodes = export["nodes"]!.AsArray();
+        nodes.Add(JsonNode.Parse("""
+            {
+              "cells": [
+                {"column":0,"display":"Unattributed","displayType":"QString","tooltip":"Samples not associated with any known shader due to unsupported shader types."},
+                {"column":2,"display":"Samples","displayType":"QString"},
+                {"column":3,"display":"--","displayType":"QString"},
+                {"column":13,"display":"...","displayType":"QString"}
+              ],
+              "childCount":0,"depth":0,"ordinal":200,"path":[116],"row":116
+            }
+            """));
+        export["nodeCount"] = nodes.Count;
+        export["returnedCount"] = nodes.Count;
+        export["totalCount"] = nodes.Count;
+
+        using var fixture = JsonDocument.Parse(root.ToJsonString());
+        var actual = Shaders(fixture).Shaders.Items;
+
+        Assert.Equal(expected.Count, actual.Count);
+        Assert.DoesNotContain(actual, shader => shader.Key.Stage == "Unattributed");
+    }
+
+    [Fact]
     public void ASharedShaderStillJoinsWhenAnEarlierPipelineIsAbsent()
     {
         var data = Inspection();

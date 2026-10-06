@@ -30,13 +30,18 @@ internal static class ViewerSessionTransport
     {
         try
         {
+            var candidates = ViewerHostTargets.FromExecutable(viewerPath);
+            if (candidates.Count == 0)
+            {
+                return null;
+            }
             var directory = Path.Combine(ResolveSessionRoot(), $"trace-{SessionKey(artifact, viewerPath)[..32]}");
             var owner = TryReadOwner(Path.Combine(directory, "owner.json"));
             var manifest = TryReadManifest(Path.Combine(directory, "session.json"));
             if (owner is null || manifest is null || manifest.Status != "ready" ||
                 completedRequestId is not null &&
                     (completedRequestId.Length == 0 || manifest.LastRequestId != completedRequestId) ||
-                !ValidateManifest(manifest, owner.SessionId, artifact.ReportId, owner.Pid) ||
+                !ValidateManifest(manifest, owner.SessionId, artifact.ReportId, owner.Pid, candidates) ||
                 !TryOpenExpectedProcess(owner, artifact, viewerPath, out var process))
             {
                 return null;
@@ -75,7 +80,8 @@ internal static class ViewerSessionTransport
         string outputPath,
         string requestId,
         int timeoutMs,
-        string cachePolicy)
+        string cachePolicy,
+        IReadOnlyList<ViewerHostTarget> candidates)
     {
         var stopwatch = Stopwatch.StartNew();
         string sessionDirectory;
@@ -113,7 +119,8 @@ internal static class ViewerSessionTransport
             runRoot,
             sessionDirectory,
             stopwatch,
-            timeoutMs);
+            timeoutMs,
+            candidates);
         if (!ensured.IsSuccess)
         {
             return new(ensured.Error);
@@ -166,7 +173,8 @@ internal static class ViewerSessionTransport
             artifact.ReportId,
             requestId,
             stopwatch,
-            timeoutMs);
+            timeoutMs,
+            candidates);
         if (!completed.IsSuccess)
         {
             await InvalidateAsync(sessionProcess);
@@ -325,7 +333,8 @@ internal static class ViewerSessionTransport
         string runRoot,
         string sessionDirectory,
         Stopwatch stopwatch,
-        int timeoutMs)
+        int timeoutMs,
+        IReadOnlyList<ViewerHostTarget> candidates)
     {
         var ownerPath = Path.Combine(sessionDirectory, "owner.json");
         var manifestPath = Path.Combine(sessionDirectory, "session.json");
@@ -338,7 +347,8 @@ internal static class ViewerSessionTransport
                 owner,
                 manifestPath,
                 stopwatch,
-                timeoutMs);
+                timeoutMs,
+                candidates);
             if (reusable)
             {
                 return new(
@@ -381,6 +391,8 @@ internal static class ViewerSessionTransport
         startInfo.Environment["NSIGHT_SOLID_PROBE_SESSION_RUN_ROOT"] = runRoot;
         startInfo.Environment["NSIGHT_SOLID_PROBE_SESSION_ID"] = sessionId;
         startInfo.Environment["NSIGHT_SOLID_PROBE_REPORT_ID"] = artifact.ReportId;
+        startInfo.Environment["NSIGHT_SOLID_PROBE_VERIFIED_HOST_TARGETS"] =
+            ViewerHostTargets.BridgeVerificationJson(candidates);
         startInfo.Environment["NSIGHT_SOLID_PROBE_SESSION_IDLE_TIMEOUT_MS"] =
             SessionIdleTimeoutMs().ToString(System.Globalization.CultureInfo.InvariantCulture);
 
@@ -472,7 +484,7 @@ internal static class ViewerSessionTransport
             }
             var manifest = TryReadManifest(manifestPath);
             if (manifest is not null &&
-                ValidateManifest(manifest, sessionId, artifact.ReportId, process.Id) &&
+                ValidateManifest(manifest, sessionId, artifact.ReportId, process.Id, candidates) &&
                 manifest.Status == "ready")
             {
                 var baselineDelay = Math.Min(
@@ -548,7 +560,8 @@ internal static class ViewerSessionTransport
         SessionOwner owner,
         string manifestPath,
         Stopwatch stopwatch,
-        int timeoutMs)
+        int timeoutMs,
+        IReadOnlyList<ViewerHostTarget> candidates)
     {
         while (RemainingMilliseconds(stopwatch, timeoutMs) > 0)
         {
@@ -560,7 +573,7 @@ internal static class ViewerSessionTransport
             var manifest = TryReadManifest(manifestPath);
             if (manifest is null ||
                 !ValidateManifest(
-                    manifest, owner.SessionId, owner.ReportId, owner.Pid))
+                    manifest, owner.SessionId, owner.ReportId, owner.Pid, candidates))
             {
                 await Task.Delay(100);
                 continue;
@@ -585,7 +598,8 @@ internal static class ViewerSessionTransport
         string reportId,
         string requestId,
         Stopwatch stopwatch,
-        int timeoutMs)
+        int timeoutMs,
+        IReadOnlyList<ViewerHostTarget> candidates)
     {
         var manifestPath = Path.Combine(sessionDirectory, "session.json");
         while (RemainingMilliseconds(stopwatch, timeoutMs) > 0)
@@ -600,7 +614,7 @@ internal static class ViewerSessionTransport
             }
             var manifest = TryReadManifest(manifestPath);
             if (manifest is not null &&
-                ValidateManifest(manifest, sessionId, reportId, process.Id))
+                ValidateManifest(manifest, sessionId, reportId, process.Id, candidates))
             {
                 if (manifest.Status == "ready" &&
                     manifest.LastRequestId == requestId)
@@ -724,13 +738,24 @@ internal static class ViewerSessionTransport
             {
                 return null;
             }
+            var verified = root.TryGetProperty("verifiedHostTarget", out var verifiedValue) &&
+                verifiedValue.ValueKind == JsonValueKind.Object
+                ? verifiedValue
+                : default;
             return new(
                 String(root, "status") ?? string.Empty,
                 String(root, "pluginVersion") ?? string.Empty,
                 String(root, "sessionId") ?? string.Empty,
                 String(root, "reportId") ?? string.Empty,
+                String(root, "qtCompileVersion") ?? string.Empty,
                 String(root, "qtRuntimeVersion") ?? string.Empty,
                 String(root, "applicationVersion") ?? string.Empty,
+                verified.ValueKind == JsonValueKind.Object
+                    ? String(verified, "nsightVersion") ?? string.Empty : string.Empty,
+                verified.ValueKind == JsonValueKind.Object
+                    ? String(verified, "nsightBuild") ?? string.Empty : string.Empty,
+                verified.ValueKind == JsonValueKind.Object
+                    ? String(verified, "compatibilityProfile") ?? string.Empty : string.Empty,
                 String(root, "currentRequestId"),
                 String(root, "lastRequestId"),
                 String(root, "protocolError"),
@@ -759,18 +784,20 @@ internal static class ViewerSessionTransport
         SessionManifest manifest,
         string sessionId,
         string reportId,
-        int pid) =>
+        int pid,
+        IReadOnlyList<ViewerHostTarget> candidates) =>
         manifest.SessionId == sessionId &&
         manifest.ReportId == reportId &&
         manifest.Pid == pid &&
         manifest.PluginVersion == ViewerProbeRunner.ExpectedBridgeVersion &&
-        manifest.QtRuntimeVersion == ViewerProbeRunner.ExpectedQtVersion &&
-        manifest.ApplicationVersion.Contains(
-            ViewerProbeRunner.ExpectedProductVersion, StringComparison.Ordinal) &&
-        manifest.ApplicationVersion.Contains(
-            $"build {ViewerProbeRunner.ExpectedProductBuild}", StringComparison.Ordinal) &&
-        manifest.ApplicationVersion.Contains(
-            ViewerProbeRunner.ExpectedProductSku, StringComparison.Ordinal);
+        ViewerHostTargets.MatchVerifiedRuntime(
+            candidates,
+            manifest.ApplicationVersion,
+            manifest.QtRuntimeVersion,
+            manifest.QtCompileVersion,
+            manifest.VerifiedNsightVersion,
+            manifest.VerifiedNsightBuild,
+            manifest.CompatibilityProfile) is not null;
 
     private static bool TryOpenExpectedProcess(
         SessionOwner owner,
@@ -1119,8 +1146,12 @@ internal static class ViewerSessionTransport
         string PluginVersion,
         string SessionId,
         string ReportId,
+        string QtCompileVersion,
         string QtRuntimeVersion,
         string ApplicationVersion,
+        string VerifiedNsightVersion,
+        string VerifiedNsightBuild,
+        string CompatibilityProfile,
         string? CurrentRequestId,
         string? LastRequestId,
         string? ProtocolError,

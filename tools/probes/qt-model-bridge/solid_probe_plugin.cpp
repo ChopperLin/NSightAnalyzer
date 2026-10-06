@@ -36,11 +36,41 @@
 
 namespace {
 
-constexpr auto kPluginVersion = "probe-0.51";
-constexpr auto kVerifiedNsightVersion = "2026.2.0";
-constexpr auto kVerifiedNsightBuild = "37991608";
+constexpr auto kPluginVersion = "probe-0.52";
 constexpr auto kSessionSchema = "NsightSolidProbeSessionV1";
 constexpr auto kSessionRequestSchema = "NsightSolidProbeSessionRequestV1";
+
+QJsonObject VerifiedHostTarget()
+{
+    const QString applicationVersion = QCoreApplication::applicationVersion();
+    const QString runtimeQt = QString::fromLatin1(qVersion());
+    const QString compileQt = QString::fromLatin1(QT_VERSION_STR);
+    QJsonParseError parseError;
+    const QJsonDocument targets = QJsonDocument::fromJson(
+        qgetenv("NSIGHT_SOLID_PROBE_VERIFIED_HOST_TARGETS"), &parseError);
+    if (parseError.error == QJsonParseError::NoError && targets.isArray()) {
+        for (const QJsonValue& value : targets.array()) {
+            if (!value.isObject()) {
+                continue;
+            }
+            const QJsonObject target = value.toObject();
+            if (target.value("applicationVersion").toString() == applicationVersion
+                && target.value("qtRuntimeVersion").toString() == runtimeQt
+                && target.value("qtCompileVersion").toString() == compileQt) {
+                return {
+                    {"nsightVersion", target.value("nsightVersion")},
+                    {"nsightBuild", target.value("nsightBuild")},
+                    {"compatibilityProfile", target.value("compatibilityProfile")},
+                };
+            }
+        }
+    }
+    return {
+        {"nsightVersion", "unverified"},
+        {"nsightBuild", "unverified"},
+        {"compatibilityProfile", "unverified"},
+    };
+}
 
 QJsonValue VariantToJson(const QVariant& value)
 {
@@ -2752,10 +2782,7 @@ private slots:
             {"pollIntervalMs", m_pollIntervalMs},
             {"applicationFound", application != nullptr},
             {"guiThread", application != nullptr && QThread::currentThread() == application->thread()},
-            {"verifiedHostTarget", QJsonObject{
-                {"nsightVersion", kVerifiedNsightVersion},
-                {"nsightBuild", kVerifiedNsightBuild},
-            }},
+            {"verifiedHostTarget", VerifiedHostTarget()},
         };
         const QString requestId = qEnvironmentVariable(
             "NSIGHT_SOLID_PROBE_REQUEST_ID").trimmed();
@@ -5248,12 +5275,10 @@ private:
             {"sessionId", m_sessionId},
             {"reportId", m_reportId},
             {"pid", static_cast<qint64>(QCoreApplication::applicationPid())},
+            {"qtCompileVersion", QT_VERSION_STR},
             {"qtRuntimeVersion", qVersion()},
             {"applicationVersion", QCoreApplication::applicationVersion()},
-            {"verifiedHostTarget", QJsonObject{
-                {"nsightVersion", kVerifiedNsightVersion},
-                {"nsightBuild", kVerifiedNsightBuild},
-            }},
+            {"verifiedHostTarget", VerifiedHostTarget()},
             {"transport", "filesystemMailboxV1"},
             {"idleTimeoutMs", m_idleTimeoutMs},
             {"createdUtc", m_createdUtc.toString(Qt::ISODateWithMs)},
