@@ -132,6 +132,9 @@ omit metric prose and shader instruction vectors; `--detail` restores them withi
 Descriptors include mutually exclusive and dependent options. `doctor` reports static dependency
 checks separately from runtime checks; `version` identifies package content. An absolute `--workspace`
 sets process-local run and session roots so shell clients can share a session from different directories.
+The 1 MiB stdout bound is retained. If an actual `trace.range-shaders` envelope would cross it,
+the CLI returns the largest fitting prefix, preserves the requested limit and collection total,
+and advances `nextCursor` with `runtime.response_page_reduced`; no semantic fact is rewritten.
 
 Every operation returns:
 

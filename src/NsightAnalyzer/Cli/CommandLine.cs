@@ -736,9 +736,8 @@ internal static class CommandLine
     }
 
     /// <summary>
-    /// The largest page this operation can actually serve. Shader rows carry
-    /// their instruction mix and stall reasons, so a full-size page of them
-    /// would breach the response bound after the work was already spent.
+    /// The largest page this operation accepts. Variable-width shader pages are
+    /// fitted to the actual serialized response after projection.
     /// </summary>
     internal static int MaximumLimitFor(string operation) =>
         operation switch

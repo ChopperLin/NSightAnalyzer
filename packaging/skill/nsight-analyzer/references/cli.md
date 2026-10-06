@@ -97,6 +97,15 @@ rows; its page total differs from the overall matched/comparable counts.
 Keep scope, source provenance, availability, numeric state and coverage with
 selected evidence. Null/omitted/unavailable values never become zero.
 
+Stdout JSON is capped at 1 MiB. Shader rows vary substantially in serialized
+width, especially with `--detail`, so `trace.range-shaders` automatically returns
+the largest stable row prefix that fits. When this happens, it emits warning
+`runtime.response_page_reduced`, keeps the requested `limit`, and sets
+`returnedCount`, `truncated`, and `nextCursor` to the actual page. Continue from
+that cursor with the same filters and repeat until `nextCursor` is absent. The byte
+bound is a transport constraint, not evidence of a damaged report, and paging never
+modifies the input report.
+
 When work ends, close each report with `viewer-session.close <trace>` using the
 same `--workspace` and optional `--viewer`. `version` is sufficient for recording
 which CLI build/package was used; do not repeat the full capability directory.

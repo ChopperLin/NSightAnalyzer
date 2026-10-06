@@ -163,9 +163,11 @@ deletes or overwrites the caller's report.
 
 `AgentEfficiencyTests` closes brief output against detailed fixture facts, verifies complete metric
 pagination and shader coverage, bounds the short catalog and default inspection response, checks
-section-independent comparisons and actionable overflow errors, and round-trips stage/hash/occurrence
-into shader-source selection. A sorted proxy may have a different row path; semantic identity must
-still match. Duplicate source identities that the pinned bridge cannot distinguish are unavailable.
+section-independent comparisons and actionable overflow errors, byte-fits variable-width shader
+pages in both compact and pretty JSON while retaining a stable continuation cursor, and round-trips
+stage/hash/occurrence into shader-source selection. A sorted proxy may have a different row path;
+semantic identity must still match. Duplicate source identities that the pinned bridge cannot
+distinguish are unavailable.
 
 The published skill includes `references/analysis.md` and `references/recovery.md`. Package smoke
 checks use schema 2 and default concise output. Interactive dogfood records default (no formatting

@@ -33,6 +33,8 @@ internal static class EntryPoint
         {
             using var workspace = WorkspaceEnvironment.Apply(command.Workspace);
             var result = await OperationRegistry.ExecuteAsync(command);
+            result = ResponseBudget.Fit(
+                command.Operation, result, command.Detail, command.Compact);
             var withinBound = JsonRenderer.Write(
                 new(command.Operation, SchemaVersion.V2,
                     AgentResponseProjection.Apply(result, command.Detail)), command.Compact);

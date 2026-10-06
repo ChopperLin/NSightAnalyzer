@@ -56,6 +56,11 @@ Follow `nextCursor` only when more results are needed. A truncated page or shade
 Top-N cannot support a claim about every item. Increase `--top-shaders` when coverage
 is insufficient. Use `--detail` for metric descriptions or shader instruction vectors;
 it does not disable paging. Prefer the singular shader profile for one shader.
+Each stdout envelope is capped at 1 MiB. Because shader rows have variable width,
+`trace.range-shaders` may return fewer rows than the requested `--limit` with warning
+`runtime.response_page_reduced`; repeat the same request with its `nextCursor` until
+that field is absent to close the full shader collection. This is normal byte-bounded
+paging, not report corruption, and does not modify the report.
 Metric pages can reuse an exact snapshot, but each request still establishes the
 requested selection and verifies a fresh catalog before using it. Keep the same
 trace identity, scope, table filters and workspace when continuing a page.

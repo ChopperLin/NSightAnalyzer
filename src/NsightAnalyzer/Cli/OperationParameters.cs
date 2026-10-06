@@ -80,17 +80,13 @@ internal static class OperationParameters
         Minimum: 1,
         Maximum: ContractLimits.MaximumPageLimit);
 
-    /// <summary>
-    /// The shader page bound is lower than every other family's. Publishing the
-    /// general maximum here would promise a page size that fails on serialization
-    /// after the Viewer work is already spent.
-    /// </summary>
     public static OperationParameter ShaderLimit { get; } = new(
         "--limit",
         "integer",
         false,
-        "Maximum shader rows to return in one page. Lower than other families " +
-        "because one shader row carries its instruction mix and stall reasons.",
+        "Maximum shader rows requested in one page. Because shader rows vary in " +
+        "serialized width, the response may return a shorter stable prefix to " +
+        "stay within the 1 MiB output bound; continue from nextCursor.",
         Default: "20",
         Minimum: 1,
         Maximum: ContractLimits.MaximumShaderPageLimit);

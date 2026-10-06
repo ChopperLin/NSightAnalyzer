@@ -126,17 +126,10 @@ public static class ContractLimits
     public const int DefaultTopShaders = 5;
 
     /// <summary>
-    /// Page bound for shader facts. One shader row carries its instruction mix
-    /// and stall reasons, so it is an order of magnitude larger than any other
-    /// row: a 500-row page of the widest observed rows exceeds
-    /// <see cref="MaximumResponseBytes"/> and fails after the work is done.
-    /// Publishing the bound that can actually be served keeps the schema
-    /// honest, at the cost of more pages.
-    /// <para>
-    /// Measured, not estimated: on a real range, 175 rows render to 991 KB and
-    /// 200 rows exceed the bound. 150 is the largest round page that keeps
-    /// meaningful headroom for a range whose rows are wider than that one's.
-    /// </para>
+    /// Coarse item-count bound for shader facts. One shader row carries its
+    /// instruction mix and stall reasons, so it is an order of magnitude wider
+    /// than most rows. Actual row width still varies by report; the CLI applies
+    /// the serialized byte budget and continuation warning within this bound.
     /// </summary>
     public const int MaximumShaderPageLimit = 150;
     // Event descriptions can contain expanded API structs and arrays. Keep

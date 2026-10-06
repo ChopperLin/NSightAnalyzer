@@ -169,6 +169,49 @@ public sealed class AgentEfficiencyTests
             "--sections", "shaders", "--top-shaders", "1"]).IsSuccess);
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void ShaderPagesAreShortenedToTheActualSerializedByteBudget(bool compact)
+    {
+        var inspection = Inspection();
+        var requested = Enumerable.Range(0, ContractLimits.MaximumShaderPageLimit)
+            .Select(index => inspection.Shaders[index % inspection.Shaders.Count] with
+            {
+                Key = inspection.Shaders[index % inspection.Shaders.Count].Key with
+                {
+                    PreorderOrdinal = index,
+                    TreePath = [index],
+                    Name = new string('s', 8_192),
+                },
+            })
+            .ToArray();
+        var value = new RangeShadersValue(
+            inspection.Event.Key,
+            new(requested, 0, ContractLimits.MaximumShaderPageLimit, 600,
+                requested.Length, true, requested.Length));
+        var original = OperationResult.Success(value, [Provenance]);
+
+        Assert.False(JsonRenderer.Render(
+            new("trace.range-shaders", SchemaVersion.V2, original), compact).WithinBound);
+
+        var fitted = ResponseBudget.Fit(
+            "trace.range-shaders", original, detail: true, compact);
+        var page = Assert.IsType<RangeShadersValue>(fitted.Value).Shaders;
+        Assert.InRange(page.ReturnedCount, 1, requested.Length - 1);
+        Assert.Equal(ContractLimits.MaximumShaderPageLimit, page.Limit);
+        Assert.Equal(page.ReturnedCount, page.NextCursor);
+        Assert.True(page.Truncated);
+        Assert.Equal(requested.Take(page.ReturnedCount), page.Items);
+        var warning = Assert.Single(fitted.Warnings!, warning =>
+            warning.Code == ResponseBudget.PageReducedWarningCode);
+        Assert.Contains($"--cursor {page.NextCursor}", warning.Message);
+        Assert.True(JsonRenderer.Render(new(
+            "trace.range-shaders",
+            SchemaVersion.V2,
+            AgentResponseProjection.Apply(fitted, detail: true)), compact).WithinBound);
+    }
+
     private static PassInspectionData Inspection()
     {
         using var metrics = FixtureBridge.Load("range-metrics-gbufferpass.json");

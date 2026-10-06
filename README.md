@@ -35,7 +35,9 @@ above those wrappers.
 CLI v2 returns concise JSON by default. Pages default to 20 items, shader Top-N to five;
 all counts, scope, units, provenance and truncation remain explicit. `--detail` adds metric
 descriptions and shader instruction vectors without disabling paging. `--pretty` only indents
-JSON; the old `--compact` remains accepted but is unnecessary.
+JSON; the old `--compact` remains accepted but is unnecessary. Stdout is capped at 1 MiB;
+variable-width `trace.range-shaders` pages are shortened to a stable prefix when needed and
+return an actionable warning plus `nextCursor` instead of failing the whole page.
 
 Start a targeted investigation with `find-ranges` (marker grain by default) or `find-events`.
 Reuse exact returned keys. Use `trace.outline` when the tree context is needed, rather than
