@@ -25,7 +25,7 @@ explicit capability failures—not from pretending it is an official SDK.
         |
         | typed request/result, exact scope, provenance
         v
-    NsightViewer2026_2 adapter
+    exact version-pinned compatibility map
         |
         | version-specific model discovery, selection and projection
         v
@@ -158,12 +158,24 @@ The adapter verifies:
 
 ## Versioning
 
-The first adapter is concrete and pinned:
+The direct adapter has two concrete compatibility entries:
 
-    NsightViewer2026_2 / build 37991608 / bridge probe-0.51
+| Adapter identity | Compatibility profile | Viewer build | Qt runtime | Bridge compile Qt |
+|---|---|---:|---:|---:|
+| NsightViewer2026_2 | NsightViewerGpuTraceSemanticV1 | 37991608 | 6.8.1 | 6.8.1 |
+| NsightViewer2026_3 | NsightViewerGpuTraceSemanticV1 | 38722833 | 6.10.2 | 6.8.1 |
 
-A mismatched build returns adapterMismatch. A new Viewer build is re-probed and either gets a new
-adapter mapping or an explicitly verified compatibility entry. No nominal 2026.x fallback exists.
+Both require bridge `probe-0.52`. The 2026.3.1 entry reuses the proven semantic paths but has its own
+exact host/Qt validation. It adds two warp-occupancy metric tables and a non-shader `Unattributed
+Samples` summary row, which the shader projection explicitly excludes. A mismatched build returns
+adapterMismatch. A new Viewer build is re-probed and either gets a new adapter mapping or an
+explicitly verified compatibility entry. No nominal 2026.x fallback exists.
+
+The profile contains semantic activation/projection code; host rows are admission evidence. A patch
+release that closes the existing fixture suite adds one exact row to the profile instead of copying
+an adapter. `viewer-host-targets.json` is embedded in the CLI as the canonical immutable admission
+table; the bridge verifies the exact candidates supplied by that table. Only an observed semantic
+difference creates profile-specific code.
 
 ## Session model
 
@@ -201,11 +213,12 @@ immutable facts of the unchanged report; Instruction Mix and source action resul
       Contracts/
       Operations/
       Adapters/NsightViewer2026_2/
+        viewer-host-targets.json      exact admitted hosts and shared profile
     tools/probes/qt-model-bridge/    frozen probing/legacy oracle
     tools/verification/              contract and optional Viewer closure
     docs/
     .local/                          reports, raw output, builds and runs
 
 The product bridge is currently the constrained semantic subset of the committed SolidProbe
-plugin; generic discovery controls remain probe-only. Do not split projects or add interfaces until
-a second implementation proves the seam.
+plugin; generic discovery controls remain probe-only. Do not split projects or add provider interfaces
+until a distinct semantic implementation, rather than another compatible host entry, proves the seam.

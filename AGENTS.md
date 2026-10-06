@@ -18,7 +18,7 @@ report SDK.
 4. Facts flow downward:
 
        Agent Skill -> deterministic wrapper -> atomic operation
-                   -> NsightViewer2026_2 adapter -> Viewer bridge -> decoded report models
+                   -> exact Viewer compatibility entry -> Viewer bridge -> decoded report models
 
    Diagnosis, causality, optimization priority, confidence, and recommendations stay in the Skill.
    Wrappers only resolve identities, page, scan, filter, order, join, compare, and summarize exact
@@ -34,9 +34,11 @@ report SDK.
    arbitrary role enumeration, all-column overrides, unsafe pointer calls, and experimental UI
    actions remain there. Product code extracts only the smallest proven semantic path and closes
    its output against this oracle.
-8. No provider interface, generic query engine, or abstraction for hypothetical Viewer versions.
-   The first implementation is a direct NsightViewer2026_2 adapter pinned to build 37991608.
-   Add an interface only after a second real implementation exists.
+8. No provider interface, generic query engine, wildcard version match, or abstraction for
+   hypothetical Viewer versions. The direct adapter has only two admitted host entries:
+   2026.2.0.0 build 37991608 and 2026.3.1.0 build 38722833. Add another exact entry only after
+   real-fixture closure. Compatible entries may share the existing semantic profile; add version-specific
+   code or an interface only when a distinct implementation actually exists.
 9. Preserve unknown, absent, empty, not-loaded, unavailable, unsupported-scope, and
    license/input-limited as distinct states. Missing PDB HLSL, Standard-edition SASS text, and
    unreliable single-draw PC-sampling scope must never become successful empty data.

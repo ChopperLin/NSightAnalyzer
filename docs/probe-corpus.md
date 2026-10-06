@@ -18,14 +18,17 @@ Downloads or other broad directories.
 
 ## Fixed facts
 
-- Viewer 2026.2 build 37991608, Qt 6.8.1, probe 0.44.
+- Viewer 2026.2 build 37991608 / Qt 6.8.1 and Viewer 2026.3.1 build 38722833 / Qt 6.10.2.
+- Probe 0.44 remains the frozen 2026.2 semantic oracle; product bridge `probe-0.52` closes both hosts.
 - 30-frame event count 306,576.
-- tested pass surface 88 metric tables and 409 rows.
+- tested pass surface: 2026.2 exposes 88 metric tables, 409 rows and 801 values; 2026.3.1
+  preserves those tables and adds two warp-occupancy tables for 90 tables, 1,627 rows and 3,237 values.
 - frame comparison 258 changed out of 376 logical metrics.
 - frame-0 GBuffer shader inventory 1,020 hashes, 133 sampled, 27,432 samples.
 - focused c709 shader and source values listed in testing.md.
-- counter export: 226 ranges, 646 counter columns plus the range-name column; GBuffer pixel-register
-  allocation is 62.7392%, closing to the Warp Metrics precise value 62.739219%.
+- counter export: 226 ranges on both hosts; 2026.2 exposes 646 counter columns and 2026.3.1 exposes
+  1,864, plus the range-name column. GBuffer pixel-register allocation is 62.7392% on both, closing
+  to the Warp Metrics precise value 62.739219%.
 
 These are fixture facts, not constants for every trace.
 

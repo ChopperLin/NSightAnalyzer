@@ -11,14 +11,16 @@ The successful path is a version-pinned QGenericPlugin loaded by the Viewer. It 
 item models on the GUI thread. It does not parse the report container, call ngfx-rpc, inject an
 arbitrary DLL, scrape screenshots, or synthesize coordinate-based input.
 
-## Verified host
+## Verified hosts
 
-- Nsight Graphics 2026.2.0, build 37991608, public-release
-- Viewer application 2026.2.0.0
-- Qt 6.8.1, MSVC 2022 x64
-- probe implementation 0.44
+| Viewer application | Build/SKU | Qt runtime | Evidence |
+|---|---|---|---|
+| 2026.2.0.0 | 37991608, public-release | 6.8.1 | Probe 0.44 oracle and real corpus |
+| 2026.3.1.0 | 38722833, public-release | 6.10.2 | `probe-0.52`, same real corpus and agent workflow |
 
-The adapter must refuse any other build until re-probed.
+On the single-frame fixture, 2026.3.1 preserved all 88 existing metric-table exports and all 675
+semantic shader rows (39,508 samples), added two warp-occupancy tables, and added one explicit
+`Unattributed Samples` summary row. The adapter must refuse any other build until re-probed.
 
 ## Proven data surface
 

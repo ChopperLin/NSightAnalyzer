@@ -163,6 +163,14 @@ policy and bottleneck judgment remain above the atom layer.
 - The Skill requires configuration/control-variable evidence for causal claims, including SER combined with
   thread-reordering changes. Timing/counter differences alone cannot identify which configuration changed.
 
+## R5.9 — Exact Viewer host compatibility (complete)
+
+- One embedded immutable host table admits only 2026.2 build 37991608 and 2026.3.1 build 38722833.
+- Each entry pins application version, build, SKU, Qt runtime, bridge compile Qt, and default executable path.
+- 2026.3.1 closes the full single-frame slow workflow and agent cache/session workflow against the real fixture.
+- Future compatible builds add one real-fixture-backed JSON entry; changed semantic paths get version-specific code.
+- No major/minor-family wildcard or hypothetical provider abstraction is introduced.
+
 Further product atoms still require a missing objective fact and a real fixture. Automatic matching across
 unrelated traces, causal scoring, and statistical significance are not inferred from these summaries.
 

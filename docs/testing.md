@@ -7,6 +7,8 @@
 3. Optional Viewer integration opens a caller-supplied real trace and validates exact build,
    selection, model stability, output freshness, and CrashReporter lifecycle.
 4. Oracle closure compares product atom output to probe 0.44 on the same trace and selector.
+5. Host compatibility runs the same real fixture through every admitted Viewer entry and closes
+   shared semantic facts plus explicitly version-specific additions.
 
 Generic model discovery is never part of product verification.
 
@@ -218,8 +220,13 @@ Each cache receipt must be newly created by that invocation and close against it
 selected scope, and completed session request. Cleanup checks include additional/replacement CrashReporter
 children using exact parent/process identity.
 
-The full regression at `.local/verification/agent-v21-20261004-074802/` confirmed two timing pages each
-perform exactly two event calls, ambiguous shader joins fail explicitly, and Viewer reopen invalidates old
-metric snapshots. The final packaged CLI passed the strengthened cache/session checks at
-`.local/verification/agent-v21-20261004-075701-bd28fbf9/`; its verified package content fingerprint is
-`0e8e41f51f034fe7c40e1e08cd9684d2c7c7b65e03a96cbfa1741d640f6bb482`.
+Pass `-ViewerPath <ngfx-ui.exe>` to either verification script to test one exact compatibility
+entry. The 2026.3.1 acceptance run closes build 38722833, Qt runtime 6.10.2, bridge compile Qt 6.8.1,
+90 metric tables/3,237 values, 675 shader identities/39,508 samples, 1,864 counter columns, shader
+source, Instruction Mix, counter artifact cleanup, session reuse, restart, and graceful shutdown.
+
+The 2026.3.1 agent regression at `.local/verification/agent-v21-20261006-102117-a2a08301/` confirmed
+two timing pages each perform exactly two event calls, ambiguous shader joins fail explicitly, and
+Viewer reopen invalidates old metric snapshots. Package verification records its current content
+fingerprint in `dist/nsight-analyzer/PACKAGE.json` rather than treating a documentation-time hash as
+permanent.

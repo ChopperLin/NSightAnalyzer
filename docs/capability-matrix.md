@@ -16,13 +16,13 @@ compose the verified fact families below and do not add new facts or bottleneck 
 
 | ID | Semantic fact family | Probe evidence | Product status | Acceptance |
 |---|---|---|---|---|
-| ENV-001 | capabilities/decoder preflight | exact 2026.2 build and plugin checks | verified | refuse mismatched Viewer/bridge |
+| ENV-001 | capabilities/decoder preflight | exact 2026.2/2026.3.1 host table and plugin checks | verified | refuse mismatched Viewer/build/Qt/bridge; no wildcard |
 | TRC-001 | trace identity | local snapshots for both real reports | verified | non-empty extension, stable identity, optional SHA-256 |
 | NAV-000 | range-grain outline | 493 of 4,951 single-frame events are ranges | verified | bridge-filtered skeleton, true preorder ordinals, grain label |
 | NAV-001 | event page | 306,576-node report and final six-node page | verified | exact page closure, stable EventKey |
 | NAV-002 | event parameters | DrawIndexedInstanced typed values; out-of-domain Dispatch fixture | verified | exact scope and typed leaf projection; invalid Viewer-decoded D3D12 values return unavailable |
 | NAV-003 | bounded event candidate search | 52 single-frame ClearRenderTargetView matches; seven under exact scope 1680 | verified | one traversal, true EventKeys, preorder paging, exact optional ancestor |
-| MET-001 | range metric catalog | 88 tables, 409 rows | verified | exact tables/headers/descriptions/occurrences |
+| MET-001 | range metric catalog | 2026.2: 88 tables/409 rows; 2026.3.1: 90/1,627 | verified | exact tables/headers/descriptions/occurrences |
 | MET-002 | range metric values | generated export equality and two real reports | verified | long-form values, precise Tooltip, paging |
 | MET-003 | cross-frame refresh | frame 0/29 GBuffer values differ | verified | distinct EventKeys, no stale selection |
 | SHD-001 | range shader inventory | 1,020 hashes, 133 sampled | verified | paged rows and stable ShaderKey |
