@@ -24,6 +24,9 @@ $verifyRunsRoot = Join-Path $verifyWorkspace '.local\runs'
 $verifySessionsRoot = Join-Path $verifyWorkspace '.local\sessions'
 $script:verifyLastRunDirectories = @()
 $script:verifyLastResult = $null
+$script:verifyExpectedBuild = $null
+$script:verifyExpectedQt = $null
+$script:verifyExpectedMetricCount = $null
 function Read-CheckedJson {
     param([string]$Path,[long]$MaximumBytes=1048576)
     $item = Get-Item -LiteralPath $Path -ErrorAction Stop
@@ -95,8 +98,10 @@ function Latest-MetricReceipt {
     if ($session.schema -ne 'NsightSolidProbeSessionV1' -or $session.status -ne 'ready' -or
         $session.pid -ne $bridge.pid -or $session.reportId -ne $bridge.reportId -or
         $session.sessionId -ne $matchingOwners[0].owner.sessionId -or $session.lastRequestId -ne $bridge.requestId -or
-        $bridge.pluginVersion -ne 'probe-0.51' -or $bridge.qtRuntimeVersion -ne '6.8.1' -or
-        $bridge.verifiedHostTarget.nsightBuild -ne '37991608') {
+        $bridge.pluginVersion -ne 'probe-0.52' -or $bridge.qtCompileVersion -ne '6.8.1' -or
+        $bridge.qtRuntimeVersion -ne $script:verifyExpectedQt -or
+        $session.qtCompileVersion -ne '6.8.1' -or
+        $bridge.verifiedHostTarget.nsightBuild -ne $script:verifyExpectedBuild) {
         throw 'Metric receipt request identity, decoder or completed session does not match'
     }
     return $receipt
@@ -169,13 +174,22 @@ function Assert-ClosedSession {
 try {
     $version = Run-Check 'version' @('version')
     $doctor = Run-Check 'doctor' @('doctor')
+    $runtimeTarget = $doctor.result.value.checks |
+        Where-Object component -eq 'viewerRuntime' | Select-Object -First 1
+    if ($runtimeTarget.expected -notmatch 'build=(?<build>\d+).*qt=(?<qt>\d+\.\d+\.\d+)') {
+        throw 'Doctor did not identify one exact Viewer runtime target'
+    }
+    $script:verifyExpectedBuild = $Matches.build
+    $script:verifyExpectedQt = $Matches.qt
+    $script:verifyExpectedMetricCount = if ($Matches.build -eq '38722833') { 3237 } else { 801 }
     $timing = Run-Check 'timing' @('compare-ranges',$verifyTrace,'--event-ordinal','1773','--baseline-event-ordinal','3901','--sections','timing')
     if ($timing.result.value.execution.atomCallCount -ne 2 -or $null -ne $timing.result.value.metrics) {throw 'Timing activated metric models'}
     $first = Run-Check 'metrics-first' @('trace.range-metrics',$verifyTrace,'--event-ordinal','1773')
     if ((Latest-MetricReceipt).hit) {throw 'Cold snapshot should miss'}
     $next = Run-Check 'metrics-next' @('trace.range-metrics',$verifyTrace,'--event-ordinal','1773','--cursor','20')
     if (-not (Latest-MetricReceipt).hit) {throw 'Second metric page did not reuse verified snapshot'}
-    if ($next.result.value.metrics.totalCount -ne 801 -or $next.result.value.metrics.returnedCount -ne 20) {throw 'Metric paging closure changed'}
+    if ($next.result.value.metrics.totalCount -ne $script:verifyExpectedMetricCount -or
+        $next.result.value.metrics.returnedCount -ne 20) {throw 'Metric paging closure changed'}
     $other = Run-Check 'metrics-other-scope' @('trace.range-metrics',$verifyTrace,'--event-ordinal','3901','--table','SM Register Occupancy')
     $again = Run-Check 'metrics-original-scope' @('trace.range-metrics',$verifyTrace,'--event-ordinal','1773','--table','SM Register Occupancy')
     if (-not (Latest-MetricReceipt).hit -or $again.result.value.scope.preorderOrdinal -ne 1773) {throw 'Alternating scope cache mismatch'}

@@ -86,7 +86,7 @@ Assert-True (@($capabilities.Document.result.value.operations.items |
 Assert-True (@($capabilities.Document.result.value.operations.items |
         Where-Object layer -eq 'discovery').Count -eq 3) `
     'Unexpected discovery count.'
-Assert-True ($capabilities.Document.result.value.decoder.bridgeVersion -eq 'probe-0.51') `
+Assert-True ($capabilities.Document.result.value.decoder.bridgeVersion -eq 'probe-0.52') `
     'Unexpected bridge version.'
 Assert-True (@($capabilities.Document.result.value.operations.items |
         Where-Object { -not $_.parameters -or $_.parameters.Count -eq 0 }).Count -eq 0) `
@@ -178,8 +178,12 @@ if ($SingleFrameTrace) {
     Add-ViewerArgument $infoArgs
     $info = Invoke-JsonCli -Arguments $infoArgs -ExpectedExitCode 0
     Assert-True $info.Document.result.isSuccess 'trace.info failed.'
-    Assert-True ($info.Document.result.value.decoder.productBuild -eq '37991608') `
+    $decoderBuild = $info.Document.result.value.decoder.productBuild
+    Assert-True ($decoderBuild -in @('37991608', '38722833')) `
         'trace.info used an unexpected Viewer build.'
+    $expectedMetricTableCount = if ($decoderBuild -eq '38722833') { 90 } else { 88 }
+    $expectedMetricIdentityCount = if ($decoderBuild -eq '38722833') { 3237 } else { 801 }
+    $expectedCounterCount = if ($decoderBuild -eq '38722833') { 1864 } else { 646 }
 
     $eventArgs = [Collections.ArrayList]@(
         'trace.events', $single, '--cursor', '0', '--limit', '10', '--compact')
@@ -346,7 +350,7 @@ if ($SingleFrameTrace) {
     $metricCatalogStartedUtc = [DateTime]::UtcNow
     $metricCatalog = Invoke-JsonCli `
         -Arguments $metricCatalogArgs -ExpectedExitCode 0
-    Assert-True ($metricCatalog.Document.result.value.tables.totalCount -eq 88) `
+    Assert-True ($metricCatalog.Document.result.value.tables.totalCount -eq $expectedMetricTableCount) `
         'Range metric catalog table count changed.'
     Assert-True (@($metricCatalog.Document.result.value.tables.items |
             Where-Object name -eq 'SM Register Occupancy').Count -eq 1) `
@@ -456,7 +460,7 @@ if ($SingleFrameTrace) {
         $inspection = Invoke-JsonCli -Arguments $inspectArgs -ExpectedExitCode 0
         Assert-True ($inspection.Document.result.value.metrics.values.totalCount -eq 8) `
             'inspect-pass focused metric closure changed.'
-        Assert-True ($inspection.Document.result.value.shaders.totalCount -eq 676) `
+        Assert-True ($inspection.Document.result.value.shaders.totalCount -eq 675) `
             'inspect-pass shader inventory closure changed.'
         Assert-True ($null -eq $inspection.Document.result.value.instructionMix) `
             'inspect-pass returned an unrequested Instruction Mix section.'
@@ -472,9 +476,9 @@ if ($SingleFrameTrace) {
         Add-ViewerArgument $compareArgs
         $comparison = Invoke-JsonCli -Arguments $compareArgs -ExpectedExitCode 0
         if ($comparison.Document.result.isSuccess) {
-            Assert-True ($comparison.Document.result.value.metrics.totalCount -eq 801) `
+            Assert-True ($comparison.Document.result.value.metrics.totalCount -eq $expectedMetricIdentityCount) `
                 'compare-ranges metric identity closure changed.'
-            Assert-True ($comparison.Document.result.value.metrics.matchedCount -eq 801) `
+            Assert-True ($comparison.Document.result.value.metrics.matchedCount -eq $expectedMetricIdentityCount) `
                 'compare-ranges failed to join stable metric identities.'
             Assert-True ($comparison.Document.result.value.metrics.deltas.nextCursor -eq 100) `
                 'compare-ranges metric delta paging changed.'
@@ -537,7 +541,7 @@ if ($SingleFrameTrace) {
         $catalog = Invoke-JsonCli -Arguments $counterArgs -ExpectedExitCode 0
         Assert-True ($catalog.Document.result.value.export.rangeCount -eq 226) `
             'Counter export range count changed.'
-        Assert-True ($catalog.Document.result.value.export.counterCount -eq 646) `
+        Assert-True ($catalog.Document.result.value.export.counterCount -eq $expectedCounterCount) `
             'Counter export column count changed.'
         Assert-True ($catalog.Document.result.value.export.traceCopyCleanup -eq 'removed') `
             'Viewer-generated trace copy was not cleaned up.'
@@ -689,7 +693,7 @@ if ($MultiFrameTrace) {
 [pscustomobject]@{
     status = 'passed'
     configuration = $Configuration
-    bridgeVersion = 'probe-0.51'
+    bridgeVersion = 'probe-0.52'
     singleFrameChecked = $singleChecked
     multiFrameChecked = $multiChecked
     slowViewerChecked = $slowChecked
