@@ -22,10 +22,14 @@ New-Item -ItemType Directory -Path $publishDirectory, $packageDirectory -Force |
 
 $project = Join-Path $repoRoot 'src\NsightAnalyzer\NsightAnalyzer.csproj'
 if ($SkipBuild) {
-    $binaryDirectory = Join-Path $repoRoot 'src\NsightAnalyzer\bin\Release\net9.0-windows'
+    $binaryDirectory = Join-Path $repoRoot `
+        'src\NsightAnalyzer\bin\Release\net9.0-windows\win-x64\publish'
 }
 else {
-    & dotnet publish $project -c Release --self-contained false `
+    & dotnet publish $project -c Release -r win-x64 --self-contained true `
+        -p:PublishSingleFile=true `
+        -p:IncludeNativeLibrariesForSelfExtract=true `
+        -p:EnableCompressionInSingleFile=true `
         -p:DebugSymbols=false -p:DebugType=None -o $publishDirectory
     if ($LASTEXITCODE -ne 0) {
         throw 'dotnet publish failed.'
@@ -33,12 +37,7 @@ else {
     $binaryDirectory = $publishDirectory
 }
 
-foreach ($name in @(
-    'nsight-analyzer.exe',
-    'nsight-analyzer.dll',
-    'nsight-analyzer.deps.json',
-    'nsight-analyzer.runtimeconfig.json'
-)) {
+foreach ($name in @('nsight-analyzer.exe')) {
     $source = Join-Path $binaryDirectory $name
     if (-not (Test-Path -LiteralPath $source -PathType Leaf)) {
         throw "Published NSightAnalyzer file is missing: $source"
@@ -63,6 +62,17 @@ foreach ($reference in [regex]::Matches($skillText, '\]\((references/[^)]+)\)'))
         throw "Invalid packaged Skill reference: $($reference.Groups[1].Value)"
     }
 }
+$packageExecutable = Join-Path $packageDirectory 'nsight-analyzer.exe'
+$decoderCatalogRaw = ((& $packageExecutable capabilities | Out-String).Trim())
+if ($LASTEXITCODE -ne 0) {
+    throw 'Packaged NSightAnalyzer failed the pre-manifest decoder catalog check.'
+}
+$decoderCatalog = $decoderCatalogRaw | ConvertFrom-Json
+if (-not $decoderCatalog.result.isSuccess -or
+    @($decoderCatalog.result.value.decoder.targets).Count -eq 0) {
+    throw 'Packaged NSightAnalyzer returned no exact Viewer compatibility targets.'
+}
+$decoder = $decoderCatalog.result.value.decoder
 
 $gitRevision = (& git -C $repoRoot rev-parse HEAD).Trim()
 if ($LASTEXITCODE -ne 0) {
@@ -95,12 +105,18 @@ $manifest = [ordered]@{
     fingerprintBasis = 'sha256 of ordinal-sorted path<TAB>byteLength<TAB>sha256 rows joined by LF'
     setupReference = 'references/setup.md'
     prerequisites = [ordered]@{
-        dotnet = '9 x64'
-        viewerProductVersion = '2026.2.0.0'
-        viewerBuild = '37991608'
-        viewerSku = 'public-release'
-        qt = '6.8.1'
-        bridge = 'probe-0.51'
+        dotnet = '9 x64 bundled self-contained; no external runtime required'
+        viewerTargets = @($decoder.targets | ForEach-Object {
+            [ordered]@{
+                compatibilityProfile = $_.compatibilityProfile
+                productVersion = $_.productVersion
+                build = $_.productBuild
+                sku = $_.productSku
+                qtRuntime = $_.qtRuntimeVersion
+            }
+        })
+        bridgeCompileQt = (@($decoder.targets.qtCompileVersion | Sort-Object -Unique) -join ' or ')
+        bridge = $decoder.bridgeVersion
     }
     files = $files
 } | ConvertTo-Json -Depth 5
@@ -109,7 +125,6 @@ $manifest = [ordered]@{
     $manifest + [Environment]::NewLine,
     [Text.UTF8Encoding]::new($false))
 
-$packageExecutable = Join-Path $packageDirectory 'nsight-analyzer.exe'
 $capabilitiesRaw = ((& $packageExecutable capabilities | Out-String).Trim())
 if ($LASTEXITCODE -ne 0) {
     throw 'Packaged NSightAnalyzer failed the capabilities smoke check.'

@@ -5,7 +5,7 @@ description: Inspect existing NVIDIA Nsight Graphics GPU Trace reports (.ngfx-gp
 
 # NSight Analyzer
 
-Run the adjacent `nsight-analyzer.exe`. Requires Windows x64, .NET 9, Nsight Graphics Viewer 2026.2 build 37991608 and its matching SolidProbe bridge. This is an unsupported, version-pinned Viewer adapter.
+Run the adjacent self-contained `nsight-analyzer.exe`. Requires Windows x64 and one exact supported Nsight Graphics Viewer: 2026.2 build 37991608 or 2026.3.1 build 38722833, with its matching `probe-0.52` SolidProbe bridge. The packaged CLI bundles .NET 9 and needs no separately installed .NET runtime or SDK. This is an unsupported, version-pinned Viewer adapter; no `2026.x` wildcard is supported.
 
 Choose an absolute task workspace and pass `--workspace <path>` on every report
 operation and session close. This keeps sessions and evidence under the same

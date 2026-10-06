@@ -21,16 +21,18 @@ internal static class VersionOperation
             ?? assembly.GetName().Version?.ToString() ?? "unknown";
         var revision = build.Contains('+') ? build[(build.IndexOf('+') + 1)..] : "unknown";
         string assemblyHash;
+        string programPath;
         try
         {
-            assemblyHash = HashFile(assembly.Location);
+            programPath = ResolveProgramPath(assembly);
+            assemblyHash = HashFile(programPath);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
             return new("NSightAnalyzer", build, revision, "unavailable", "assemblySha256", "unreadable");
         }
         var fallback = new ToolVersionValue("NSightAnalyzer", build, revision, assemblyHash, "assemblySha256", "unpackaged");
-        var packageDirectory = Path.GetDirectoryName(assembly.Location)!;
+        var packageDirectory = Path.GetDirectoryName(programPath)!;
         var manifestPath = Path.Combine(packageDirectory, "PACKAGE.json");
         if (!File.Exists(manifestPath)) return fallback;
         try
@@ -71,7 +73,7 @@ internal static class VersionOperation
                 observedRows.Add(relative.Replace('\\', '/') + "\t" +
                     info.Length.ToString(CultureInfo.InvariantCulture) + "\t" + observedHash);
             }
-            if (!paths.Contains(Path.GetFileName(assembly.Location)))
+            if (!paths.Contains(Path.GetFileName(programPath)))
                 return fallback with { PackageState = "manifestInvalid" };
             observedRows.Sort(StringComparer.Ordinal);
             var fingerprint = Convert.ToHexString(SHA256.HashData(
@@ -84,6 +86,18 @@ internal static class VersionOperation
         {
             return fallback with { PackageState = "manifestInvalid" };
         }
+    }
+
+    private static string ResolveProgramPath(Assembly assembly)
+    {
+#pragma warning disable IL3000 // Empty by design for a bundled single-file application.
+        var assemblyPath = assembly.Location;
+#pragma warning restore IL3000
+        if (!string.IsNullOrWhiteSpace(assemblyPath))
+            return assemblyPath;
+        if (!string.IsNullOrWhiteSpace(Environment.ProcessPath))
+            return Environment.ProcessPath;
+        throw new IOException("The running program path is unavailable.");
     }
 
     private static string HashFile(string path)

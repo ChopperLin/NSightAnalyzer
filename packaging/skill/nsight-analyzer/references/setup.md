@@ -6,10 +6,10 @@ Qt development files or the installed SolidProbe hook. Required components are:
 | Component | Required value |
 |---|---|
 | Host | Windows x64 |
-| CLI runtime | .NET 9 x64 runtime |
-| Nsight Graphics Viewer | 2026.2.0.0, build 37991608, public-release SKU |
-| Loaded Viewer Qt | 6.8.1 |
-| SolidProbe bridge | probe-0.51 |
+| CLI runtime | .NET 9 x64 bundled in the self-contained package; no separate runtime or SDK |
+| Nsight Graphics Viewer | 2026.2.0.0 build 37991608 or 2026.3.1.0 build 38722833; public-release SKU |
+| Loaded Viewer Qt | 6.8.1 for 2026.2; 6.10.2 for 2026.3.1 |
+| SolidProbe bridge | probe-0.52, compiled with Qt 6.8.1 |
 
 Run `nsight-analyzer.exe doctor --workspace <absolute-task-directory>` before
 investigating a setup failure. For a non-default existing installation, add
@@ -20,18 +20,22 @@ test write permission. `localPrerequisitesPresent` is only a local preflight;
 `runtimeValidation: notChecked` remains until a real report operation verifies
 the exact decoder/bridge, report identity and requested scope.
 
-The default Viewer path is:
-`C:\Program Files\NVIDIA Corporation\Nsight Graphics 2026.2.0\host\windows-desktop-nomad-x64\ngfx-ui.exe`.
+Default discovery checks 2026.2 first, then 2026.3.1, preserving the original decoder when both are
+installed. Their default roots are `Nsight Graphics 2026.2.0` and `Nsight Graphics 2026.3.1` under
+`C:\Program Files\NVIDIA Corporation`; both use
+`host\windows-desktop-nomad-x64\ngfx-ui.exe`.
 The bridge is expected at `Plugins\generic\solidprobe.dll` next to that executable.
-Do not substitute a different Viewer build or bridge version.
+Do not substitute another patch/build or bridge version merely because its name begins with 2026.
 
 For a missing bridge, hand the package's `version` result and doctor's checks to
 the person maintaining the matching NSightAnalyzer checkout. The maintained
 source build/install entrypoint is
 `tools/probes/qt-model-bridge/build-and-install.ps1` in that checkout, with its
-instructions in the adjacent README. It requires the matching Qt 6.8.1 development
-environment and MSVC build tools, checks the adapter's bridge pin and supports
-backup/rollback. The independent package intentionally does not expose the probe
+instructions in the adjacent README. It requires the Qt 6.8.1 development environment and MSVC
+build tools; Qt 6 permits this older-minor release plugin to load in the verified 6.10.2 runtime.
+The script checks the exact Viewer compatibility entry and bridge pin and supports per-Viewer
+backup/rollback. Exact entries come from the CLI's embedded host table; adding a verified patch to
+an existing semantic profile does not copy adapter code. The independent package intentionally does not expose the probe
 tool's generic model or experimental controls as product operations.
 
 Installing/replacing that hook modifies the NVIDIA installation and is a
@@ -39,9 +43,10 @@ separate setup action requiring the user's explicit request. Doctor never does
 it. If the bridge source/build environment is unavailable, report the missing
 component and maintainer handoff; retrying report operations cannot repair it.
 
-If the .NET host prints a runtime installation error before any JSON appears,
-the CLI has not started. Resolve the x64 .NET 9 runtime dependency before using
-doctor. Do not interpret empty stdout as an empty trace result.
+The packaged executable is a self-contained Windows x64 binary. It must not request a .NET runtime
+installation. If a development build is run through `dotnet`, that checkout still needs the matching
+SDK/runtime; do not confuse that developer prerequisite with the packaged Skill. Do not interpret
+empty stdout as an empty trace result.
 
 Use the same absolute `--workspace` for all calls in an investigation. It maps
 runs to `<workspace>/.local/runs` and sessions to `<workspace>/.local/sessions`.

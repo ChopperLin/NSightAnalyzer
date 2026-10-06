@@ -6,14 +6,20 @@ NSightAnalyzer is an Agent-facing fact retrieval CLI for existing NVIDIA Nsight 
 The proven data path is deliberately honest:
 
     Agent -> deterministic wrapper -> semantic atom
-          -> NsightViewer2026_2 adapter -> SolidProbe plugin
+          -> exact Viewer compatibility entry -> SolidProbe plugin
           -> report models decoded by the matching Nsight Viewer
 
-Nsight Graphics 2026.2 build 37991608 must open the report because no discovered documented NVIDIA
-SDK exposes the same existing-report data surface. The adapter is therefore unsupported and
-version-pinned; it is not presented as an official report SDK.
+The admitted hosts are exactly Nsight Graphics 2026.2.0.0 build 37991608 with Qt 6.8.1 and
+2026.3.1.0 build 38722833 with Qt 6.10.2, both public-release. No `2026.x` wildcard exists. A
+matching Viewer must open the report because no discovered documented NVIDIA SDK exposes the same
+existing-report data surface. The adapter is therefore unsupported and version-pinned; it is not
+presented as an official report SDK.
 
-The frozen Probe 0.44 oracle and the current `probe-0.51` product bridge have recovered and
+Both admitted hosts currently share one semantic compatibility profile. A later patch release that
+passes the same real-fixture suite needs a new exact host row, not a copied adapter; untested builds
+still fail closed.
+
+The frozen Probe 0.44 oracle and the current `probe-0.52` product bridge have recovered and
 validated:
 
 - complete event/pass/marker/action navigation;
@@ -75,7 +81,7 @@ Source duplicates that this bridge cannot distinguish are explicitly unavailable
 comparison uses unique stage/hash/name/pipeline tuples and rejects ambiguous matches. Missing sample
 data never becomes zero, missing requested metric tables fail, and metric comparisons retain numeric
 source and Viewer display resolution. Public envelopes use schema 2.1;
-the pinned Viewer and `probe-0.51` bridge are unchanged.
+each result identifies the exact compatibility entry and `probe-0.52` bridge.
 
 Product atoms reuse one normally launched Viewer process per exact trace snapshot. The normal
 CrashReporter pipe guardian is recorded as session baseline rather than treated as a crash; Viewer
@@ -101,8 +107,10 @@ Build the Agent Skill package and publish it to the sibling `lx6-hub\skills\nsig
 pwsh -NoProfile -File .\scripts\build-package.ps1
 ```
 
-The package contains the framework-dependent CLI host, `SKILL.md`, its analysis/recovery references, and a hash manifest. Use
-`-SkipHubPublish` for an independent package build or `-HubPath <path>` for a non-sibling hub.
+The package contains a self-contained single-file Windows x64 CLI with its .NET 9 runtime,
+`SKILL.md`, its analysis/recovery references, and a hash manifest. The target machine does not need
+a separate .NET runtime or SDK. Use `-SkipHubPublish` for an independent package build or
+`-HubPath <path>` for a non-sibling hub.
 The package does not contain NVIDIA Viewer files or install the version-pinned SolidProbe bridge.
 
 Start with:

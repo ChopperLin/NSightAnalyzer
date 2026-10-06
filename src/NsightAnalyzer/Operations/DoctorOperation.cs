@@ -29,9 +29,10 @@ internal static class DoctorOperation
             new("platform", OperatingSystem.IsWindows() && RuntimeInformation.ProcessArchitecture == Architecture.X64
                     ? "verified" : "mismatch", "Windows x64",
                 $"{RuntimeInformation.OSDescription}; process={RuntimeInformation.ProcessArchitecture}"),
-            new("dotnetRuntime", Environment.Version.Major == 9 ? "verified" : "mismatch", ".NET 9 x64",
+            new("dotnetRuntime", Environment.Version.Major == 9 ? "verified" : "mismatch",
+                ".NET 9 x64 (bundled in the release package)",
                 RuntimeInformation.FrameworkDescription,
-                Note: "The running CLI proves this runtime is available; an absent .NET runtime prevents doctor from starting."),
+                Note: "The running CLI proves this runtime is available; the self-contained release package does not require a separately installed .NET runtime."),
         };
         var candidates = TryReadTargets(viewerPath);
         var target = SelectPreflightTarget(viewerPath, candidates);
