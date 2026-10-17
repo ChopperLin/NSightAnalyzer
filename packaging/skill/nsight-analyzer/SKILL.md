@@ -1,6 +1,6 @@
 ---
 name: nsight-analyzer
-description: Inspect existing NVIDIA Nsight Graphics GPU Trace reports (.ngfx-gputrace), locate expensive passes, retrieve metrics and shader evidence, and compare performance scopes. Use for GPU Trace performance investigations; exclude Graphics Capture, live collection, Nsight Systems and Compute.
+description: Inspect existing NVIDIA Nsight Graphics GPU Trace reports (.ngfx-gputrace), locate expensive passes, and investigate pass regressions or improvements across captures and source revisions using metrics and shader evidence. Exclude Graphics Capture, live collection, Nsight Systems and Compute.
 ---
 
 # NSight Analyzer
@@ -37,6 +37,11 @@ for those failures. A successful helper result verifies installed bytes, not run
 compatibility: the first real report operation must still succeed.
 
 ## Choose the shortest evidence path
+
+For a named pass across multiple captures/builds, or a question linking a performance
+change to code, read [references/pass-regression.md](references/pass-regression.md)
+before collecting detailed metrics. It defines the timing-first investigation and
+the evidence needed to distinguish workload changes from execution-cost changes.
 
 Default output is concise JSON: 20 items per page and Top 5 shaders with coverage.
 No formatting flag is needed. Use `describe <operation>` or `<operation> --help`

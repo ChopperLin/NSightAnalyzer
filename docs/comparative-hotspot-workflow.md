@@ -1,5 +1,10 @@
 # Comparative hotspot workflow
 
+For the packaged, end-to-end Agent procedure across multiple captures and source
+revisions, use [pass-regression.md](../packaging/skill/nsight-analyzer/references/pass-regression.md).
+That file is the maintained workflow source; this document records wrapper design
+and fixture observations.
+
 ## Goal
 
 The primary workflow answers four questions in order:
@@ -162,3 +167,25 @@ This is enough evidence to keep event search and timeline alignment as wrapper p
 adding either as an atom. Repeated full model closure is now the larger mechanical cost. A general
 `compare-frames` pass matcher remains deferred until another real investigation proves which stable
 identity and nesting rules it actually needs.
+
+## Multi-capture RTR dogfood (2026-10-17)
+
+Three existing captures provided 30 target markers each and six workload commands
+per marker. Timing distributions localized most growth to DXR before inspecting
+focused metrics, shader stages, DXIL hotspots and the corresponding SVN intervals.
+Detailed counter/shader evidence covered two temporal locations per capture; it
+was not a 90-frame counter measurement. The packaged workflow preserves that
+distinction and prefers median-near detailed samples for subsequent investigations.
+
+The review found no proven missing atom needed to retrieve those observed facts:
+
+| Friction or missing evidence | Classification and next step |
+|---|---|
+| Marker has no tree children although its event span contains API commands | Composition gap: existing event rows establish membership by span plus frame/queue context. The reference documents the bounded fallback; a future wrapper can automate it. |
+| N captures, page closure and whole-series statistics | Deterministic composition over existing facts, not a new atom. No new product wrapper is introduced by this documentation change. |
+| Actual GPU-written indirect dispatch count/dimensions | Current parameters expose command signature, argument buffer/offset, MaxCommandCount and count-buffer information, not the payload. Investigate only if a real decoded-model fixture exposes it; no claim that current GPU Trace can supply raw buffers. |
+| Exact material/variant, runtime overrides or build identity | Require matching symbols/build/configuration evidence where the report lacks it. Git/SVN history is an external evidence source, not a GPU atom. |
+
+The regression evidence therefore supports a useful diagnosis while leaving the
+pure direct/indirect API effect unmeasured. Do not encode the original suspected
+cause or numerical outcome as the expected answer for future workflow use.

@@ -12,6 +12,8 @@
 - [Verification](testing.md): offline contract tests and optional real-Viewer closure.
 - [Comparative hotspot workflow](comparative-hotspot-workflow.md): resolve, inspect, compare, and
   evidence-weighing boundaries for the first dogfood path.
+- [Multi-capture pass regression workflow](../packaging/skill/nsight-analyzer/references/pass-regression.md):
+  the packaged Agent procedure for timing-first investigation, workload/shader evidence and source-history attribution.
 
 The committed probe README remains the detailed low-level experiment log. Product documentation
 does not promote generic Qt model access into a public operation.
