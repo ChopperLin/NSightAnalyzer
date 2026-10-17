@@ -111,7 +111,13 @@ The package contains a self-contained single-file Windows x64 CLI with its .NET 
 `SKILL.md`, its analysis/recovery references, and a hash manifest. The target machine does not need
 a separate .NET runtime or SDK. Use `-SkipHubPublish` for an independent package build or
 `-HubPath <path>` for a non-sibling hub.
-The package does not contain NVIDIA Viewer files or install the version-pinned SolidProbe bridge.
+The package also contains the matching SolidProbe DLL, its Viewer compatibility table,
+and `scripts/ensure-viewer-bridge.ps1`. The skill runs this helper before analysis to
+verify and, when needed, back up and install the bridge into the selected Viewer.
+Packaging builds the bridge but does not install it on the build machine. Consumers
+need a supported NVIDIA Viewer and PowerShell 7, not Qt development files or MSVC.
+NVIDIA Viewer files are not redistributed. After changing the bridge protocol, publish
+the complete package and validate a real report through its installed reader.
 
 Start with:
 

@@ -14,7 +14,8 @@ selection, page totals, truncation, source provenance and exact scope when resum
 | Viewer transient error with `retryable: true` | Retry once; the transport rebuilds a lost session |
 | Instruction Mix not loaded | Report that family unavailable; use metrics/shaders independently when they answer the question |
 | Missing PDB or unavailable SASS | Use available correlation evidence and state the limitation; do not retry unchanged |
-| Viewer/bridge/version mismatch | Run `doctor` with the same `--viewer` and `--workspace`; report its expected/observed/path checks and read setup.md. Do not install automatically |
+| Missing/mismatched bridge | Close owned sessions, run `scripts/ensure-viewer-bridge.ps1` with the same workspace/Viewer, and retry the report once only if the helper installed a changed DLL. If bytes are already current, report the runtime mismatch; do not repeatedly reinstall |
+| Unsupported Viewer/Qt/build | Run `doctor` with the same `--viewer` and `--workspace`; read setup.md. Do not replace NVIDIA binaries or bypass compatibility checks |
 | Different working directory / missing session | Repeat with the original absolute `--workspace` and `--viewer`; check doctor for resolved run/session roots |
 | Dependency host failure with no JSON | Read native stderr and setup.md; the CLI cannot produce JSON before the .NET host starts |
 

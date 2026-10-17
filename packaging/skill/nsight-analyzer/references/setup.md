@@ -1,62 +1,76 @@
-# Install handoff and local checks
+# Prepare and repair the reader
 
-The package supplies the CLI and this Skill. It does not contain NVIDIA Viewer,
-Qt development files or the installed SolidProbe hook. Required components are:
+The release package contains the self-contained CLI, this Skill, the matching
+`bridge/solidprobe.dll`, its Viewer host table, and
+`scripts/ensure-viewer-bridge.ps1`. Consumers do not need the source checkout,
+Qt development files, MSVC, or a separate .NET runtime. NVIDIA Viewer itself is
+not included and must already be installed.
 
 | Component | Required value |
 |---|---|
-| Host | Windows x64 |
-| CLI runtime | .NET 9 x64 bundled in the self-contained package; no separate runtime or SDK |
-| Nsight Graphics Viewer | 2026.2.0.0 build 37991608 or 2026.3.1.0 build 38722833; public-release SKU |
-| Loaded Viewer Qt | 6.8.1 for 2026.2; 6.10.2 for 2026.3.1 |
-| SolidProbe bridge | probe-0.52, compiled with Qt 6.8.1 |
+| Host / helper | Windows x64 / PowerShell 7 |
+| CLI runtime | .NET 9 x64 bundled in the package |
+| Viewer | 2026.2.0.0 build 37991608 or 2026.3.1.0 build 38722833; public-release |
+| Viewer Qt | 6.8.1 for 2026.2; 6.10.2 for 2026.3.1 |
+| Bridge | probe-0.52, compiled with Qt 6.8.1 |
 
-Run `nsight-analyzer.exe doctor --workspace <absolute-task-directory>` before
-investigating a setup failure. For a non-default existing installation, add
-`--viewer <absolute-path-to-ngfx-ui.exe>` on doctor and report operations.
-Doctor reads file metadata and returns each dependency's expected value,
-observed value, path and state. It does not start Viewer, create directories or
-test write permission. `localPrerequisitesPresent` is only a local preflight;
-`runtimeValidation: notChecked` remains until a real report operation verifies
-the exact decoder/bridge, report identity and requested scope.
+## Before opening a report
 
-Default discovery checks 2026.2 first, then 2026.3.1, preserving the original decoder when both are
-installed. Their default roots are `Nsight Graphics 2026.2.0` and `Nsight Graphics 2026.3.1` under
-`C:\Program Files\NVIDIA Corporation`; both use
-`host\windows-desktop-nomad-x64\ngfx-ui.exe`.
-The bridge is expected at `Plugins\generic\solidprobe.dll` next to that executable.
-Do not substitute another patch/build or bridge version merely because its name begins with 2026.
+Run the packaged helper once per task, using the same absolute workspace as all
+report operations:
 
-For a missing bridge, hand the package's `version` result and doctor's checks to
-the person maintaining the matching NSightAnalyzer checkout. The maintained
-source build/install entrypoint is
-`tools/probes/qt-model-bridge/build-and-install.ps1` in that checkout, with its
-instructions in the adjacent README. It requires the Qt 6.8.1 development environment and MSVC
-build tools; Qt 6 permits this older-minor release plugin to load in the verified 6.10.2 runtime.
-The script checks the exact Viewer compatibility entry and bridge pin and supports per-Viewer
-backup/rollback. Exact entries come from the CLI's embedded host table; adding a verified patch to
-an existing semantic profile does not copy adapter code. The independent package intentionally does not expose the probe
-tool's generic model or experimental controls as product operations.
+```powershell
+pwsh -NoProfile -File <skill-directory>/scripts/ensure-viewer-bridge.ps1 -Workspace <absolute-task-directory>
+```
 
-Installing/replacing that hook modifies the NVIDIA installation and is a
-separate setup action requiring the user's explicit request. Doctor never does
-it. If the bridge source/build environment is unavailable, report the missing
-component and maintainer handoff; retrying report operations cannot repair it.
+It prefers an installed 2026.2 Viewer, then 2026.3.1, matching CLI discovery.
+For another installation path, pass `-ViewerPath <exact-ngfx-ui.exe>` and use
+that same executable as `--viewer` for every report operation and session close.
+`-CheckOnly` reports `current`, `missing`, or `mismatch` without modifying files.
 
-The packaged executable is a self-contained Windows x64 binary. It must not request a .NET runtime
-installation. If a development build is run through `dotnet`, that checkout still needs the matching
-SDK/runtime; do not confuse that developer prerequisite with the packaged Skill. Do not interpret
-empty stdout as an empty trace result.
+The helper verifies the release manifest and Viewer/Qt file metadata. It compares
+the installed DLL's SHA-256 with the bundled DLL, so a rebuild with an unchanged
+protocol label is still detected. If bytes match, it returns `state: current`
+without writing files. Otherwise it stages the new DLL next to the destination,
+verifies a backup of the previous bytes, replaces only `Plugins/generic/solidprobe.dll`,
+and verifies the installed hash. Backups stay under the task workspace's
+`.local/bridge-backups/<viewer-identity>/`; names contain the old DLL's hash, not
+the new protocol version. A failed post-install check restores the prior state.
 
-Use the same absolute `--workspace` for all calls in an investigation. It maps
-runs to `<workspace>/.local/runs` and sessions to `<workspace>/.local/sessions`.
-The override affects only that CLI process and its children; it does not change
-the working directory or user/machine environment. Omitting it retains the
-existing `NSIGHT_ANALYZER_RUN_ROOT` and `NSIGHT_ANALYZER_SESSION_ROOT` overrides,
-or defaults to the current working directory. Close every opened report using
-the same workspace and Viewer override.
+Routine bridge repair is part of using this Skill for requested trace analysis;
+do not add another confirmation for this bounded, reversible prerequisite.
+Announce the repair and continue within the environment's permissions.
 
-`version` verifies the package files against `PACKAGE.json` and reports the
-observed content fingerprint. `packageState: verified` means those files match
-the local manifest, not that the package is signed or the Viewer runtime is ready.
-An unpackaged development build reports its assembly fingerprint instead.
+| Helper result | Action |
+|---|---|
+| `current` / `installed` | Continue with the original report operation |
+| `setup.package_invalid` / `setup.package_incomplete` | Obtain the complete matching release; do not copy an unverified DLL |
+| `setup.viewer_missing` / `setup.viewer_unsupported` | Report the supported versions and observed installation; do not download/replace NVIDIA Viewer automatically |
+| `setup.viewer_in_use` | Close only owned analyzer sessions with `viewer-session.close`; retry once. If a user's Viewer remains open, ask them to close that instance; never kill it |
+| `setup.install_busy` | Another helper owns the install lock; retry after it finishes |
+| `setup.install_failed` | Read the exact error. Permission denied requires installation write access; a locked file requires its owner to release it. Do not silently elevate or repeat unchanged |
+
+The helper returns `runtimeValidation: notChecked`: file metadata cannot verify
+the exact runtime build/SKU. A real report operation must validate the pinned
+Viewer, bridge, report identity, and requested scope. If runtime still reports a
+mismatch while the installed hash is current, stop reinstalling and report the
+expected/observed versions. Never loosen the pins to force a report through.
+
+## Diagnostics and lifecycle
+
+`nsight-analyzer.exe doctor --workspace <absolute-task-directory>` is read-only.
+It checks local file presence/metadata, not the loaded bridge version or its hash.
+`localPrerequisitesPresent: true` is not a substitute for the helper or a successful
+report read. `version` verifies package file hashes; it does not prove runtime
+readiness or a signed release. Neither command installs anything.
+
+Use the same `--workspace` on every report call and close. Report artifacts and
+reusable sessions live under its `.local/runs` and `.local/sessions`. Close each
+report with `viewer-session.close <trace> --workspace <same-path>` and the same
+optional `--viewer`. If a repair changes the installed bridge, existing owned
+sessions must be closed before retrying; already-loaded DLLs do not update in place.
+
+For maintainers, `scripts/build-package.ps1` builds both CLI and bridge and
+publishes the complete release. The bridge build uses the source checkout's
+`tools/probes/qt-model-bridge/build-and-install.ps1 -SkipInstall` (Qt 6.8.1/MSVC).
+Do not send an end user through that developer build path.

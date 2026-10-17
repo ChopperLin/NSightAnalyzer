@@ -74,6 +74,19 @@ if (-not $decoderCatalog.result.isSuccess -or
 }
 $decoder = $decoderCatalog.result.value.decoder
 
+# Ship the matching bridge; consumers must not need this checkout, Qt headers or MSVC.
+& (Join-Path $repoRoot 'tools/probes/qt-model-bridge/build-and-install.ps1') -SkipInstall
+if ($LASTEXITCODE -ne 0) { throw 'SolidProbe build failed.' }
+$bridgeSource = Get-Content -LiteralPath (Join-Path $repoRoot 'tools/probes/qt-model-bridge/solid_probe_plugin.cpp') -Raw
+if ($bridgeSource -notmatch 'kPluginVersion\s*=\s*"([^"]+)"' -or
+    $Matches[1] -cne $decoder.bridgeVersion) {
+    throw 'Built bridge does not match the packaged CLI bridge requirement.'
+}
+$bridgeDirectory = Join-Path $packageDirectory 'bridge'
+New-Item -ItemType Directory -Path $bridgeDirectory -Force | Out-Null
+Copy-Item -LiteralPath (Join-Path $repoRoot '.local/build/qt-model-bridge/out/generic/solidprobe.dll') -Destination $bridgeDirectory
+Copy-Item -LiteralPath (Join-Path $repoRoot 'src/NsightAnalyzer/Adapters/NsightViewer2026_2/viewer-host-targets.json') -Destination $bridgeDirectory
+
 $gitRevision = (& git -C $repoRoot rev-parse HEAD).Trim()
 if ($LASTEXITCODE -ne 0) {
     throw 'Could not resolve the Git revision.'

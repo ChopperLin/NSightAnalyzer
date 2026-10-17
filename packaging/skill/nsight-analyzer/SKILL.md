@@ -13,6 +13,29 @@ operation and session close. This keeps sessions and evidence under the same
 failures, run `doctor` and read [references/setup.md](references/setup.md).
 For shell integration or JSON consumption, read [references/cli.md](references/cli.md).
 
+## Prepare the local reader
+
+The package includes the matching `bridge/solidprobe.dll`. Before the first report
+operation in a task, run the bundled helper with PowerShell 7:
+
+```powershell
+pwsh -NoProfile -File <skill-directory>/scripts/ensure-viewer-bridge.ps1 -Workspace <absolute-task-directory>
+```
+
+Pass `-ViewerPath <exact-ngfx-ui.exe>` when using a non-default Viewer, and use that
+same path as `--viewer` for report operations. The helper verifies the package and
+Viewer/Qt metadata, compares DLL hashes, and installs a missing or mismatched bridge
+with a verified backup. Matching bytes are a no-op. Routine bridge preparation is part
+of the requested trace analysis; announce a needed repair and proceed without an extra
+confirmation. Do not send the user to a source checkout or ask them to compile the DLL.
+
+Respect OS/tool permission restrictions. If the selected Viewer is in use, close only
+owned analyzer sessions; do not kill the user's Viewer. If installation is denied,
+report the exact path/error and required permission; do not silently elevate or loop.
+The helper does not install/upgrade NVIDIA Viewer. Read [setup.md](references/setup.md)
+for those failures. A successful helper result verifies installed bytes, not runtime
+compatibility: the first real report operation must still succeed.
+
 ## Choose the shortest evidence path
 
 Default output is concise JSON: 20 items per page and Top 5 shaders with coverage.
@@ -85,7 +108,7 @@ observations from build/configuration evidence; use the comparison rules in the 
 
 - GPU Trace only: do not use this Skill for Graphics Capture, live collection, replay, Nsight Systems/Compute, Perf SDK, or Aftermath.
 - Never parse the proprietary report container, scrape screenshots, or expose Qt/widget/model internals.
-- Do not install or replace the Viewer bridge, change NVIDIA installation files, or elevate unless the user explicitly asks for that separate setup action.
+- Install/repair only the bundled bridge through `scripts/ensure-viewer-bridge.ps1` as part of requested analysis, with backup and hash verification. Do not replace NVIDIA binaries, install another Viewer, bypass version checks, or silently elevate.
 - Preserve unknown, unavailable, unsupported, incomplete, and license/input-limited as distinct outcomes; none proves an empty result.
 - Operations declaring `writesLocalArtifacts` may write only to their isolated local run directory and must preserve the caller's original report.
 - When finished with each report, use `viewer-session.close <trace> --workspace <same-path>` (and the same `--viewer` override) to release its session.
