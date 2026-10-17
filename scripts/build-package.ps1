@@ -46,7 +46,7 @@ foreach ($name in @('nsight-analyzer.exe')) {
 }
 
 $skillSource = Join-Path $repoRoot 'packaging\skill\nsight-analyzer'
-Get-ChildItem -LiteralPath $skillSource | ForEach-Object {
+Get-ChildItem -LiteralPath $skillSource -Force | ForEach-Object {
     Copy-Item -LiteralPath $_.FullName -Destination $packageDirectory -Recurse
 }
 foreach ($required in @('SKILL.md', 'references\analysis.md', 'references\recovery.md', 'references\setup.md', 'references\cli.md')) {
@@ -85,10 +85,7 @@ if ($bridgeSource -notmatch 'kPluginVersion\s*=\s*"([^"]+)"' -or
 $bridgeDirectory = Join-Path $packageDirectory 'bridge'
 New-Item -ItemType Directory -Path $bridgeDirectory -Force | Out-Null
 Copy-Item -LiteralPath (Join-Path $repoRoot '.local/build/qt-model-bridge/out/generic/solidprobe.dll') -Destination $bridgeDirectory
-# Keep manifest-covered text stable under the hub's Windows Git checkout settings.
-$hostTable = Get-Content -LiteralPath (Join-Path $repoRoot 'src/NsightAnalyzer/Adapters/NsightViewer2026_2/viewer-host-targets.json') -Raw
-[IO.File]::WriteAllText((Join-Path $bridgeDirectory 'viewer-host-targets.json'),
-    $hostTable.ReplaceLineEndings("`r`n"), [Text.UTF8Encoding]::new($false))
+Copy-Item -LiteralPath (Join-Path $repoRoot 'src/NsightAnalyzer/Adapters/NsightViewer2026_2/viewer-host-targets.json') -Destination $bridgeDirectory
 
 $gitRevision = (& git -C $repoRoot rev-parse HEAD).Trim()
 if ($LASTEXITCODE -ne 0) {
