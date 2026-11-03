@@ -47,6 +47,7 @@ internal static class RangeBundleReader
         var settings = includeShaders
             ? TraceRangeShadersOperation.BridgeSettings(eventOrdinal, null)
             : TraceEventParametersOperation.ScopedSettings(eventOrdinal, null);
+        settings["REQUIRE_METRIC_VIEWS"] = includeMetrics ? "1" : "0";
         var cachePolicy = includeShaders
             ? ViewerProbeCachePolicy.RangeShadersV1
             : ViewerProbeCachePolicy.None;
@@ -75,7 +76,7 @@ internal static class RangeBundleReader
                     root, eventOrdinal, null, null, null, 0, int.MaxValue) : null,
                 ViewerProbeRunner.CreateProvenance(run, artifact, "range-bundle/v2"));
             return OperationResult.Success(
-                bundle, [bundle.Provenance], OperationSupport.ViewerWarnings);
+                bundle, [bundle.Provenance], includeShaders ? OperationSupport.ShaderWarnings : OperationSupport.ViewerWarnings);
         }
         catch (BridgeScopeUnsupportedException exception)
         {

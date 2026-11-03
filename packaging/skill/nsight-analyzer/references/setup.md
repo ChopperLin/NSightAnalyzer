@@ -12,7 +12,7 @@ not included and must already be installed.
 | CLI runtime | .NET 9 x64 bundled in the package |
 | Viewer | 2026.2.0.0 build 37991608 or 2026.3.1.0 build 38722833; public-release |
 | Viewer Qt | 6.8.1 for 2026.2; 6.10.2 for 2026.3.1 |
-| Bridge | probe-0.52, compiled with Qt 6.8.1 |
+| Bridge | probe-0.53, compiled with Qt 6.8.1 |
 
 ## Before opening a report
 

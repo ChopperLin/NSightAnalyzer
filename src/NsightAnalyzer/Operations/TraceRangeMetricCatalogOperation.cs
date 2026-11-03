@@ -22,7 +22,7 @@ internal static class TraceRangeMetricCatalogOperation
         }
         var artifact = opened.Artifact!;
         var settings = TraceEventParametersOperation.ScopedSettings(
-            eventOrdinal, eventPath);
+            eventOrdinal, eventPath, requireMetricViews: true);
         settings["POLL_INTERVAL_MS"] = "100";
         settings["METRIC_CATALOG_ONLY"] = "1";
         var probe = await ViewerProbeRunner.RunAsync(

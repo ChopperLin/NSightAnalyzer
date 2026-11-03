@@ -36,7 +36,7 @@
 
 namespace {
 
-constexpr auto kPluginVersion = "probe-0.52";
+constexpr auto kPluginVersion = "probe-0.53";
 constexpr auto kSessionSchema = "NsightSolidProbeSessionV1";
 constexpr auto kSessionRequestSchema = "NsightSolidProbeSessionRequestV1";
 
@@ -2601,6 +2601,7 @@ const QSet<QString>& ProductSessionSettingNames()
         "MODEL_SETTLE_MIN_POLLS",
         "PANEL_SETTLE_MIN_POLLS",
         "POLL_INTERVAL_MS",
+        "REQUIRE_METRIC_VIEWS",
         "SELECTION_BASELINE_METRIC_MIN_COUNT",
         "SELECTION_BASELINE_METRIC_STABLE_MIN_POLLS",
     };
@@ -2641,7 +2642,7 @@ bool IsRangeShaderCacheRequest(
     }
 
     static const QHash<QString, QString> required{
-        {"SELECTION_BASELINE_METRIC_MIN_COUNT", "80"},
+        {"SELECTION_BASELINE_METRIC_MIN_COUNT", "1"},
         {"SELECTION_BASELINE_METRIC_STABLE_MIN_POLLS", "2"},
         {"METRIC_SETTLE_MIN_POLLS", "4"},
         {"METRIC_SETTLE_MAX_POLLS", "60"},
@@ -2664,7 +2665,9 @@ bool IsRangeShaderCacheRequest(
         {"COMBO_SELECT_TRIGGER", "activated"},
         {"COMBO_SELECT_SETTLE_MIN_POLLS", "12"},
     };
-    if (settings.size() != required.size() + 1) {
+    const QString metricRequirement = settings.value("REQUIRE_METRIC_VIEWS").toString();
+    if ((metricRequirement != "0" && metricRequirement != "1")
+        || settings.size() != required.size() + 2) {
         return false;
     }
     for (auto iterator = required.constBegin(); iterator != required.constEnd(); ++iterator) {
@@ -2828,14 +2831,23 @@ private slots:
                 : 120;
             root.insert("selectionMetricsPollLimit", selectionMetricsPollLimit);
             const bool complete = HandleSelectionMetrics(application, root);
-            if (!complete && m_pollCount >= selectionMetricsPollLimit) {
+            const bool metricViewsUnavailable = !complete
+                && m_pollCount >= selectionMetricsPollLimit
+                && root.value("stage").toString() == "waiting-baseline-metrics"
+                && root.value("metricViewTotal").toInt(-1) == 0;
+            if (metricViewsUnavailable) {
+                // No selection or asynchronous action has started; keep the session usable.
+                root.insert("status", "unavailable");
+                root.insert("stage", "metric-views-unavailable");
+            } else if (!complete && m_pollCount >= selectionMetricsPollLimit) {
+                root.insert("pendingStage", root.value("stage"));
                 root.insert("status", "timeout");
                 root.insert("stage", "timeout");
             }
             Write(root);
             if (complete || m_pollCount >= selectionMetricsPollLimit) {
-                Finish(complete);
-                const bool leaveTimeoutForExternalKill = !complete
+                Finish(complete || metricViewsUnavailable);
+                const bool leaveTimeoutForExternalKill = !complete && !metricViewsUnavailable
                     && m_pollCount >= selectionMetricsPollLimit
                     && qEnvironmentVariableIntValue(
                         "NSIGHT_SOLID_PROBE_EXTERNAL_KILL_ON_TIMEOUT") == 1;
@@ -3145,6 +3157,11 @@ private:
     bool HandleSelectionMetrics(QApplication* application, QJsonObject& root)
     {
         root.insert("schema", "NsightSolidProbeSelectionMetricsV1");
+        // Shader/parameter/source reads depend on their own models, not Warp Metrics.
+        const bool requireMetricViews = !qEnvironmentVariableIsSet(
+            "NSIGHT_SOLID_PROBE_REQUIRE_METRIC_VIEWS") || qEnvironmentVariableIntValue(
+                "NSIGHT_SOLID_PROBE_REQUIRE_METRIC_VIEWS") != 0;
+        root.insert("metricViewsRequested", requireMetricViews);
         if (!m_eventSelector.isEmpty()) {
             root.insert("eventSelector", m_eventSelector);
         }
@@ -3193,45 +3210,48 @@ private:
                 return false;
             }
 
-            bool baselineReady = false;
-            int baselineTotal = 0;
-            const QJsonArray baselineCatalog = CollectMetricViews(
-                application, false, &baselineReady, &baselineTotal);
-            int baselineMinimumCount = qEnvironmentVariableIntValue(
-                "NSIGHT_SOLID_PROBE_SELECTION_BASELINE_METRIC_MIN_COUNT");
-            baselineMinimumCount = baselineMinimumCount > 0
-                ? baselineMinimumCount
-                : 1;
-            int baselineStableMinimumPolls = qEnvironmentVariableIntValue(
-                "NSIGHT_SOLID_PROBE_SELECTION_BASELINE_METRIC_STABLE_MIN_POLLS");
-            baselineStableMinimumPolls = qMax(0, baselineStableMinimumPolls);
-            if (baselineTotal > 0 && baselineTotal == m_lastBaselineMetricTotal) {
-                ++m_stableBaselineMetricCountSamples;
-            } else {
-                m_stableBaselineMetricCountSamples = 0;
-            }
-            m_lastBaselineMetricTotal = baselineTotal;
-            const bool baselineCatalogReady = baselineReady
-                && baselineTotal >= baselineMinimumCount
-                && m_stableBaselineMetricCountSamples >= baselineStableMinimumPolls;
-            root.insert("metricViewTotal", baselineTotal);
-            root.insert("metricViewReturned", baselineCatalog.size());
-            root.insert("selectionBaselineMetricMinimumCount", baselineMinimumCount);
-            root.insert("selectionBaselineMetricStableMinimumPolls",
-                baselineStableMinimumPolls);
-            root.insert("stableBaselineMetricCountSamples",
-                m_stableBaselineMetricCountSamples);
-            root.insert("baselineMetricCatalogReady", baselineCatalogReady);
-            if (!baselineCatalogReady) {
-                root.insert("stage", "waiting-baseline-metrics");
-                return false;
-            }
+            if (requireMetricViews) {
+                bool baselineReady = false;
+                int baselineTotal = 0;
+                const QJsonArray baselineCatalog = CollectMetricViews(
+                    application, false, &baselineReady, &baselineTotal);
+                int baselineMinimumCount = qEnvironmentVariableIntValue(
+                    "NSIGHT_SOLID_PROBE_SELECTION_BASELINE_METRIC_MIN_COUNT");
+                baselineMinimumCount = baselineMinimumCount > 0
+                    ? baselineMinimumCount
+                    : 1;
+                int baselineStableMinimumPolls = qEnvironmentVariableIntValue(
+                    "NSIGHT_SOLID_PROBE_SELECTION_BASELINE_METRIC_STABLE_MIN_POLLS");
+                baselineStableMinimumPolls = qMax(0, baselineStableMinimumPolls);
+                if (baselineTotal > 0 && baselineTotal == m_lastBaselineMetricTotal) {
+                    ++m_stableBaselineMetricCountSamples;
+                } else {
+                    m_stableBaselineMetricCountSamples = 0;
+                }
+                m_lastBaselineMetricTotal = baselineTotal;
+                const bool baselineCatalogReady = baselineReady
+                    && baselineTotal >= baselineMinimumCount
+                    && m_stableBaselineMetricCountSamples >= baselineStableMinimumPolls;
+                root.insert("metricViewTotal", baselineTotal);
+                root.insert("metricViewReturned", baselineCatalog.size());
+                root.insert("selectionBaselineMetricMinimumCount", baselineMinimumCount);
+                root.insert("selectionBaselineMetricStableMinimumPolls",
+                    baselineStableMinimumPolls);
+                root.insert("stableBaselineMetricCountSamples",
+                    m_stableBaselineMetricCountSamples);
+                root.insert("baselineMetricCatalogReady", baselineCatalogReady);
+                if (!baselineCatalogReady) {
+                    root.insert("stage", "waiting-baseline-metrics");
+                    return false;
+                }
 
-            const QJsonArray baseline = CollectMetricViews(
-                application, true, &baselineReady, &baselineTotal);
-            if (!baselineReady || baselineTotal < baselineMinimumCount) {
-                root.insert("stage", "waiting-baseline-metrics-data");
-                return false;
+                const QJsonArray baseline = CollectMetricViews(
+                    application, true, &baselineReady, &baselineTotal);
+                if (!baselineReady || baselineTotal < baselineMinimumCount) {
+                    root.insert("stage", "waiting-baseline-metrics-data");
+                    return false;
+                }
+                m_baselineMetricViews = baseline;
             }
             if (eventView->selectionModel() == nullptr) {
                 root.insert("status", "error");
@@ -3239,7 +3259,6 @@ private:
                 return true;
             }
 
-            m_baselineMetricViews = baseline;
             const bool captureModelBaseline = HasModelExportFilters()
                 && qEnvironmentVariableIntValue(
                     "NSIGHT_SOLID_PROBE_MODEL_CAPTURE_BASELINE") == 1;
@@ -3316,10 +3335,11 @@ private:
             return false;
         }
 
-        bool metricsReady = false;
+        bool metricsReady = !requireMetricViews;
         int metricViewTotal = 0;
-        const QJsonArray currentMetricViews = CollectMetricViews(
-            application, true, &metricsReady, &metricViewTotal);
+        const QJsonArray currentMetricViews = requireMetricViews
+            ? CollectMetricViews(application, true, &metricsReady, &metricViewTotal)
+            : QJsonArray();
         if (!metricsReady) {
             root.insert("stage", "waiting-selected-metrics");
             return false;
@@ -4406,13 +4426,14 @@ private:
             const QString pipelineName = pipelineCells.size() > 2
                 ? pipelineCells.at(2).toString().trimmed()
                 : QString();
-            if (shaderName.isEmpty() || pipelineName.isEmpty()) {
+            if (shaderName.isEmpty()) {
                 root.insert("status", "error");
                 root.insert("stage",
                     "combo-selection-model-identity-unavailable");
                 return true;
             }
-            comboSelectionMatch = pipelineName + " - " + shaderName;
+            comboSelectionMatch = pipelineName.isEmpty()
+                ? shaderName : pipelineName + " - " + shaderName;
             root.insert("comboSelectionDerivedFromModelSelection", true);
             root.insert("comboSelectionDerivedShaderName", shaderName);
             root.insert("comboSelectionDerivedPipelineName", pipelineName);
@@ -4603,12 +4624,14 @@ private:
             return false;
         }
 
-        root.insert("baselineMetricViews", m_baselineMetricViews);
-        root.insert("metricViews", m_lastMetricViews);
-        root.insert("metricViewTotal", metricViewTotal);
-        root.insert("metricViewReturned", m_lastMetricViews.size());
-        root.insert("changedMetricViewCount", CountChangedMetricViews(
-            m_baselineMetricViews, m_lastMetricViews));
+        if (requireMetricViews) {
+            root.insert("baselineMetricViews", m_baselineMetricViews);
+            root.insert("metricViews", m_lastMetricViews);
+            root.insert("metricViewTotal", metricViewTotal);
+            root.insert("metricViewReturned", m_lastMetricViews.size());
+            root.insert("changedMetricViewCount", CountChangedMetricViews(
+                m_baselineMetricViews, m_lastMetricViews));
+        }
         if (HasModelExportFilters()) {
             root.insert("models", m_lastModels);
             root.insert("modelTotal", currentModelTotal);

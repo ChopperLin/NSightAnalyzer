@@ -35,7 +35,7 @@ internal static class RangeMetricSnapshotReader
         var snapshot = session is null ? null : TryLoad(session, artifact.ArtifactIdentity, selector);
         if (snapshot is not null)
         {
-            var settings = TraceEventParametersOperation.ScopedSettings(eventOrdinal, eventPath);
+            var settings = TraceEventParametersOperation.ScopedSettings(eventOrdinal, eventPath, requireMetricViews: true);
             settings["POLL_INTERVAL_MS"] = "100";
             settings["METRIC_CATALOG_ONLY"] = "1";
             if (!TryRemaining(timer, timeoutMs, out var proofRemaining)) return TimedOut();
@@ -71,7 +71,7 @@ internal static class RangeMetricSnapshotReader
             catch (BridgeSchemaException exception) { return OperationSupport.ProjectionFailure(exception); }
         }
 
-        var freshSettings = TraceEventParametersOperation.ScopedSettings(eventOrdinal, eventPath);
+        var freshSettings = TraceEventParametersOperation.ScopedSettings(eventOrdinal, eventPath, requireMetricViews: true);
         freshSettings["POLL_INTERVAL_MS"] = "100";
         if (!TryRemaining(timer, timeoutMs, out var freshRemaining)) return TimedOut();
         var probe = await ViewerProbeRunner.RunAsync(artifact, ViewerProbeMode.SelectionMetricsExport,

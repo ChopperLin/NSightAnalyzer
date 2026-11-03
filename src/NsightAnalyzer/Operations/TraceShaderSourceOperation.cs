@@ -146,7 +146,7 @@ internal static class TraceShaderSourceOperation
                     ViewerProbeRunner.CreateProvenance(
                         run, artifact, "trace.shader-source/v2"),
                 ],
-                OperationSupport.ViewerWarnings);
+                OperationSupport.ShaderWarnings);
         }
         catch (BridgeScopeUnsupportedException exception)
         {

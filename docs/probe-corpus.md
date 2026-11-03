@@ -11,6 +11,7 @@ are removed.
 | generated validation | local generated .ngfx-gputrace plus official counter export | exact 18-value metric closure |
 | real single frame | Ananta_2026_08_11_11_33_36.ngfx-gputrace | pass metrics, event parameters, shader/source oracle |
 | real 30 frame | pkg20260819_Nvidia-RTX-5070ti_...ngfx-gputrace | large paging, repeated frame markers, shader scale |
+| real DXR, no Warp Metrics | PBZ_2026_11_03_14_10_41.ngfx-gputrace | independent Shader/event readiness, unnamed pipelines, multi-function RT source |
 | Vulkan descriptor heap | vk_descriptor_heap_2026_08_24_01_54_26.ngfx-gputrace | bind/barrier input variant and binding/resource-model absence |
 
 The reports remain at user/local paths; tests receive them explicitly. Product defaults never scan
@@ -19,7 +20,7 @@ Downloads or other broad directories.
 ## Fixed facts
 
 - Viewer 2026.2 build 37991608 / Qt 6.8.1 and Viewer 2026.3.1 build 38722833 / Qt 6.10.2.
-- Probe 0.44 remains the frozen 2026.2 semantic oracle; product bridge `probe-0.52` closes both hosts.
+- Probe 0.44 remains the frozen 2026.2 semantic oracle; product bridge `probe-0.53` closes both hosts.
 - 30-frame event count 306,576.
 - tested pass surface: 2026.2 exposes 88 metric tables, 409 rows and 801 values; 2026.3.1
   preserves those tables and adds two warp-occupancy tables for 90 tables, 1,627 rows and 3,237 values.

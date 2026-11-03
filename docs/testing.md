@@ -230,3 +230,32 @@ two timing pages each perform exactly two event calls, ambiguous shader joins fa
 Viewer reopen invalidates old metric snapshots. Package verification records its current content
 fingerprint in `dist/nsight-analyzer/PACKAGE.json` rather than treating a documentation-time hash as
 permanent.
+
+## Metric-independent DXR source closure (2026-11-03, probe-0.53)
+
+The PBZ real trace exposed no Warp Metrics, while shader/source/event models were present.
+The former universal 80-table prerequisite timed out before selecting the target, incorrectly
+blocking independent facts. Readiness is now specific to the requested family; metrics still
+require a populated, stable catalog. A bounded no-metrics result before UI mutation returns
+`trace.range_metrics_unavailable` without poisoning the transport. Real pending actions still fail closed.
+
+On Viewer 2026.2 build 37991608 / Qt 6.8.1, the new bridge and projection recovered:
+
+- all 646 shader identities; unnamed pipeline labels resolve by the exact shader name,
+  while stage/hash/occurrence and the final source-provider hash remain mandatory;
+- the sampled RayGen's complete 11,131-row DXIL and 18,366-row SASS correlation models;
+  all six continuation-function headers are structural, not missing sample vectors;
+- source statistics by header identity, across normal compute/raster and optional RT columns;
+- event 827 DispatchRays parameters after an explicit metric-unavailable result in the same session.
+
+PBZ sample attribution did not change between command-list selections 823 and 855. Its counts
+are not established as pass-local. Shader atoms and compositions now carry an explicit scope
+warning. SASS opcode text remains unavailable in this Viewer SKU; no license boundary is bypassed.
+
+Regression against the existing single-frame Ananta corpus retained GBuffer pixel register
+occupancy 62.739219%, c709 source 480 DXIL / 485 SASS rows and 3,592 attributed samples.
+The 144 automated tests include metric-independent readiness, wrong-scope/stability rejection,
+empty pipeline identity, wrong provider hash, continuation headers versus missing instruction
+samples, and all three observed source column layouts. Local raw evidence is in
+`.local/pbz-fix/`; no commercial shader source is committed. This change was live-tested on
+2026.2 only; the previously admitted 2026.3.1 host was not rerun for this increment.

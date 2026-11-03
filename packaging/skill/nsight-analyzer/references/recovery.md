@@ -12,6 +12,7 @@ selection, page totals, truncation, source provenance and exact scope when resum
 | Response too large | Reduce the requested page or shader Top-N; use an exact table filter, preserving coverage |
 | Timeout | Narrow scope/tables/sections first. Increase the overall budget only for a known necessary request |
 | Viewer transient error with `retryable: true` | Retry once; the transport rebuilds a lost session |
+| `trace.range_metrics_unavailable` | Warp Metrics did not load in the bounded wait. Read event parameters or shaders independently; no repeated timeout/reinstall is needed |
 | Instruction Mix not loaded | Report that family unavailable; use metrics/shaders independently when they answer the question |
 | Missing PDB or unavailable SASS | Use available correlation evidence and state the limitation; do not retry unchanged |
 | Missing/mismatched bridge | Close owned sessions, run `scripts/ensure-viewer-bridge.ps1` with the same workspace/Viewer, and retry the report once only if the helper installed a changed DLL. If bytes are already current, report the runtime mismatch; do not repeatedly reinstall |
@@ -24,3 +25,8 @@ request can succeed for its explicitly selected families, but cannot retroactive
 make the unavailable family complete. If the report changed, rediscover its keys.
 Use `version` or `--version` when reproducing a failure: schema 2.x and the same
 Viewer do not establish that two clients have identical package contents.
+
+`viewer.session_poisoned` means a failed or unfinished Viewer request invalidated the
+transport session. It does not identify report encryption or prove missing shader data.
+A metric-only readiness failure before any action leaves the owned session reusable;
+actual pending actions/timeouts still invalidate it.

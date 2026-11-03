@@ -61,7 +61,7 @@ internal static class TraceRangeInstructionMixOperation
                     ViewerProbeRunner.CreateProvenance(
                         run, artifact, "trace.range-instruction-mix/v1"),
                 ],
-                OperationSupport.ViewerWarnings);
+                OperationSupport.ShaderWarnings);
         }
         catch (BridgeScopeUnsupportedException exception)
         {

@@ -288,6 +288,25 @@ public sealed class ShaderSourceIdentityTests
             source.RootElement, null, "0.2.12.71.0", selection, 1, 20));
     }
 
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    public void UnnamedPipelineUsesShaderNameAndStillVerifiesSourceHash(string? pipeline)
+    {
+        using var inventory = FixtureBridge.Load("range-shaders-gbufferpass.json");
+        var key = PixelKey(inventory) with { Pipeline = pipeline };
+        var selection = BridgeProjection.ResolveShaderSourceSelection(inventory.RootElement,
+            null, "0.2.12.71.0", key.Stage, key.Hash!, key.HashOccurrence) with { Shader = key };
+        using var source = Source(inventory, selection, false);
+        var value = BridgeProjection.ProjectShaderSource(source.RootElement, null, "0.2.12.71.0", selection, 1, 20);
+        Assert.Equal(pipeline ?? "", value.Shader.Pipeline);
+        var root = JsonNode.Parse(source.RootElement.GetRawText())!;
+        root["models"]![0]!["export"]!["nodes"]![0]!["cells"]![0]!["display"] = "dxil (0000000000000000)";
+        using var wrongSource = JsonDocument.Parse(root.ToJsonString());
+        Assert.Throws<BridgeFactNotFoundException>(() => BridgeProjection.ProjectShaderSource(
+            wrongSource.RootElement, null, "0.2.12.71.0", selection, 1, 20));
+    }
+
     private static JsonDocument Source(JsonDocument inventory, ShaderSourceSelection selection, bool wrongStage)
     {
         var root = JsonNode.Parse(inventory.RootElement.GetRawText())!.AsObject();
@@ -304,15 +323,75 @@ public sealed class ShaderSourceIdentityTests
         root["targetModelSelectionParent"] = JsonSerializer.SerializeToNode(new { cells = new[] { "", "", key.Pipeline } });
         root["modelSelector"] = JsonSerializer.SerializeToNode(new { kind = "match", column = 3, occurrence = selection.HashMatchOccurrence, value = key.Hash });
         root["comboSelectionDerivedShaderName"] = key.Name;
-        root["comboSelectionDerivedPipelineName"] = key.Pipeline;
-        root["currentComboSelection"] = JsonSerializer.SerializeToNode(new { text = $"{key.Pipeline} - {key.Name}" });
+        root["comboSelectionDerivedPipelineName"] = key.Pipeline ?? "";
+        root["currentComboSelection"] = JsonSerializer.SerializeToNode(new { text = string.IsNullOrEmpty(key.Pipeline) ? key.Name : $"{key.Pipeline} - {key.Name}" });
         root["models"] = JsonNode.Parse("""
             [{"class":"NV::SourceCorrelation::SourceModel","parentId":"fixture","export":{
             "totalCountExact":true,"truncated":false,"returnedCount":1,"totalCount":1,"headers":[],
-            "nodes":[{"ordinal":0,"cells":[{"column":3,"display":"placeholder"}]}]}}]
+            "nodes":[{"ordinal":0,"path":[0],"cells":[{"column":3,"display":"placeholder"}]}]}}]
             """);
         root["models"]![0]!["export"]!["nodes"]![0]!["cells"]![0]!["display"] = $"dxil ({key.Hash![2..]})";
         return JsonDocument.Parse(root.ToJsonString());
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void OnlyContinuationHeadersMayOmitSamples(bool structuralHeader)
+    {
+        using var inventory = FixtureBridge.Load("range-shaders-gbufferpass.json");
+        var key = PixelKey(inventory);
+        var selection = BridgeProjection.ResolveShaderSourceSelection(inventory.RootElement,
+            null, "0.2.12.71.0", key.Stage, key.Hash!, key.HashOccurrence);
+        using var original = Source(inventory, selection, false);
+        var root = JsonNode.Parse(original.RootElement.GetRawText())!;
+        var export = root["models"]![0]!["export"]!;
+        var row = JsonNode.Parse("""
+            {"ordinal":1,"path":[1],"cells":[
+            {"column":0,"display":""},{"column":2,"display":""},
+            {"column":3,"display":"SASS - continuation"},{"column":4,"display":null}]}
+            """)!;
+        if (!structuralHeader) row["cells"]![1]!["display"] = "00100000";
+        export["nodes"]!.AsArray().Add(row);
+        export["totalCount"] = 2;
+        export["returnedCount"] = 2;
+        using var source = JsonDocument.Parse(root.ToJsonString());
+        if (structuralHeader)
+        {
+            var result = BridgeProjection.ProjectShaderSource(source.RootElement, null, "0.2.12.71.0", selection, 1, 20);
+            Assert.Equal("notApplicable", Assert.Single(result.Rows.Items).SampleAvailability);
+        }
+        else
+        {
+            Assert.Throws<BridgeFactUnavailableException>(() => BridgeProjection.ProjectShaderSource(
+                source.RootElement, null, "0.2.12.71.0", selection, 1, 20));
+        }
+    }
+
+    [Theory]
+    [InlineData(25, 26)]
+    [InlineData(26, 27)]
+    [InlineData(27, 28)]
+    public void OptionalRayTracingColumnsDoNotShiftSourceStatistics(int mixColumn, int dependencyColumn)
+    {
+        using var inventory = FixtureBridge.Load("range-shaders-gbufferpass.json");
+        var key = PixelKey(inventory);
+        var selection = BridgeProjection.ResolveShaderSourceSelection(inventory.RootElement,
+            null, "0.2.12.71.0", key.Stage, key.Hash!, key.HashOccurrence);
+        using var original = Source(inventory, selection, false);
+        var root = JsonNode.Parse(original.RootElement.GetRawText())!;
+        var export = root["models"]![0]!["export"]!;
+        export["headers"] = JsonSerializer.SerializeToNode(new[] {
+            new { column = mixColumn, display = "Instruction Mix" },
+            new { column = dependencyColumn, display = "Dependency-Attributed Samples" } });
+        var cells = export["nodes"]![0]!["cells"]!.AsArray();
+        cells.Add(JsonSerializer.SerializeToNode(new { column = mixColumn, display = new[] { 7, 2 } }));
+        cells.Add(JsonSerializer.SerializeToNode(new { column = dependencyColumn, display = new[] { 3, 1 } }));
+        using var source = JsonDocument.Parse(root.ToJsonString());
+        var result = BridgeProjection.ProjectShaderSource(source.RootElement, null, "0.2.12.71.0", selection, 0, 20);
+        Assert.Equal(9, Assert.Single(result.Views).InstructionCount);
+        Assert.Equal(9, Assert.Single(result.Rows.Items).InstructionCount);
+        Assert.Equal(4, Assert.Single(result.Rows.Items).DependencyAttributedSampleCount);
     }
 
     private static ShaderKey PixelKey(JsonDocument inventory) =>

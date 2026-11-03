@@ -165,7 +165,7 @@ The direct adapter has two concrete compatibility entries:
 | NsightViewer2026_2 | NsightViewerGpuTraceSemanticV1 | 37991608 | 6.8.1 | 6.8.1 |
 | NsightViewer2026_3 | NsightViewerGpuTraceSemanticV1 | 38722833 | 6.10.2 | 6.8.1 |
 
-Both require bridge `probe-0.52`. The 2026.3.1 entry reuses the proven semantic paths but has its own
+Both require bridge `probe-0.53`. The 2026.3.1 entry reuses the proven semantic paths but has its own
 exact host/Qt validation. It adds two warp-occupancy metric tables and a non-shader `Unattributed
 Samples` summary row, which the shader projection explicitly excludes. A mismatched build returns
 adapterMismatch. A new Viewer build is re-probed and either gets a new adapter mapping or an

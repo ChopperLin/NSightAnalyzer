@@ -1228,7 +1228,7 @@ internal static class BridgeProjection
         var pipeline = ArrayText(parentCells, 2) ?? string.Empty;
         if (!requestedHash.Equals(targetHash, StringComparison.OrdinalIgnoreCase) ||
             !stage.Equals(selection.Shader.Stage, StringComparison.OrdinalIgnoreCase) ||
-            shaderName != selection.Shader.Name || pipeline != selection.Shader.Pipeline)
+            shaderName != selection.Shader.Name || pipeline != (selection.Shader.Pipeline ?? string.Empty))
         {
             throw new BridgeSchemaException(
                 "The selected shader identity is incomplete or differs from the request.");
@@ -1254,7 +1254,7 @@ internal static class BridgeProjection
         if (!shaderName.Equals(derivedShaderName, StringComparison.Ordinal) ||
             !pipeline.Equals(derivedPipelineName, StringComparison.Ordinal) ||
             !RequiredString(currentCombo, "text").Equals(
-                $"{pipeline} - {shaderName}",
+                pipeline.Length == 0 ? shaderName : $"{pipeline} - {shaderName}",
                 StringComparison.Ordinal))
         {
             throw new BridgeSchemaException(
@@ -1336,11 +1336,7 @@ internal static class BridgeProjection
                 var samples = SourceSamples(node);
                 attributedSamples = checked(attributedSamples + samples.Count);
                 hasSampleValues |= samples.Availability == "available";
-                if (view.Headers.TryGetValue(26, out var instructionHeader) &&
-                    instructionHeader == "Instruction Mix" &&
-                    TrySumIntegerArray(
-                        CellValue(node, 26, "display"),
-                        out var rowInstructionCount))
+                if (TrySumSourceColumn(view, node, "Instruction Mix", out var rowInstructionCount))
                 {
                     instructionCount = checked(instructionCount + rowInstructionCount);
                     hasInstructionCount = true;
@@ -1549,19 +1545,13 @@ internal static class BridgeProjection
         var stalls = samples.Stalls;
 
         long? instructionCount = null;
-        if (view.Headers.TryGetValue(26, out var column26) &&
-            column26 == "Instruction Mix" &&
-            TrySumIntegerArray(
-                CellValue(node, 26, "display"), out var instructionTotal))
+        if (TrySumSourceColumn(view, node, "Instruction Mix", out var instructionTotal))
         {
             instructionCount = instructionTotal;
         }
 
         long? dependencySamples = null;
-        if (view.Headers.TryGetValue(27, out var column27) &&
-            column27 == "Dependency-Attributed Samples" &&
-            TrySumIntegerArray(
-                CellValue(node, 27, "display"), out var dependencyTotal))
+        if (TrySumSourceColumn(view, node, "Dependency-Attributed Samples", out var dependencyTotal))
         {
             dependencySamples = dependencyTotal;
         }
@@ -1597,10 +1587,9 @@ internal static class BridgeProjection
         JsonElement node)
     {
         var value = CellValue(node, 4, "display");
-        // The proven source model has one structural header and explicit empty
-        // display strings on rows without sample attribution. Neither is a
-        // missing sample vector on a fact-bearing row.
-        if (RequiredInt32(node, "ordinal") == 0 &&
+        // Ray-tracing SASS has a header for each generated continuation function.
+        // Only structural headers may omit attribution; instructions still fail closed.
+        if ((RequiredInt32(node, "ordinal") == 0 || IsSourceFunctionHeader(node)) &&
             value.ValueKind is JsonValueKind.Undefined or JsonValueKind.Null)
         {
             return (0, "notApplicable", []);
@@ -1615,6 +1604,24 @@ internal static class BridgeProjection
         }
         var stalls = ProjectStalls(value);
         return (stalls.Sum(stall => stall.SampleCount), "available", stalls);
+    }
+
+    private static bool IsSourceFunctionHeader(JsonElement node) =>
+        string.IsNullOrEmpty(CellText(node, 0)) &&
+        string.IsNullOrEmpty(CellText(node, 2)) &&
+        CellText(node, 3)?.StartsWith("SASS - ", StringComparison.Ordinal) == true;
+
+    private static bool TrySumSourceColumn(RawSourceView view, JsonElement node, string header, out long total)
+    {
+        foreach (var pair in view.Headers)
+        {
+            if (pair.Value == header)
+            {
+                return TrySumIntegerArray(CellValue(node, pair.Key, "display"), out total);
+            }
+        }
+        total = 0;
+        return false;
     }
 
     private static readonly string[] StallReasons =

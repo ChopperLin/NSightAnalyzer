@@ -72,3 +72,17 @@ Stop when the decisive comparison is supported, when additional tables would not
 distinguish the remaining hypotheses, or when the report lacks the required fact.
 State that gap once and identify the smallest useful next check. Do not exhaust
 every page or repeatedly ask for unavailable PDB/SASS evidence.
+
+## Shader identity and sample scope
+
+A verified EventKey establishes the Viewer selection, not independent proof that the
+PC-sample provider filtered every count to that event. Some reports retain report-wide
+shader attribution when ranges change. Preserve `trace.shader_sample_scope_unverified`;
+do not infer per-pass execution counts or timing from those samples alone.
+
+For SER, inspect the captured RayGen DXIL and exact shader hash. NVAPI HitObject
+TraceRay/ReorderThread/Invoke opcodes are stronger evidence than a default CVAR or
+DispatchRays name. A sampled SER-enabled shader establishes more than mere executable
+string presence, but does not quantify actual reordering or its performance benefit.
+Missing Standard-edition SASS opcode text remains unavailable, even when correlated
+DXIL, continuation labels and addresses can be read.

@@ -51,7 +51,7 @@ internal static class TraceShaderProfileOperation
                 value,
                 [ViewerProbeRunner.CreateProvenance(
                     run, artifact, "trace.shader-profile/v1")],
-                OperationSupport.ViewerWarnings);
+                OperationSupport.ShaderWarnings);
         }
         catch (BridgeFactNotFoundException exception)
         {

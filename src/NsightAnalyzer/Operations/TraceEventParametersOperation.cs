@@ -69,11 +69,13 @@ internal static class TraceEventParametersOperation
 
     internal static Dictionary<string, string> ScopedSettings(
         int? eventOrdinal,
-        string? eventPath)
+        string? eventPath,
+        bool requireMetricViews = false)
     {
         var settings = new Dictionary<string, string>
         {
-            ["SELECTION_BASELINE_METRIC_MIN_COUNT"] = "80",
+            ["REQUIRE_METRIC_VIEWS"] = requireMetricViews ? "1" : "0",
+            ["SELECTION_BASELINE_METRIC_MIN_COUNT"] = "1",
             ["SELECTION_BASELINE_METRIC_STABLE_MIN_POLLS"] = "2",
             ["METRIC_SETTLE_MIN_POLLS"] = "4",
             ["METRIC_SETTLE_MAX_POLLS"] = "60",

@@ -12,6 +12,13 @@ internal static class OperationSupport
             "Facts were decoded through an unsupported, version-pinned Nsight Viewer model adapter."),
     ];
 
+    public static IReadOnlyList<OperationWarning> ShaderWarnings =>
+    [
+        .. ViewerWarnings,
+        new("trace.shader_sample_scope_unverified",
+            "The event scope identifies the verified Viewer selection, not proof that PC samples are filtered to that range. Some reports retain report-wide attribution; do not infer pass-local execution counts or timing from these samples alone."),
+    ];
+
     public static OperationResult ScopeUnsupportedFailure(
         BridgeScopeUnsupportedException exception) =>
         OperationResult.Failure(

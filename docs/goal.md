@@ -12,7 +12,7 @@ The supported decoder entries are exactly:
 | 2026.2.0.0 | 37991608, public-release | 6.8.1 |
 | 2026.3.1.0 | 38722833, public-release | 6.10.2 |
 
-Both use the MSVC 2022 x64 `probe-0.52` bridge compiled against Qt 6.8.1; Qt's older-minor plugin
+Both use the MSVC 2022 x64 `probe-0.53` bridge compiled against Qt 6.8.1; Qt's older-minor plugin
 loading contract and real-viewer tests close the 6.10.2 pairing. Probe 0.44 remains the frozen
 semantic oracle. Other Viewer builds are unavailable until separately re-probed and accepted; there
 is no family or wildcard match.

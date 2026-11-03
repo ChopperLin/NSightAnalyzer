@@ -19,7 +19,7 @@ Both admitted hosts currently share one semantic compatibility profile. A later 
 passes the same real-fixture suite needs a new exact host row, not a copied adapter; untested builds
 still fail closed.
 
-The frozen Probe 0.44 oracle and the current `probe-0.52` product bridge have recovered and
+The frozen Probe 0.44 oracle and the current `probe-0.53` product bridge have recovered and
 validated:
 
 - complete event/pass/marker/action navigation;
@@ -81,7 +81,7 @@ Source duplicates that this bridge cannot distinguish are explicitly unavailable
 comparison uses unique stage/hash/name/pipeline tuples and rejects ambiguous matches. Missing sample
 data never becomes zero, missing requested metric tables fail, and metric comparisons retain numeric
 source and Viewer display resolution. Public envelopes use schema 2.1;
-each result identifies the exact compatibility entry and `probe-0.52` bridge.
+each result identifies the exact compatibility entry and `probe-0.53` bridge.
 
 Product atoms reuse one normally launched Viewer process per exact trace snapshot. The normal
 CrashReporter pipe guardian is recorded as session baseline rather than treated as a crash; Viewer

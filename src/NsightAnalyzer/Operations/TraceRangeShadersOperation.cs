@@ -55,7 +55,7 @@ internal static class TraceRangeShadersOperation
                     ViewerProbeRunner.CreateProvenance(
                         run, artifact, "trace.range-shaders/v1"),
                 ],
-                OperationSupport.ViewerWarnings);
+                OperationSupport.ShaderWarnings);
         }
         catch (BridgeFactNotFoundException exception)
         {

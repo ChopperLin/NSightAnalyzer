@@ -52,7 +52,7 @@ internal sealed record ViewerProbeRunResult(
 internal static class ViewerProbeRunner
 {
     public const string SupportLevel = "unsupportedVersionPinned";
-    public const string ExpectedBridgeVersion = "probe-0.52";
+    public const string ExpectedBridgeVersion = "probe-0.53";
 
     private const long MaximumRawOutputBytes = 128L * 1024 * 1024;
     private static readonly HashSet<string> ProductSettingNames =
@@ -129,6 +129,7 @@ internal static class ViewerProbeRunner
         "MODEL_SETTLE_MIN_POLLS",
         "PANEL_SETTLE_MIN_POLLS",
         "POLL_INTERVAL_MS",
+        "REQUIRE_METRIC_VIEWS",
         "SELECTION_BASELINE_METRIC_MIN_COUNT",
         "SELECTION_BASELINE_METRIC_STABLE_MIN_POLLS",
     ];
@@ -438,6 +439,12 @@ internal static class ViewerProbeRunner
                 ErrorCategory.Viewer,
                 "viewer.status_missing",
                 "The bridge output has no status.");
+        }
+        if (status == "unavailable" && TryString(root, "stage", out var unavailableStage)
+            && unavailableStage == "metric-views-unavailable")
+        {
+            return Error(ErrorCategory.Unavailable, "trace.range_metrics_unavailable",
+                "Warp Metrics did not become available in this report. Shader and event evidence may still be readable.");
         }
         if (status == "error")
         {
